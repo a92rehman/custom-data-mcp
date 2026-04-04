@@ -50,15 +50,19 @@ docs/
   research/
 .claude/
   rules/
-    index.md              # READ FIRST — points to all domain rules
-    data-governance.md    # General governance rules
-    bigquery.md           # BigQuery coding rules
-    caching.md            # Caching rules
-    failure-handling.md   # Failure handling rules
-    observability.md      # Logging rules
-    dimensions/
-      teachers/           # Teacher data definitions + query rules
-    theory_of_change/     # LP, FICO, training, student metrics (TBD)
+    index.md              # READ FIRST — routes to general rules + regions
+    data-governance.md    # General (all regions)
+    bigquery.md           # General — partition policy, event table rules
+    caching.md            # General — freshness, loop prevention
+    failure-handling.md   # General — retries, circuit breaker
+    observability.md      # General — telemetry, audit logging
+    ict-islamabad/        # Region: ICT (org_id=1, dataset: tbproddb)
+      dimensions/teachers/  # Teacher profiles, required filters
+      lesson_plans/         # LP usage, status categories, counting
+      coaching_observations/ # FICO B/C/D, score mapping, observer types
+      training/             # Training levels, pass threshold, aggregation
+    punjab-rwp/           # Future — same domain structure
+    moawin/               # Future — same domain structure
 ```
 
 ## Environment Variables
@@ -82,7 +86,9 @@ LOG_LEVEL=INFO
 ## Domain Context
 - Taleemabad is a Pakistani EdTech platform with apps for teacher training and lesson plans
 - 3 main datasets: RUMI_DB (70 tables), TaleemHub_DB (60 tables), tbproddb (466 tables)
-- organization_id = region (1 = ICT/Islamabad)
+- **Rules are organized by region** — always determine region first
+- organization_id = region (1 = ICT/Islamabad, others TBD)
+- ICT/Islamabad rules are complete (tbproddb). Punjab/RWP and Moawin rules will be added later.
 - levels = teacher level (PRIMARY, MIDDLE, SECONDARY) — stored as JSON array
 - FICO is the classroom observation framework (Sections B, C, D)
 - Theory of Change: LP Adoption → Coaching → Classroom Practice → Teacher Behavior → Student Outcomes
