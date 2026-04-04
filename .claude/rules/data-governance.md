@@ -2,7 +2,7 @@
 
 ## Metric Access
 - All analytical queries MUST follow the governed query definitions in `.claude/rules/` subfolders — never generate ad-hoc SQL
-- Read the relevant domain rules (e.g., `dimensions/teachers/teacher-data.md`) to find the correct query
+- Read the relevant domain rules (e.g., `ict-islamabad/dimensions/teachers/teacher-query-rules.md`) to find the correct query
 - Never allow direct access to raw tables that aren't covered by a rule definition
 - No matching rule → tell the user no governed query exists for this request, log the gap
 

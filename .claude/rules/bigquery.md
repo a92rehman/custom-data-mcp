@@ -1,9 +1,3 @@
----
-paths:
-  - "src/**/*.py"
-  - "tests/**/*.py"
----
-
 # BigQuery
 
 - Every query MUST include a partition filter — reject without one, ask user to narrow scope

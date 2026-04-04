@@ -1,9 +1,3 @@
----
-paths:
-  - "src/**/*.py"
-  - "tests/**/*.py"
----
-
 # Teacher Query Rules
 
 ## Mandatory Questions Before Any Teacher Query
@@ -30,7 +24,7 @@ Always ask: "Which region? ICT/Islamabad or another?"
 - `tp.is_active = 'true'` AND `u.is_active = 'true'` — both user and profile must be active
 - `u.deleted_at IS NULL` AND `tp.deleted_at IS NULL` — exclude soft-deleted records
 - `u.is_testing_account = "false"` — exclude test accounts
-- `organization_id` — must match the user's specified region
+- `organization_id` — must match the user's specified region 1 for ICT/Islamabad
 - `FDE_Schools` EMIS filter — for ICT/Islamabad; other regions use their own school reference
 - Level filter via `JSON_VALUE_ARRAY(tp.levels)` — must match user's specified level
 

@@ -22,8 +22,9 @@ def test_config_defaults(monkeypatch):
     assert config.log_level == "INFO"
 
 
-def test_config_requires_project(monkeypatch):
+def test_config_requires_project(monkeypatch, tmp_path):
     monkeypatch.delenv("BIGQUERY_PROJECT", raising=False)
     monkeypatch.delenv("BIGQUERY_DATASETS", raising=False)
+    monkeypatch.chdir(tmp_path)  # avoid reading project .env
     with pytest.raises(Exception):  # noqa: B017
         ServerConfig()

@@ -1,9 +1,3 @@
----
-paths:
-  - "src/**/*.py"
-  - "tests/**/*.py"
----
-
 # Failure Handling
 
 - Never return partial or wrong data silently — every failure tells user what happened + what to try

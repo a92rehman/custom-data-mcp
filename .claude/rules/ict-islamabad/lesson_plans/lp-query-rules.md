@@ -1,9 +1,3 @@
----
-paths:
-  - "src/**/*.py"
-  - "tests/**/*.py"
----
-
 # Lesson Plan Query Rules
 
 ## What LP Queries Produce

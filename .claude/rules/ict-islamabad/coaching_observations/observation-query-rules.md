@@ -1,9 +1,3 @@
----
-paths:
-  - "src/**/*.py"
-  - "tests/**/*.py"
----
-
 # Coaching Observation Query Rules
 
 ## When These Rules Apply
@@ -25,7 +19,7 @@ Ask: "Which observation section? B (LP Fidelity), C (Student Learning), D (Stude
 Ask: "Per observation, per teacher, per school, or overall?"
 
 ### Observer Type
-Ask if relevant: "All observers, or specific type? (Coach, Principal, Digital Coach)"
+Ask if relevant: "All observers, or specific type? (NIETE-Coach, Principal, Digital Coach)"
 
 ### Active Only
 Default to active observations only (`co.is_active = 'true'`). Only include missed/cancelled if the user explicitly asks.
@@ -75,7 +69,7 @@ section_b_score = AVG(numeric_score) WHERE section_type = 'B' GROUP BY Observati
 ## Observer Types
 
 Observers are stored polymorphically via two columns on `coaching_observation`:
-- `user_profile_content_type_id = 173` → Coach (join to `users_coachprofile`)
+- `user_profile_content_type_id = 173` → NIETE-Coach (join to `users_coachprofile`)
 - `user_profile_content_type_id = 70` → Principal (join to `users_principalprofile`)
 - Digital Coach (AI) observations — check with data team for identification method
 

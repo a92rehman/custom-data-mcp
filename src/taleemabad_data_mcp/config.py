@@ -6,20 +6,33 @@ import json
 
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
+from pydantic_settings.sources.providers.dotenv import DotEnvSettingsSource
 from pydantic_settings.sources.providers.env import EnvSettingsSource
+
+
+def _comma_sep_decode(field_name: str, field: FieldInfo, value: str) -> object:
+    """Parse value as JSON first, fall back to comma-separated for list fields."""
+    try:
+        return json.loads(value)
+    except (json.JSONDecodeError, ValueError):
+        origin = getattr(field.annotation, "__origin__", None)
+        if origin is list:
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
 
 
 class _CommaSepEnvSource(EnvSettingsSource):
     """Env source that falls back to comma-separated parsing for list fields."""
 
     def decode_complex_value(self, field_name: str, field: FieldInfo, value: str) -> object:
-        try:
-            return json.loads(value)
-        except (json.JSONDecodeError, ValueError):
-            origin = getattr(field.annotation, "__origin__", None)
-            if origin is list:
-                return [item.strip() for item in value.split(",") if item.strip()]
-            return value
+        return _comma_sep_decode(field_name, field, value)
+
+
+class _CommaSepDotEnvSource(DotEnvSettingsSource):
+    """DotEnv source that falls back to comma-separated parsing for list fields."""
+
+    def decode_complex_value(self, field_name: str, field: FieldInfo, value: str) -> object:
+        return _comma_sep_decode(field_name, field, value)
 
 
 class ServerConfig(BaseSettings):
@@ -46,6 +59,6 @@ class ServerConfig(BaseSettings):
         return (
             init_settings,
             _CommaSepEnvSource(settings_cls),
-            dotenv_settings,
+            _CommaSepDotEnvSource(settings_cls, env_file=".env", env_file_encoding="utf-8"),
             file_secret_settings,
         )

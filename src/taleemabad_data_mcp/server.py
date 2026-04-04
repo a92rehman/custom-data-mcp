@@ -4,6 +4,7 @@ Claude Code reads governance rules from .claude/rules/ and uses these tools
 to execute validated queries, estimate costs, and log interactions.
 """
 
+import json
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
@@ -14,7 +15,6 @@ from mcp.server.fastmcp import FastMCP
 from taleemabad_data_mcp.config import ServerConfig
 from taleemabad_data_mcp.engine.audit_logger import AuditLogger
 from taleemabad_data_mcp.engine.cost_estimator import CostEstimator
-from taleemabad_data_mcp.engine.partition_validator import PartitionValidator
 
 logger = structlog.get_logger()
 
@@ -25,7 +25,6 @@ class AppContext:
     bq_client: bigquery.Client
     audit_logger: AuditLogger
     cost_estimator: CostEstimator
-    partition_validator: PartitionValidator
 
 
 @asynccontextmanager
@@ -43,7 +42,6 @@ async def app_lifespan(server: FastMCP):
 
     audit_logger = AuditLogger()
     cost_estimator = CostEstimator(bq_client, max_bytes=config.bigquery_max_bytes)
-    partition_validator = PartitionValidator()
 
     logger.info(
         "server_started",
@@ -57,7 +55,6 @@ async def app_lifespan(server: FastMCP):
             bq_client=bq_client,
             audit_logger=audit_logger,
             cost_estimator=cost_estimator,
-            partition_validator=partition_validator,
         )
     finally:
         bq_client.close()
@@ -117,8 +114,6 @@ async def execute_query(sql: str, dry_run: bool = False) -> str:
         if not rows:
             return "Query returned 0 rows."
 
-        # Format as readable table
-        import json
         return json.dumps(rows[:100], indent=2, default=str)
 
     except Exception as e:

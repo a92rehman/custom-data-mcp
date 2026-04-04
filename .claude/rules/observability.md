@@ -1,9 +1,3 @@
----
-paths:
-  - "src/**/*.py"
-  - "tests/**/*.py"
----
-
 # Observability
 
 - Log 3 layers on every interaction: Request (who/what) → Execution (which metric/SQL/cost) → Response (result/freshness/feedback)

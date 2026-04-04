@@ -2,11 +2,11 @@
 
 Python MCP server — thin BigQuery execution layer.
 Claude Code reads governance rules from `.claude/rules/` and uses MCP tools to execute queries.
-See @docs/VISION.md for why and what. See @README.md for installation.
+See [VISION.md](docs/VISION.md) for why and what. See [README.md](README.md) for installation.
 
 ## Architecture
 - **Governance logic lives in `.claude/rules/`** — Claude Code reads rules, understands business logic, generates queries
-- **MCP server is a thin execution layer** — runs queries, estimates costs, validates partitions, logs audits
+- **MCP server is a thin execution layer** — runs queries, estimates costs, logs audits
 - **No YAML engine** — no metric parsing at runtime. Claude reads the rules directly.
 
 ## Tech Stack
@@ -39,11 +39,7 @@ src/
     engine/               # Supporting logic
       audit_logger.py     # Immutable audit log entries
       cost_estimator.py   # BigQuery dry-run cost estimation
-      partition_validator.py  # Partition-first enforcement
     models/               # Pydantic models (audit entries)
-    tools/                # Reserved for future tool modules
-    resources/            # MCP resource definitions (future)
-    prompts/              # MCP prompt templates (future)
 tests/
 docs/
   VISION.md

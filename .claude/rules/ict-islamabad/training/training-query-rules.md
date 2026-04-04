@@ -1,9 +1,3 @@
----
-paths:
-  - "src/**/*.py"
-  - "tests/**/*.py"
----
-
 # Teacher Training Query Rules
 
 ## When These Rules Apply
