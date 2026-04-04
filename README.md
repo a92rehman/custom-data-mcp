@@ -31,7 +31,7 @@ cp .env.example .env
       "args": ["run", "python", "-m", "taleemabad_data_mcp"],
       "env": {
         "BIGQUERY_PROJECT": "your-project",
-        "BIGQUERY_DATASETS": "reporting,analytics",
+        "BIGQUERY_DATASETS": "RUMI_DB,TaleemHub_DB,tbproddb",
         "GOOGLE_APPLICATION_CREDENTIALS": "/path/to/key.json"
       }
     }
@@ -43,12 +43,9 @@ cp .env.example .env
 
 | Tool | Purpose |
 |------|---------|
-| `query_metric` | Query a Gold metric with filters (region, date range, dimensions) |
-| `list_metrics` | Browse available metrics by category |
-| `describe_metric` | Get definition, target, lineage, freshness info |
-| `get_metric_lineage` | Trace Gold → Silver → Bronze sources |
-| `validate_metric` | Check if a question maps to a Gold metric |
-| `report_gap` | Flag a missing metric for the data team |
+| `execute_query` | Run a governed SQL query against BigQuery (with cost guardrails) |
+| `list_datasets` | Browse allowed BigQuery datasets and their tables |
+| `get_table_schema` | Get columns and types for a specific table |
 
 ## Example Interactions
 

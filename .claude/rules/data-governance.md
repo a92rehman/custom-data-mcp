@@ -1,16 +1,17 @@
 # Data Governance
 
 ## Metric Access
-- All analytical queries MUST resolve to a pre-approved metric definition before execution — never generate ad-hoc SQL
-- The metric definitions will be stored as version-controlled YAML files (not yet built — see docs/VISION.md Section 4 for the planned lifecycle: draft → review → approved → certified → deprecated)
-- Never allow direct access to raw or intermediate data tables through the MCP
-- No matching metric → show closest matches, log the gap — never fall back to raw SQL
+- All analytical queries MUST follow the governed query definitions in `.claude/rules/` subfolders — never generate ad-hoc SQL
+- Read the relevant domain rules (e.g., `dimensions/teachers/teacher-data.md`) to find the correct query
+- Never allow direct access to raw tables that aren't covered by a rule definition
+- No matching rule → tell the user no governed query exists for this request, log the gap
 
 ## Conversation
 - Never assume when ambiguous — clarify first, max 3 rounds, then escalate to data team
+- See `.claude/rules/index.md` for which domain rules to read based on the question
 
 ## Audit
-- Every interaction creates an immutable audit log entry
+- Every interaction creates an immutable audit log entry via the MCP audit_logger
 
 ## Data Classification
 - `public`: aggregate KPIs safe for external/donor reports

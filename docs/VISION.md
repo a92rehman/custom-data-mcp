@@ -44,7 +44,7 @@ Every interaction follows a five-step flow:
 
 1. **Conversation over assumption** — always clarify, never guess
 2. **Rules over ad-hoc SQL** — no direct raw table access
-3. **Definitions as code** — YAML-defined, version-controlled, review-gated. Lifecycle: `draft → review → approved → certified → deprecated`
+3. **Definitions as code** — metric definitions and query logic stored in `.claude/rules/`, version-controlled, review-gated
 4. **Observe everything** — full audit trail of who asked what
 5. **Progressive trust** — Bronze → Silver → Gold tier system
 
