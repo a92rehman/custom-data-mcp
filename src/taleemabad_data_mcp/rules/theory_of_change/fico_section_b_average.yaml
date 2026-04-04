@@ -1,0 +1,20 @@
+name: fico_section_b_average
+display_name: "FICO Section B Average"
+description: "Average score across 10 LP fidelity indicators (B1-B10), 4-point scale."
+category: theory_of_change
+tier: gold
+status: draft
+type: simple
+target: ">= 60%"
+source_table: fact_observation_scores
+partition_column: observation_date
+dimensions:
+  - school_id
+  - region_id
+  - teacher_id
+freshness_sla_hours: 4
+sensitivity: internal
+owner: pedagogy_team
+lineage:
+  silver: fact_observation_scores
+  bronze: raw_observation_events
