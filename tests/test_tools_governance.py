@@ -25,7 +25,5 @@ async def test_describe_unknown_metric():
 
 @pytest.mark.asyncio
 async def test_get_metric_lineage():
-    result = await mcp.call_tool(
-        "get_metric_lineage", {"metric_name": "lp_adoption_rate_weekly"}
-    )
+    result = await mcp.call_tool("get_metric_lineage", {"metric_name": "lp_adoption_rate_weekly"})
     assert "silver" in str(result).lower() or "fact_lesson_plan_usage" in str(result)

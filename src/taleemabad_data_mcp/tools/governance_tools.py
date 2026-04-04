@@ -17,9 +17,7 @@ def register_governance_tools(mcp, rule_engine: RuleEngine):
         Args:
             category: Filter by category (e.g., 'theory_of_change'). Omit to list all.
         """
-        metrics = (
-            rule_engine.list_by_category(category) if category else rule_engine.list_all()
-        )
+        metrics = rule_engine.list_by_category(category) if category else rule_engine.list_all()
         result = []
         for m in metrics:
             queryable = "queryable" if m.is_queryable else f"status: {m.status}"
@@ -40,8 +38,7 @@ def register_governance_tools(mcp, rule_engine: RuleEngine):
         metric = rule_engine.resolve(metric_name)
         if metric is None:
             return (
-                f"No metric found for '{metric_name}'. "
-                "Use list_metrics to see available metrics."
+                f"No metric found for '{metric_name}'. Use list_metrics to see available metrics."
             )
         return json.dumps(metric.model_dump(), indent=2, default=str)
 

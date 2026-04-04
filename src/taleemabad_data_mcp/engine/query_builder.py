@@ -28,9 +28,7 @@ class QueryBuilder:
 
         if from_key in filters:
             where_clauses.append(f"{pc} >= @date_from")
-            params.append(
-                bigquery.ScalarQueryParameter("date_from", "STRING", filters[from_key])
-            )
+            params.append(bigquery.ScalarQueryParameter("date_from", "STRING", filters[from_key]))
 
         if to_key in filters:
             where_clauses.append(f"{pc} <= @date_to")

@@ -11,9 +11,7 @@ class ValidationResult(BaseModel):
 class PartitionValidator:
     """Enforces partition-first execution policy."""
 
-    def validate(
-        self, partition_column: str | None, filters: dict[str, str]
-    ) -> ValidationResult:
+    def validate(self, partition_column: str | None, filters: dict[str, str]) -> ValidationResult:
         if partition_column is None:
             return ValidationResult(
                 valid=False,
