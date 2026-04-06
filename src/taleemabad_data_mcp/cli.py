@@ -288,3 +288,26 @@ def serve() -> None:
     from taleemabad_data_mcp.server import mcp
 
     mcp.run()
+
+
+@main.command()
+def dashboard() -> None:
+    """Launch the observability dashboard (Streamlit)."""
+    try:
+        import streamlit  # noqa: F401
+    except ImportError:
+        click.echo(
+            "Streamlit is not installed. Install dashboard dependencies:\n"
+            '  pip install "taleemabad-data-mcp[dashboard]"',
+            err=True,
+        )
+        sys.exit(1)
+
+    import subprocess as sp
+
+    dashboard_app = Path(__file__).parent / "dashboard" / "app.py"
+    if not dashboard_app.exists():
+        click.echo(f"Dashboard app not found at {dashboard_app}", err=True)
+        sys.exit(1)
+
+    sp.run(["streamlit", "run", str(dashboard_app)], check=False)

@@ -29,6 +29,11 @@ dev = [
     "pytest-cov>=5.0",
     "ruff>=0.8",
 ]
+dashboard = [
+    "streamlit>=1.30",
+    "plotly>=5.18",
+    "pandas>=2.0",
+]
 
 [tool.ruff]
 target-version = "py311"
