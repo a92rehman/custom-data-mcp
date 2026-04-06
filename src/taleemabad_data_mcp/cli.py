@@ -86,9 +86,22 @@ def _mcp_server_config(credentials: str, user_name: str) -> dict:
     }
 
 
+def _running_inside_target_venv() -> bool:
+    """Check if we're already running inside the target venv."""
+    venv = _venv_dir()
+    try:
+        return Path(sys.executable).resolve().is_relative_to(venv.resolve())
+    except (ValueError, OSError):
+        return False
+
+
 def _create_venv_and_install() -> None:
     """Create a dedicated venv and install the package from GitHub."""
     venv = _venv_dir()
+
+    if _running_inside_target_venv():
+        click.echo("Already running from the installed environment. Skipping reinstall.")
+        return
 
     # Create venv
     click.echo("Creating dedicated Python environment...")
