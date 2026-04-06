@@ -115,6 +115,23 @@ def _create_venv_and_install() -> None:
     click.echo("Package installed successfully.")
 
 
+def _mcp_json_content(credentials: str, user_name: str) -> dict:
+    """Build the .mcp.json file content."""
+    return {
+        "mcpServers": {
+            "taleemabad-data": _mcp_server_config(credentials, user_name),
+        },
+    }
+
+
+def _write_mcp_json(directory: Path, credentials: str, user_name: str) -> None:
+    """Write .mcp.json to a directory."""
+    mcp_json_path = directory / ".mcp.json"
+    content = _mcp_json_content(credentials, user_name)
+    mcp_json_path.write_text(json.dumps(content, indent=2) + "\n", encoding="utf-8")
+    return mcp_json_path
+
+
 @click.group()
 def main() -> None:
     """Taleemabad Data Navigator — governed semantic layer for BigQuery."""
@@ -173,9 +190,46 @@ def setup(user: str, credentials: str) -> None:
     click.echo(f"User config saved to {env_path}")
 
     click.echo()
-    click.echo("Setup complete! Restart Claude Code and ask a data question.")
-    click.echo(f"MCP server: {python_path}")
-    click.echo('Try: "Show me LP adoption for ICT schools this month"')
+    click.echo("Setup complete!")
+    click.echo()
+    click.echo("Next: go to any project and run:")
+    click.echo("  taleemabad-data-mcp init")
+    click.echo()
+    click.echo("This creates .mcp.json so Claude Code connects to the data MCP.")
+
+
+@main.command()
+def init() -> None:
+    """Add .mcp.json to the current project directory.
+
+    Run this in any project where you want the Taleemabad data MCP available.
+    Reads your credentials from the setup config.
+    """
+    env_path = _env_path()
+    if not env_path.exists():
+        click.echo("Error: run 'taleemabad-data-mcp setup' first.", err=True)
+        sys.exit(1)
+
+    # Read saved config
+    env_vars = {}
+    for line in env_path.read_text(encoding="utf-8").strip().split("\n"):
+        if "=" in line:
+            key, value = line.split("=", 1)
+            env_vars[key] = value
+
+    user_name = env_vars.get("TALEEMABAD_USER", "unknown")
+    credentials = env_vars.get("GOOGLE_APPLICATION_CREDENTIALS", "")
+
+    if not credentials:
+        click.echo("Error: no credentials found in config. Re-run setup.", err=True)
+        sys.exit(1)
+
+    cwd = Path.cwd()
+    mcp_path = _write_mcp_json(cwd, credentials, user_name)
+    click.echo(f"Created {mcp_path}")
+    click.echo()
+    click.echo("Open Claude Code here and run /mcp to verify.")
+    click.echo('Then ask: "Show me LP adoption for ICT schools this month"')
 
 
 @main.command()
