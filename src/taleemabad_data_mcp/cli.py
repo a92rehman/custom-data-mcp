@@ -57,7 +57,7 @@ def _save_settings(settings: dict) -> None:
     path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
 
 
-def _mcp_server_config(credentials: str) -> dict:
+def _mcp_server_config(credentials: str, user_name: str) -> dict:
     """Build the MCP server configuration entry."""
     return {
         "command": "uvx",
@@ -71,6 +71,8 @@ def _mcp_server_config(credentials: str) -> dict:
             "BIGQUERY_PROJECT": "niete-bq-prod",
             "BIGQUERY_DATASETS": "RUMI_DB,TaleemHub_DB,tbproddb",
             "GOOGLE_APPLICATION_CREDENTIALS": credentials,
+            "TALEEMABAD_USER": user_name,
+            "TALEEMABAD_HOSTNAME": platform.node(),
         },
     }
 
@@ -109,7 +111,7 @@ def setup(user: str, credentials: str) -> None:
     settings = _load_settings()
     if "mcpServers" not in settings:
         settings["mcpServers"] = {}
-    settings["mcpServers"]["taleemabad-data"] = _mcp_server_config(credentials_abs)
+    settings["mcpServers"]["taleemabad-data"] = _mcp_server_config(credentials_abs, user)
     _save_settings(settings)
     click.echo(f"MCP server configured in {_settings_path()}")
 
