@@ -4,37 +4,74 @@ A governed semantic layer between business teams and BigQuery. Ask a question in
 
 See [VISION.md](docs/VISION.md) for why this exists and where it's going.
 
-## Quick Install (for teams)
+## Install
 
-One command. Nothing added to your project directory.
+One-time setup. Takes ~2 minutes. You need Python 3.11+, [Claude Code](https://claude.ai/code), and the service account key file (ask the data team).
 
-```bash
-uvx taleemabad-data-mcp setup --user "Your Name" --credentials /path/to/service-account.json
-```
-
-This installs governance rules to `~/.claude/rules/taleemabad/` and configures the MCP server in `~/.claude/settings.json`. Open Claude Code in any project and start asking data questions.
-
-**Update rules:**
-```bash
-uvx taleemabad-data-mcp setup --user "Your Name" --credentials /path/to/key.json
-```
-
-**Uninstall:**
-```bash
-uvx taleemabad-data-mcp uninstall
-```
-
-## Developer Setup
-
-For contributing to this project:
+### macOS / Linux
 
 ```bash
-git clone https://github.com/Orenda-Project/taleemabad-data-mcp.git
-cd taleemabad-data-mcp
-uv sync --extra dev
-cp .env.example .env
-# Edit .env — see CLAUDE.md for all environment variables
+# 1. Install
+python3 -m venv ~/.claude/taleemabad-venv
+~/.claude/taleemabad-venv/bin/pip install "git+https://github.com/Orenda-Project/taleemabad-data-mcp"
+~/.claude/taleemabad-venv/bin/python -m taleemabad_data_mcp setup --user "Your Name" --credentials /path/to/niete-bq-prod-key.json
+
+# 2. Connect a project
+cd your-project
+~/.claude/taleemabad-venv/bin/python -m taleemabad_data_mcp init
+
+# 3. Open Claude Code
+claude
 ```
+
+### Windows (PowerShell)
+
+```powershell
+# 1. Install
+python -m venv "$env:USERPROFILE\.claude\taleemabad-venv"
+& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\pip.exe" install "git+https://github.com/Orenda-Project/taleemabad-data-mcp"
+& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -m taleemabad_data_mcp setup --user "Your Name" --credentials "C:\path\to\niete-bq-prod-key.json"
+
+# 2. Connect a project
+cd your-project
+& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -m taleemabad_data_mcp init
+
+# 3. Open Claude Code
+claude
+```
+
+### Verify
+
+Run `/mcp` in Claude Code — you should see `taleemabad-data · ✔ connected`.
+
+Then ask a question:
+> How many active teachers are in ICT/Islamabad?
+
+## Update
+
+```bash
+# macOS / Linux
+~/.claude/taleemabad-venv/bin/pip install --upgrade "git+https://github.com/Orenda-Project/taleemabad-data-mcp"
+~/.claude/taleemabad-venv/bin/python -m taleemabad_data_mcp setup --user "Your Name" --credentials /path/to/key.json
+
+# Windows
+& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\pip.exe" install --upgrade "git+https://github.com/Orenda-Project/taleemabad-data-mcp"
+& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -m taleemabad_data_mcp setup --user "Your Name" --credentials "C:\path\to\key.json"
+```
+
+## Uninstall
+
+```bash
+# macOS / Linux
+~/.claude/taleemabad-venv/bin/python -m taleemabad_data_mcp uninstall
+rm -rf ~/.claude/taleemabad-venv
+
+# Windows
+& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -m taleemabad_data_mcp uninstall
+Remove-Item "$env:USERPROFILE\.claude\taleemabad-venv" -Recurse -Force
+```
+
+Delete `.mcp.json` from any projects where you ran `init`.
 
 ## Tools
 
@@ -62,6 +99,18 @@ Every query is logged to BigQuery (`mcp_audit.activity_log`) and locally (`~/.cl
 - Which domains are most queried
 - BigQuery cost per user
 - Questions that didn't match any rule (gap detection)
+
+## Developer Setup
+
+For contributing to this project:
+
+```bash
+git clone https://github.com/Orenda-Project/taleemabad-data-mcp.git
+cd taleemabad-data-mcp
+uv sync --extra dev
+cp .env.example .env
+# Edit .env — see CLAUDE.md for all environment variables
+```
 
 ## Contributing
 
