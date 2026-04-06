@@ -15,6 +15,8 @@ from mcp.server.fastmcp import FastMCP
 from taleemabad_data_mcp.config import ServerConfig
 from taleemabad_data_mcp.engine.audit_logger import AuditLogger
 from taleemabad_data_mcp.engine.cost_estimator import CostEstimator
+from taleemabad_data_mcp.engine.domain_classifier import classify_domain
+from taleemabad_data_mcp.engine.feedback_logger import FeedbackLogger
 
 logger = structlog.get_logger()
 
@@ -25,6 +27,7 @@ class AppContext:
     bq_client: bigquery.Client
     audit_logger: AuditLogger
     cost_estimator: CostEstimator
+    feedback_logger: FeedbackLogger
 
 
 @asynccontextmanager
@@ -49,6 +52,13 @@ async def app_lifespan(server: FastMCP):
         hostname=config.taleemabad_hostname,
     )
     cost_estimator = CostEstimator(bq_client, max_bytes=config.bigquery_max_bytes)
+    feedback_logger = FeedbackLogger(
+        bq_client=bq_client,
+        project=config.bigquery_project,
+        audit_dataset=config.audit_dataset,
+        feedback_table="query_feedback",
+        user_name=config.taleemabad_user,
+    )
 
     logger.info(
         "server_started",
@@ -62,6 +72,7 @@ async def app_lifespan(server: FastMCP):
             bq_client=bq_client,
             audit_logger=audit_logger,
             cost_estimator=cost_estimator,
+            feedback_logger=feedback_logger,
         )
     finally:
         bq_client.close()
@@ -100,6 +111,7 @@ async def execute_query(
             generated_sql=sql,
             result_cached=False,
             error_type="dry_run",
+            domain=classify_domain([], sql),
         )
         return (
             f"Estimated bytes: {estimate.bytes_processed:,}\n"
@@ -118,16 +130,20 @@ async def execute_query(
         bytes_billed = query_job.total_bytes_billed or 0
         cost_usd = bytes_billed / 1_099_511_627_776 * 6.25 if bytes_billed else 0.0
 
+        tables = list({ref.table_id for ref in query_job.referenced_tables})
+        domain = classify_domain(tables, sql)
+
         audit.log(
             query_text=question or sql,
             generated_sql=sql,
-            tables_accessed=list({ref.table_id for ref in query_job.referenced_tables}),
+            tables_accessed=tables,
             rows_returned=len(rows),
             execution_ms=int(
                 (query_job.ended - query_job.started).total_seconds() * 1000
             ) if query_job.ended and query_job.started else None,
             cost_bytes=bytes_billed,
             cost_usd=cost_usd,
+            domain=domain,
         )
 
         if not rows:
@@ -141,6 +157,7 @@ async def execute_query(
             generated_sql=sql,
             error_type=type(e).__name__,
             error_message=str(e),
+            domain=classify_domain([], sql),
         )
         return f"Query failed: {type(e).__name__}: {e}"
 
@@ -270,3 +287,35 @@ async def get_table_schema(dataset: str, table: str) -> str:
         )
     except Exception as e:
         return f"Error: {type(e).__name__}: {e}"
+
+
+@mcp.tool()
+async def submit_feedback(
+    event_id: str,
+    rating: str,
+    comment: str = "",
+) -> str:
+    """Submit optional feedback on a query result.
+
+    Call this ONLY when the user voluntarily expresses satisfaction or
+    dissatisfaction with a query result. Never prompt for feedback —
+    it must be organic and non-intrusive.
+
+    Args:
+        event_id: The event_id from the audit log entry of the query being rated.
+        rating: "up" if the result met expectations, "down" if it did not.
+        comment: Optional free-text feedback from the user.
+    """
+    if rating not in ("up", "down"):
+        return f"Invalid rating '{rating}'. Must be 'up' or 'down'."
+
+    ctx = mcp.get_context()
+    app: AppContext = ctx.request_context.lifespan_context
+
+    entry = app.feedback_logger.log(
+        event_id=event_id,
+        rating=rating,
+        comment=comment or None,
+    )
+
+    return f"Feedback recorded (id: {entry.feedback_id}). Thank you."
