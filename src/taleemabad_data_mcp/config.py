@@ -44,6 +44,10 @@ class ServerConfig(BaseSettings):
     bigquery_max_bytes: int = 1_073_741_824  # 1 GB
     cache_ttl_seconds: int = 3600
     log_level: str = "INFO"
+    taleemabad_user: str = "unknown"
+    taleemabad_hostname: str = ""
+    audit_dataset: str = "mcp_audit"
+    audit_table: str = "activity_log"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

@@ -1,6 +1,6 @@
 """Entry point: python -m taleemabad_data_mcp"""
 
-from taleemabad_data_mcp.server import mcp
+from taleemabad_data_mcp.cli import main
 
 if __name__ == "__main__":
-    mcp.run()
+    main()

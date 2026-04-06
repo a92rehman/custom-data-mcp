@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "taleemabad-data-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "Taleemabad's Data Navigator — governed semantic layer for BigQuery"
 requires-python = ">=3.11"
 dependencies = [
@@ -13,7 +13,17 @@ dependencies = [
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
     "structlog>=24.0",
+    "click>=8.0",
 ]
+
+[project.scripts]
+taleemabad-data-mcp = "taleemabad_data_mcp.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/taleemabad_data_mcp"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/taleemabad_data_mcp/rules" = "taleemabad_data_mcp/rules"
 
 [project.optional-dependencies]
 dev = [

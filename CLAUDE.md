@@ -33,33 +33,42 @@ uv run ruff format src/ tests/            # Format
 src/
   taleemabad_data_mcp/
     __init__.py
-    __main__.py           # Entry point
-    server.py             # FastMCP instance, lifespan, MCP tools (execute_query, list_datasets, get_table_schema)
+    __main__.py           # Entry point (routes to CLI)
+    cli.py                # CLI: setup, uninstall, serve commands
+    server.py             # FastMCP instance, MCP tools
     config.py             # Configuration management (env vars)
-    engine/               # Supporting logic
-      audit_logger.py     # Immutable audit log entries
+    engine/
+      audit_logger.py     # BigQuery audit writes + local JSON Lines fallback
       cost_estimator.py   # BigQuery dry-run cost estimation
-    models/               # Pydantic models (audit entries)
+    models/
+      audit.py            # AuditLogEntry with cost tracking fields
+    rules/                # Governance rules (single source of truth)
+      index.md            # READ FIRST — routes to general rules + regions
+      data-governance.md  # General (all regions)
+      bigquery.md         # Partition policy, event table rules
+      caching.md          # Freshness, loop prevention
+      failure-handling.md # Retries, circuit breaker
+      observability.md    # Telemetry, audit logging
+      ict-islamabad/      # Region: ICT (org_id=1, dataset: tbproddb)
+        dimensions/teachers/
+        lesson_plans/
+        coaching_observations/
+        training/
 tests/
 docs/
   VISION.md
   research/
 .claude/
-  rules/
-    index.md              # READ FIRST — routes to general rules + regions
-    data-governance.md    # General (all regions)
-    bigquery.md           # General — partition policy, event table rules
-    caching.md            # General — freshness, loop prevention
-    failure-handling.md   # General — retries, circuit breaker
-    observability.md      # General — telemetry, audit logging
-    ict-islamabad/        # Region: ICT (org_id=1, dataset: tbproddb)
-      dimensions/teachers/  # Teacher profiles, required filters
-      lesson_plans/         # LP usage, status categories, counting
-      coaching_observations/ # FICO B/C/D, score mapping, observer types
-      training/             # Training levels, pass threshold, aggregation
-    punjab-rwp/           # Future — same domain structure
-    moawin/               # Future — same domain structure
+  rules/                  # Dev copy — mirrors src/.../rules/
 ```
+
+## MCP Tools
+| Tool | Purpose |
+|------|---------|
+| `execute_query` | Run governed SQL against BigQuery (cost guardrails + audit) |
+| `list_datasets` | Browse allowed datasets and tables |
+| `get_table_schema` | Get columns and types for a table |
+| `check_table_freshness` | Check when a table was last modified |
 
 ## Environment Variables
 ```
@@ -69,7 +78,18 @@ GOOGLE_APPLICATION_CREDENTIALS=<path>      # Required (service account JSON)
 BIGQUERY_MAX_BYTES=1073741824              # Default 1GB
 CACHE_TTL_SECONDS=3600                     # Default 1hr
 LOG_LEVEL=INFO
+TALEEMABAD_USER=<name>                     # For activity tracking
+AUDIT_DATASET=mcp_audit                    # Default
+AUDIT_TABLE=activity_log                   # Default
 ```
+
+## Distribution
+Teams install with one command:
+```bash
+uvx taleemabad-data-mcp setup --user "Name" --credentials /path/to/key.json
+```
+This copies rules to `~/.claude/rules/taleemabad/` and adds MCP config to `~/.claude/settings.json`.
+Nothing is added to the user's project directory.
 
 ## Code Conventions
 - Type hints on all function signatures

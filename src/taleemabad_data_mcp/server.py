@@ -40,7 +40,14 @@ async def app_lifespan(server: FastMCP):
     else:
         bq_client = bigquery.Client(project=config.bigquery_project)
 
-    audit_logger = AuditLogger()
+    audit_logger = AuditLogger(
+        bq_client=bq_client,
+        project=config.bigquery_project,
+        audit_dataset=config.audit_dataset,
+        audit_table=config.audit_table,
+        user_name=config.taleemabad_user,
+        hostname=config.taleemabad_hostname,
+    )
     cost_estimator = CostEstimator(bq_client, max_bytes=config.bigquery_max_bytes)
 
     logger.info(
@@ -101,6 +108,9 @@ async def execute_query(sql: str, dry_run: bool = False) -> str:
         results = query_job.result()
         rows = [dict(row) for row in results]
 
+        bytes_billed = query_job.total_bytes_billed or 0
+        cost_usd = bytes_billed / 1_099_511_627_776 * 6.25 if bytes_billed else 0.0
+
         audit.log(
             query_text=sql,
             generated_sql=sql,
@@ -109,6 +119,8 @@ async def execute_query(sql: str, dry_run: bool = False) -> str:
             execution_ms=int(
                 (query_job.ended - query_job.started).total_seconds() * 1000
             ) if query_job.ended and query_job.started else None,
+            cost_bytes=bytes_billed,
+            cost_usd=cost_usd,
         )
 
         if not rows:
@@ -146,6 +158,80 @@ async def list_datasets() -> str:
             result.append(f"\n{dataset_id}: ERROR: {e}")
 
     return "\n".join(result)
+
+
+@mcp.tool()
+async def check_table_freshness(dataset: str, table: str) -> str:
+    """Check when a BigQuery table was last modified.
+
+    Call this before or after queries to report data freshness to the user.
+    The caching rules require every response to include freshness context.
+
+    Args:
+        dataset: BigQuery dataset name (e.g., 'tbproddb').
+        table: Table name (e.g., 'events_partitioned').
+    """
+    ctx = mcp.get_context()
+    app: AppContext = ctx.request_context.lifespan_context
+
+    if dataset not in app.config.bigquery_datasets:
+        return f"Dataset '{dataset}' is not in the allowed list: {app.config.bigquery_datasets}"
+
+    try:
+        # Try INFORMATION_SCHEMA.PARTITIONS first (partitioned tables)
+        sql = f"""
+            SELECT
+                MAX(last_modified_time) AS last_modified,
+                MAX(partition_id) AS latest_partition
+            FROM `{app.config.bigquery_project}.{dataset}.INFORMATION_SCHEMA.PARTITIONS`
+            WHERE table_name = '{table}'
+              AND partition_id != '__NULL__'
+        """
+        result = list(app.bq_client.query(sql).result())
+
+        if result and result[0].last_modified:
+            row = result[0]
+            from datetime import UTC, datetime
+
+            now = datetime.now(UTC)
+            age = now - row.last_modified.replace(tzinfo=UTC)
+            hours = age.total_seconds() / 3600
+
+            return (
+                f"{dataset}.{table}\n"
+                f"Last modified: {row.last_modified.strftime('%Y-%m-%d %H:%M UTC')}"
+                f" ({hours:.1f}h ago)\n"
+                f"Latest partition: {row.latest_partition}"
+            )
+
+        # Fallback: __TABLES__ metadata (non-partitioned tables)
+        sql_fallback = f"""
+            SELECT last_modified_time
+            FROM `{app.config.bigquery_project}.{dataset}.__TABLES__`
+            WHERE table_id = '{table}'
+        """
+        result = list(app.bq_client.query(sql_fallback).result())
+
+        if result:
+            from datetime import UTC, datetime
+
+            ts_ms = result[0].last_modified_time
+            last_mod = datetime.fromtimestamp(ts_ms / 1000, tz=UTC)
+            now = datetime.now(UTC)
+            age = now - last_mod
+            hours = age.total_seconds() / 3600
+
+            return (
+                f"{dataset}.{table}\n"
+                f"Last modified: {last_mod.strftime('%Y-%m-%d %H:%M UTC')}"
+                f" ({hours:.1f}h ago)\n"
+                f"Not partitioned"
+            )
+
+        return f"Table '{dataset}.{table}' not found."
+
+    except Exception as e:
+        return f"Error checking freshness: {type(e).__name__}: {e}"
 
 
 @mcp.tool()
