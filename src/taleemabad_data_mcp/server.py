@@ -71,7 +71,11 @@ mcp = FastMCP("Taleemabad Data Navigator", lifespan=app_lifespan)
 
 
 @mcp.tool()
-async def execute_query(sql: str, dry_run: bool = False) -> str:
+async def execute_query(
+    sql: str,
+    question: str = "",
+    dry_run: bool = False,
+) -> str:
     """Execute a validated SQL query against BigQuery.
 
     Use this tool ONLY after consulting the rules in .claude/rules/ to determine
@@ -80,6 +84,7 @@ async def execute_query(sql: str, dry_run: bool = False) -> str:
 
     Args:
         sql: The SQL query to execute. Must be a governed query from .claude/rules/.
+        question: The user's original natural language question (for audit trail).
         dry_run: If true, only estimate cost without executing.
     """
     ctx = mcp.get_context()
@@ -89,7 +94,7 @@ async def execute_query(sql: str, dry_run: bool = False) -> str:
     if dry_run:
         estimate = app.cost_estimator.estimate(sql)
         audit.log(
-            query_text=sql,
+            query_text=question or sql,
             generated_sql=sql,
             result_cached=False,
             error_type="dry_run",
@@ -112,7 +117,7 @@ async def execute_query(sql: str, dry_run: bool = False) -> str:
         cost_usd = bytes_billed / 1_099_511_627_776 * 6.25 if bytes_billed else 0.0
 
         audit.log(
-            query_text=sql,
+            query_text=question or sql,
             generated_sql=sql,
             tables_accessed=list({ref.table_id for ref in query_job.referenced_tables}),
             rows_returned=len(rows),
@@ -130,7 +135,7 @@ async def execute_query(sql: str, dry_run: bool = False) -> str:
 
     except Exception as e:
         audit.log(
-            query_text=sql,
+            query_text=question or sql,
             generated_sql=sql,
             error_type=type(e).__name__,
             error_message=str(e),
