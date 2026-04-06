@@ -23,3 +23,4 @@ class AuditLogEntry(BaseModel):
     result_cached: bool = False
     error_type: str | None = None
     error_message: str | None = None
+    domain: str = "other"

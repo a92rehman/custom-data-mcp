@@ -74,3 +74,29 @@ def test_log_with_cost(tmp_path, monkeypatch):
     )
     assert entry.cost_bytes == 1_000_000
     assert entry.cost_usd == 0.0057
+
+
+def test_log_with_domain(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "taleemabad_data_mcp.engine.audit_logger._LOCAL_LOG_DIR", tmp_path
+    )
+    monkeypatch.setattr(
+        "taleemabad_data_mcp.engine.audit_logger._LOCAL_LOG_FILE",
+        tmp_path / "activity.jsonl",
+    )
+    logger = AuditLogger()
+    entry = logger.log(query_text="observation query", domain="observations")
+    assert entry.domain == "observations"
+
+
+def test_log_domain_defaults_to_other(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "taleemabad_data_mcp.engine.audit_logger._LOCAL_LOG_DIR", tmp_path
+    )
+    monkeypatch.setattr(
+        "taleemabad_data_mcp.engine.audit_logger._LOCAL_LOG_FILE",
+        tmp_path / "activity.jsonl",
+    )
+    logger = AuditLogger()
+    entry = logger.log(query_text="some query")
+    assert entry.domain == "other"

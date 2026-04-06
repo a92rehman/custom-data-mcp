@@ -51,6 +51,7 @@ class AuditLogger:
         result_cached: bool = False,
         error_type: str | None = None,
         error_message: str | None = None,
+        domain: str = "other",
     ) -> AuditLogEntry:
         """Create an audit log entry and persist it."""
         entry = AuditLogEntry(
@@ -68,6 +69,7 @@ class AuditLogger:
             result_cached=result_cached,
             error_type=error_type,
             error_message=error_message,
+            domain=domain,
         )
 
         # Always write to local file (fast, reliable)
@@ -143,6 +145,7 @@ class AuditLogger:
                 bigquery.SchemaField("result_cached", "BOOLEAN"),
                 bigquery.SchemaField("error_type", "STRING"),
                 bigquery.SchemaField("error_message", "STRING"),
+                bigquery.SchemaField("domain", "STRING"),
             ]
             table = bigquery.Table(self._table_id, schema=schema)
             table.time_partitioning = bigquery.TimePartitioning(
@@ -150,6 +153,21 @@ class AuditLogger:
                 field="timestamp",
             )
             self._bq_client.create_table(table, exists_ok=True)
+
+            # Migrate existing tables: add domain column if missing
+            try:
+                table_ref = self._bq_client.get_table(self._table_id)
+                existing_fields = {f.name for f in table_ref.schema}
+                if "domain" not in existing_fields:
+                    new_schema = list(table_ref.schema) + [
+                        bigquery.SchemaField("domain", "STRING"),
+                    ]
+                    table_ref.schema = new_schema
+                    self._bq_client.update_table(table_ref, ["schema"])
+                    logger.info("audit_table_migrated", added_column="domain")
+            except Exception as e:
+                logger.warning("audit_table_migration_skipped", error=str(e))
+
             self._table_exists = True
             logger.info("audit_table_ready", table=self._table_id)
         except Exception as e:
