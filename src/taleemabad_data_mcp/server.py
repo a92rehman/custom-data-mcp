@@ -84,7 +84,9 @@ async def execute_query(
 
     Args:
         sql: The SQL query to execute. Must be a governed query from .claude/rules/.
-        question: The user's original natural language question (for audit trail).
+        question: REQUIRED — the user's original natural language question exactly
+            as they asked it. This is logged for audit and activity tracking.
+            Always pass this parameter.
         dry_run: If true, only estimate cost without executing.
     """
     ctx = mcp.get_context()
