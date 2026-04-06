@@ -5,16 +5,16 @@ from __future__ import annotations
 import json
 import platform
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
 import click
-import structlog
-
-logger = structlog.get_logger()
 
 PACKAGE_NAME = "taleemabad-data-mcp"
 RULES_DIR_NAME = "taleemabad"
+VENV_DIR_NAME = "taleemabad-venv"
+GITHUB_URL = "git+https://github.com/Orenda-Project/taleemabad-data-mcp"
 
 
 def _claude_dir() -> Path:
@@ -25,6 +25,19 @@ def _claude_dir() -> Path:
 def _rules_dest() -> Path:
     """Return ~/.claude/rules/taleemabad/ path."""
     return _claude_dir() / "rules" / RULES_DIR_NAME
+
+
+def _venv_dir() -> Path:
+    """Return ~/.claude/taleemabad-venv/ path."""
+    return _claude_dir() / VENV_DIR_NAME
+
+
+def _venv_python() -> Path:
+    """Return the python executable inside the venv (cross-platform)."""
+    venv = _venv_dir()
+    if sys.platform == "win32":
+        return venv / "Scripts" / "python.exe"
+    return venv / "bin" / "python"
 
 
 def _settings_path() -> Path:
@@ -59,14 +72,10 @@ def _save_settings(settings: dict) -> None:
 
 def _mcp_server_config(credentials: str, user_name: str) -> dict:
     """Build the MCP server configuration entry."""
+    python_path = str(_venv_python())
     return {
-        "command": "uvx",
-        "args": [
-            "--from",
-            "git+https://github.com/Orenda-Project/taleemabad-data-mcp",
-            "taleemabad-data-mcp",
-            "serve",
-        ],
+        "command": python_path,
+        "args": ["-m", "taleemabad_data_mcp", "serve"],
         "env": {
             "BIGQUERY_PROJECT": "niete-bq-prod",
             "BIGQUERY_DATASETS": "RUMI_DB,TaleemHub_DB,tbproddb",
@@ -75,6 +84,35 @@ def _mcp_server_config(credentials: str, user_name: str) -> dict:
             "TALEEMABAD_HOSTNAME": platform.node(),
         },
     }
+
+
+def _create_venv_and_install() -> None:
+    """Create a dedicated venv and install the package from GitHub."""
+    venv = _venv_dir()
+
+    # Create venv
+    click.echo("Creating dedicated Python environment...")
+    subprocess.run(
+        [sys.executable, "-m", "venv", str(venv), "--clear"],
+        check=True,
+        capture_output=True,
+    )
+
+    # Install package from GitHub
+    if sys.platform == "win32":
+        pip_exe = str(venv / "Scripts" / "pip.exe")
+    else:
+        pip_exe = str(venv / "bin" / "pip")
+    click.echo("Installing taleemabad-data-mcp (this may take a minute)...")
+    result = subprocess.run(
+        [pip_exe, "install", GITHUB_URL],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        click.echo(f"Installation failed:\n{result.stderr}", err=True)
+        sys.exit(1)
+    click.echo("Package installed successfully.")
 
 
 @click.group()
@@ -94,7 +132,16 @@ def setup(user: str, credentials: str) -> None:
     """Install rules and configure Claude Code MCP connection."""
     credentials_abs = str(Path(credentials).resolve())
 
-    # 1. Copy rules to ~/.claude/rules/taleemabad/
+    # 1. Create venv and install package
+    _create_venv_and_install()
+
+    # Verify the venv python works
+    python_path = _venv_python()
+    if not python_path.exists():
+        click.echo(f"Error: Python not found at {python_path}", err=True)
+        sys.exit(1)
+
+    # 2. Copy rules to ~/.claude/rules/taleemabad/
     src_rules = _bundled_rules_dir()
     dest_rules = _rules_dest()
 
@@ -107,7 +154,7 @@ def setup(user: str, credentials: str) -> None:
     shutil.copytree(src_rules, dest_rules)
     click.echo(f"Rules installed to {dest_rules}")
 
-    # 2. Merge MCP server config into ~/.claude/settings.json
+    # 3. Merge MCP server config into ~/.claude/settings.json
     settings = _load_settings()
     if "mcpServers" not in settings:
         settings["mcpServers"] = {}
@@ -115,7 +162,7 @@ def setup(user: str, credentials: str) -> None:
     _save_settings(settings)
     click.echo(f"MCP server configured in {_settings_path()}")
 
-    # 3. Write user config env file
+    # 4. Write user config env file
     env_content = (
         f"TALEEMABAD_USER={user}\n"
         f"TALEEMABAD_HOSTNAME={platform.node()}\n"
@@ -126,13 +173,14 @@ def setup(user: str, credentials: str) -> None:
     click.echo(f"User config saved to {env_path}")
 
     click.echo()
-    click.echo("Setup complete! Open Claude Code in any project and ask a data question.")
+    click.echo("Setup complete! Restart Claude Code and ask a data question.")
+    click.echo(f"MCP server: {python_path}")
     click.echo('Try: "Show me LP adoption for ICT schools this month"')
 
 
 @main.command()
 def uninstall() -> None:
-    """Remove rules, MCP config, and user settings."""
+    """Remove rules, MCP config, venv, and user settings."""
     # 1. Remove rules
     dest_rules = _rules_dest()
     if dest_rules.exists():
@@ -152,7 +200,13 @@ def uninstall() -> None:
     else:
         click.echo("MCP server config not found (already removed).")
 
-    # 3. Remove env file
+    # 3. Remove venv
+    venv = _venv_dir()
+    if venv.exists():
+        shutil.rmtree(venv)
+        click.echo(f"Python environment removed from {venv}")
+
+    # 4. Remove env file
     env_path = _env_path()
     if env_path.exists():
         env_path.unlink()

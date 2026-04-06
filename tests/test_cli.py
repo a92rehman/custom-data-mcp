@@ -7,9 +7,8 @@ from click.testing import CliRunner
 from taleemabad_data_mcp.cli import _bundled_rules_dir, main
 
 
-def test_setup_copies_rules_and_config(tmp_path, monkeypatch):
-    """Setup should copy rules and create settings.json."""
-    claude_dir = tmp_path / ".claude"
+def _mock_patches(monkeypatch, claude_dir):
+    """Apply common monkeypatches for CLI tests."""
     monkeypatch.setattr("taleemabad_data_mcp.cli._claude_dir", lambda: claude_dir)
     monkeypatch.setattr(
         "taleemabad_data_mcp.cli._rules_dest", lambda: claude_dir / "rules" / "taleemabad"
@@ -20,8 +19,22 @@ def test_setup_copies_rules_and_config(tmp_path, monkeypatch):
     monkeypatch.setattr(
         "taleemabad_data_mcp.cli._env_path", lambda: claude_dir / "taleemabad-data-mcp.env"
     )
+    # Skip actual venv creation in tests
+    monkeypatch.setattr("taleemabad_data_mcp.cli._create_venv_and_install", lambda: None)
+    # Return current python as the venv python (it exists)
+    monkeypatch.setattr(
+        "taleemabad_data_mcp.cli._venv_python", lambda: claude_dir / "fake-python"
+    )
+    # Create the fake python file so the exists() check passes
+    claude_dir.mkdir(parents=True, exist_ok=True)
+    (claude_dir / "fake-python").write_text("")
 
-    # Create a fake credentials file
+
+def test_setup_copies_rules_and_config(tmp_path, monkeypatch):
+    """Setup should copy rules and create settings.json."""
+    claude_dir = tmp_path / ".claude"
+    _mock_patches(monkeypatch, claude_dir)
+
     creds = tmp_path / "key.json"
     creds.write_text("{}")
 
@@ -41,6 +54,11 @@ def test_setup_copies_rules_and_config(tmp_path, monkeypatch):
     settings = json.loads((claude_dir / "settings.json").read_text())
     assert "mcpServers" in settings
     assert "taleemabad-data" in settings["mcpServers"]
+    # Verify it points to local python, not uvx
+    server_config = settings["mcpServers"]["taleemabad-data"]
+    assert server_config["args"] == ["-m", "taleemabad_data_mcp", "serve"]
+    assert "TALEEMABAD_USER" in server_config["env"]
+    assert server_config["env"]["TALEEMABAD_USER"] == "Test User"
 
     # Env file was created
     env_content = (claude_dir / "taleemabad-data-mcp.env").read_text()
@@ -48,18 +66,12 @@ def test_setup_copies_rules_and_config(tmp_path, monkeypatch):
 
 
 def test_uninstall_removes_everything(tmp_path, monkeypatch):
-    """Uninstall should remove rules, config, and env file."""
+    """Uninstall should remove rules, config, venv, and env file."""
     claude_dir = tmp_path / ".claude"
     claude_dir.mkdir()
-    monkeypatch.setattr("taleemabad_data_mcp.cli._claude_dir", lambda: claude_dir)
+    _mock_patches(monkeypatch, claude_dir)
     monkeypatch.setattr(
-        "taleemabad_data_mcp.cli._rules_dest", lambda: claude_dir / "rules" / "taleemabad"
-    )
-    monkeypatch.setattr(
-        "taleemabad_data_mcp.cli._settings_path", lambda: claude_dir / "settings.json"
-    )
-    monkeypatch.setattr(
-        "taleemabad_data_mcp.cli._env_path", lambda: claude_dir / "taleemabad-data-mcp.env"
+        "taleemabad_data_mcp.cli._venv_dir", lambda: claude_dir / "taleemabad-venv"
     )
 
     # Create the things that setup would have created
@@ -67,7 +79,11 @@ def test_uninstall_removes_everything(tmp_path, monkeypatch):
     rules_dir.mkdir(parents=True)
     (rules_dir / "index.md").write_text("test")
 
-    settings = {"mcpServers": {"taleemabad-data": {"command": "uvx"}}}
+    venv_dir = claude_dir / "taleemabad-venv"
+    venv_dir.mkdir()
+    (venv_dir / "marker").write_text("venv")
+
+    settings = {"mcpServers": {"taleemabad-data": {"command": "python"}}}
     (claude_dir / "settings.json").write_text(json.dumps(settings))
 
     env_path = claude_dir / "taleemabad-data-mcp.env"
@@ -78,9 +94,10 @@ def test_uninstall_removes_everything(tmp_path, monkeypatch):
     assert result.exit_code == 0, result.output
 
     assert not rules_dir.exists()
-    assert "taleemabad-data" not in json.loads((claude_dir / "settings.json").read_text()).get(
-        "mcpServers", {}
-    )
+    assert not venv_dir.exists()
+    assert "taleemabad-data" not in json.loads(
+        (claude_dir / "settings.json").read_text()
+    ).get("mcpServers", {})
     assert not env_path.exists()
 
 
@@ -88,16 +105,7 @@ def test_setup_merges_existing_settings(tmp_path, monkeypatch):
     """Setup should merge into existing settings, not overwrite."""
     claude_dir = tmp_path / ".claude"
     claude_dir.mkdir()
-    monkeypatch.setattr("taleemabad_data_mcp.cli._claude_dir", lambda: claude_dir)
-    monkeypatch.setattr(
-        "taleemabad_data_mcp.cli._rules_dest", lambda: claude_dir / "rules" / "taleemabad"
-    )
-    monkeypatch.setattr(
-        "taleemabad_data_mcp.cli._settings_path", lambda: claude_dir / "settings.json"
-    )
-    monkeypatch.setattr(
-        "taleemabad_data_mcp.cli._env_path", lambda: claude_dir / "taleemabad-data-mcp.env"
-    )
+    _mock_patches(monkeypatch, claude_dir)
 
     # Pre-existing settings with another MCP server
     existing = {"mcpServers": {"other-server": {"command": "node"}}, "theme": "dark"}
@@ -111,10 +119,8 @@ def test_setup_merges_existing_settings(tmp_path, monkeypatch):
     assert result.exit_code == 0, result.output
 
     settings = json.loads((claude_dir / "settings.json").read_text())
-    # Both servers should exist
     assert "other-server" in settings["mcpServers"]
     assert "taleemabad-data" in settings["mcpServers"]
-    # Other settings preserved
     assert settings["theme"] == "dark"
 
 
