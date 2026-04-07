@@ -5,8 +5,9 @@ One-time setup. Takes ~2 minutes.
 ## What You Need
 
 1. **Python 3.11+** — check with `python --version` in your terminal
-2. **Claude Code** — install from https://claude.ai/code
-3. **Service account key file** (`niete-bq-prod-*.json`) — ask the data team if you don't have it
+2. **Git** — check with `git --version` (needed to install from GitHub)
+3. **Claude Code** — install from https://claude.ai/code
+4. **Service account key file** (`niete-bq-prod-*.json`) — ask the data team if you don't have it
 
 ## Setup (Windows)
 
@@ -36,7 +37,7 @@ cd C:\path\to\your-project
 ```
 
 ```powershell
-# Step 5: Open Claude Code and verify
+# Step 5: Restart Claude Code, then verify
 claude
 # Then type: /mcp
 # You should see: taleemabad-data · connected
@@ -70,7 +71,7 @@ cd your-project
 ```
 
 ```bash
-# Step 5: Open Claude Code and verify
+# Step 5: Restart Claude Code, then verify
 claude
 # Then type: /mcp
 # You should see: taleemabad-data · connected
@@ -86,15 +87,33 @@ After setup, ask a question in Claude Code:
 
 > Show me FICO Section B scores by school.
 
+## Check Version
+
+**Windows:**
+```powershell
+& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -m taleemabad_data_mcp version
+```
+
+**macOS / Linux:**
+```bash
+~/.claude/taleemabad-venv/bin/python -m taleemabad_data_mcp version
+```
+
+Or ask Claude Code: **"What version of the data MCP am I running?"**
+
 ## Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
 | `'taleemabad-data-mcp' is not recognized` | Don't run the command directly. Use the full path: `& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -m taleemabad_data_mcp ...` |
-| `python: command not found` | Install Python 3.11+ from https://python.org and make sure "Add to PATH" is checked during install |
-| `/mcp` shows `taleemabad-data · not connected` | Re-run setup (Step 3) and make sure the credentials path is correct |
+| `python: command not found` | Install Python 3.11+ from https://python.org — make sure "Add to PATH" is checked during install |
+| `git: command not found` | Install Git from https://git-scm.com/downloads |
+| `/mcp` shows `taleemabad-data · failed` | The server crashed on startup. Run upgrade to get the latest fix: see Update section below. If it still fails, re-run setup (Step 3) with correct credentials path. |
+| `/mcp` shows `taleemabad-data · not connected` | Re-run setup (Step 3) and make sure the credentials path is correct. Then restart Claude Code. |
 | `pip install` fails with permission error | Make sure you're using the venv pip, not system pip (the full path with `taleemabad-venv` in it) |
+| `pip install` fails with `error: subprocess-exited-with-error` | You may be missing Git. Install it from https://git-scm.com/downloads and try again. |
 | Setup says "Already running from the installed environment" | This is fine — it means the package is already installed |
+| MCP connected but queries fail with `Forbidden` | The service account key does not have BigQuery permissions. Ask the data team for the correct key file. |
 
 ## Update
 
@@ -114,7 +133,12 @@ When the data team releases an update, you do NOT need to re-enter your name or 
 
 The `upgrade` command reads your saved credentials from the first setup — no need to pass `--user` or `--credentials` again.
 
-After upgrading, restart Claude Code and run `/mcp` to see the new version number.
+After upgrading, **restart Claude Code** and run `/mcp` to verify the connection.
+
+Check the new version:
+```powershell
+& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -m taleemabad_data_mcp version
+```
 
 ## Uninstall
 
