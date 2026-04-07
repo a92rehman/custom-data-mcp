@@ -6,48 +6,53 @@ See [VISION.md](docs/VISION.md) for why this exists and where it's going.
 
 ## Install
 
-One-time setup. Takes ~2 minutes. You need Python 3.11+, [Claude Code](https://claude.ai/code), and the service account key file (ask the data team).
+One-time setup. Takes ~2 minutes. You need Python 3.11+, Git, [Claude Code](https://claude.ai/code), and the service account key file (ask the data team).
 
-### macOS / Linux
+See **[INSTALL.md](docs/INSTALL.md)** for detailed step-by-step instructions with troubleshooting.
+
+### Quick Start (macOS / Linux)
 
 ```bash
-# 1. Install
 python3 -m venv ~/.claude/taleemabad-venv
 ~/.claude/taleemabad-venv/bin/pip install "git+https://github.com/Orenda-Project/taleemabad-data-mcp"
-~/.claude/taleemabad-venv/bin/python -m taleemabad_data_mcp setup --user "Your Name" --credentials /path/to/niete-bq-prod-key.json
+~/.claude/taleemabad-venv/bin/python -m taleemabad_data_mcp setup --user "Your Name" --credentials /path/to/key.json
 
-# 2. Connect a project
 cd your-project
 ~/.claude/taleemabad-venv/bin/python -m taleemabad_data_mcp init
-
-# 3. Open Claude Code
 claude
 ```
 
-### Windows (PowerShell)
+### Quick Start (Windows PowerShell)
 
 ```powershell
-# 1. Install
 python -m venv "$env:USERPROFILE\.claude\taleemabad-venv"
 & "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\pip.exe" install "git+https://github.com/Orenda-Project/taleemabad-data-mcp"
-& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -m taleemabad_data_mcp setup --user "Your Name" --credentials "C:\path\to\niete-bq-prod-key.json"
+& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -m taleemabad_data_mcp setup --user "Your Name" --credentials "C:\path\to\key.json"
 
-# 2. Connect a project
 cd your-project
 & "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -m taleemabad_data_mcp init
-
-# 3. Open Claude Code
 claude
 ```
 
-> **Do NOT run `taleemabad-data-mcp` directly.** Always use the full path with `& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\..."`. See [INSTALL.md](docs/INSTALL.md) for troubleshooting.
+> **Do NOT run `taleemabad-data-mcp` directly.** Always use the full path with the venv. See [INSTALL.md](docs/INSTALL.md) for details.
 
 ### Verify
 
-Run `/mcp` in Claude Code — you should see `taleemabad-data · ✔ connected`.
+Run `/mcp` in Claude Code — you should see `taleemabad-data · connected`.
 
-Then ask a question:
-> How many active teachers are in ICT/Islamabad?
+Then ask: *"How many active PRIMARY teachers are in ICT/Islamabad?"*
+
+### Check Version
+
+```bash
+# macOS / Linux
+~/.claude/taleemabad-venv/bin/python -m taleemabad_data_mcp version
+
+# Windows
+& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -m taleemabad_data_mcp version
+```
+
+Or ask Claude Code: **"What version of the data MCP am I running?"**
 
 ## Update
 
@@ -63,7 +68,7 @@ No need to re-enter your name or credentials:
 & "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -m taleemabad_data_mcp upgrade
 ```
 
-Run `/mcp` in Claude Code to verify the new version.
+Restart Claude Code and check the version to confirm.
 
 ## Uninstall
 
@@ -83,10 +88,20 @@ Delete `.mcp.json` from any projects where you ran `init`.
 
 | Tool | Purpose |
 |------|---------|
-| `execute_query` | Run a governed SQL query against BigQuery (with cost guardrails + audit) |
+| `execute_query` | Run a governed SQL query against BigQuery (cost guardrails + audit) |
 | `list_datasets` | Browse allowed BigQuery datasets and their tables |
 | `get_table_schema` | Get columns and types for a specific table |
 | `check_table_freshness` | Check when a table was last modified |
+| `submit_feedback` | Submit optional thumbs up/down feedback on a query result |
+| `get_version` | Check the installed MCP version, user, and project info |
+
+## Regions
+
+| Region | Status | Datasets |
+|--------|--------|----------|
+| ICT/Islamabad | Complete | `tbproddb` |
+| Rawalpindi | Complete | `RUMI_DB` + `TaleemHub_DB` |
+| Moawin | Not yet available | — |
 
 ## Example Interactions
 
@@ -94,17 +109,30 @@ Delete `.mcp.json` from any projects where you ran `init`.
 
 > "Show me FICO Section B scores for ICT schools, Q1 2026."
 
-> "How is student proficiency rate calculated?"
+> "How many teachers passed Level 1 training?"
 
-> "I need teacher training completion by region but can't find a metric."
+> "Show me reading assessment results for Rawalpindi."
+
+## Observability Dashboard
+
+A Streamlit dashboard tracks MCP adoption, quality, and cost. Deploy on Railway or run locally:
+
+```bash
+pip install "taleemabad-data-mcp[dashboard]"
+python -m taleemabad_data_mcp dashboard
+```
+
+Pages: Overview, Query Analytics, Feedback, Cost, Errors, Data Freshness.
 
 ## Activity Tracking
 
-Every query is logged to BigQuery (`mcp_audit.activity_log`) and locally (`~/.claude/taleemabad-logs/activity.jsonl`). The data team can query the audit table to see:
-- Who asked what questions, when
-- Which domains are most queried
-- BigQuery cost per user
-- Questions that didn't match any rule (gap detection)
+Every query is logged to BigQuery (`mcp_audit.activity_log`) and locally (`~/.claude/taleemabad-logs/activity.jsonl`). Users can optionally give thumbs up/down feedback stored in `mcp_audit.query_feedback`. The dashboard visualizes:
+- Active users and query volume trends
+- Satisfaction rate (expectation vs reality)
+- Level of confidence (governance success + satisfaction)
+- BigQuery cost per user and domain
+- Error rates and governance gaps
+- Data freshness status
 
 ## Developer Setup
 
@@ -131,6 +159,7 @@ Internal Taleemabad project. See [CLAUDE.md](CLAUDE.md) for coding conventions.
 
 | Document | What you'll learn |
 |----------|-------------------|
+| [INSTALL.md](docs/INSTALL.md) | Step-by-step setup with troubleshooting |
 | [VISION.md](docs/VISION.md) | Why this exists, principles, governance design, roadmap |
 | [CLAUDE.md](CLAUDE.md) | Tech stack, project structure, commands, coding conventions |
 | [Research](docs/research/) | Background research (5 reports) |
