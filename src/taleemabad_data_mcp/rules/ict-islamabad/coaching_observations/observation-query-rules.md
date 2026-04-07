@@ -73,14 +73,27 @@ Observers are stored polymorphically via two columns on `coaching_observation`:
 - `user_profile_content_type_id = 70` → Principal (join to `users_principalprofile`)
 - Digital Coach (AI) observations — check with data team for identification method
 
+## AI vs Human Observation Bifurcation
+
+The `source` column on `coaching_observationquestion` distinguishes AI from human observations:
+- `source = 'manual'` → Human coach/principal questions (125,676 questions)
+- `source = 'automated'` → AI/Digital Coach questions (107 questions)
+
+To filter for human-only observations, add `oq.source = 'manual'` (or `oq.source IS NULL OR oq.source = 'manual'`).
+To filter for AI observations, add `oq.source = 'automated'`.
+
+See `coaching_ai/ai-coaching-rules.md` for full AI coaching rules.
+
 ## Key Tables
+
+### Raw Tables (canonical for query building)
 
 | Table | Role |
 |-------|------|
 | `tbproddb.coaching_observation` | Core record — date, boys/girls count, feedback, observer type |
 | `tbproddb.coaching_teachervisit` | Links observation to teacher + grade_subject |
 | `tbproddb.coaching_observationanswer` | One row per question answered |
-| `tbproddb.coaching_observationquestion` | Question metadata — prompt, type, purpose, section |
+| `tbproddb.coaching_observationquestion` | Question metadata — prompt, type, purpose, section, **source** |
 | `tbproddb.coaching_questionoption` | Selected answer — label, score_type |
 | `tbproddb.coaching_observationquestiongroup` | Question groups — title, order |
 | `tbproddb.coaching_observationsection` | Section container (used to classify B/C/D) |
@@ -89,6 +102,35 @@ Observers are stored polymorphically via two columns on `coaching_observation`:
 | `tbproddb.users_principalprofile` + `users_user` | Principal identity |
 | `tbproddb.user_school_profiles` | Teacher dimension — join via `profile_id = teacher_id` |
 | `tbproddb.FDE_Schools` | ICT school reference — join on EMIS for school name |
+
+### Pre-processed FICO Tables (verification / quick lookups)
+
+These are **pre-processed clean tables** maintained by the data team. Use for quick verification or when the raw query is too complex. For governed reporting, prefer the raw tables above — they are the source of truth.
+
+| Table | Role | Rows | Status |
+|-------|------|------|--------|
+| `tbproddb.Fico_Observations` | Pre-processed observation summaries with observer/teacher/school | 6,697 | Active — use for verification |
+| `tbproddb.Fico_Lesson_Fidelity_Data` | Section B scores (B1-B13) per observation | 0 | Empty — not yet populated |
+| `tbproddb.cf_indicators_data_fico` | Section C indicator scores (Q5-Q18) per observation | 0 | Empty — not yet populated |
+| `tbproddb.mini_assessment_fico_data` | Mini-assessment student correct counts per observation | 0 | Empty — not yet populated |
+| `tbproddb.fico_teacher_obs_details` | Teacher observation sequence (observation_number, order_label) | 0 | Empty — not yet populated |
+
+### Fico_Observations Key Columns
+- `Observation_ID` — primary key (STRING)
+- `Observation_Created`, `Observation_Modified` — dates (DATE)
+- `Observation_Date` — display date (STRING)
+- `Observer_Role`, `Observer_Name` — observer identity
+- `Teacher_Name`, `Teacher_user_id`, `TeacherprofileID` — teacher identity
+- `School_Emis`, `School_Name`, `Sector` — school context
+- `Grade`, `Subject` — classroom context
+- `Observation_Completion_Status` — completion status
+- `Feedback_Given` — whether feedback was provided (STRING)
+- `Feedback_Text` — actual feedback text (STRING)
+
+**When to use raw vs FICO tables:**
+- **Raw tables**: governed queries, score calculations, section breakdowns, custom aggregations
+- **Fico_Observations**: quick observation counts, observer/teacher/school lookups, verification of raw query results
+- **Other FICO tables**: currently empty (0 rows) — will be useful when populated for Section B/C score verification
 
 ## Required Filters
 

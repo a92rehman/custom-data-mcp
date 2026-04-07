@@ -34,8 +34,17 @@ When: LP usage, completion rates, On-Schedule/Off-Schedule, Core vs User Generat
 - `lp-query-rules.md` — LP types, status categories, counting rules, aggregation
 
 ### ict-islamabad/coaching_observations/
-When: FICO scores, Section B/C/D, observer activity, feedback
-- `observation-query-rules.md` — sections, score mapping, observer types, aggregation
+When: FICO scores, Section B/C/D, observer activity, feedback, AI vs human bifurcation
+- `observation-query-rules.md` — sections, score mapping, observer types, FICO clean tables, aggregation
+
+### ict-islamabad/coaching_ai/
+When: Digital Coach (AI) observations, automated observation questions, request tracker pipeline
+- `ai-coaching-rules.md` — source='automated' bifurcation, same FICO scoring, digital_coach_requesttracker (verification only)
+
+### ict-islamabad/student_results/
+When: AI student assessments, ASER enumerator assessments, student learning outcomes
+- `ai-assessment-rules.md` — CONFLICT/possibly inactive, student_learning_studentassessmentresult (133 rows)
+- `aser-enumerator-rules.md` — ODK endline ASER (grades 1-3 + 4-5), 52 ODK tables available
 
 ### ict-islamabad/training/
 When: teacher training levels, pass rates, completion status
