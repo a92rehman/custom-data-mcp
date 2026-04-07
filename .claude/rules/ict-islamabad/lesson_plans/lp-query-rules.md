@@ -57,8 +57,9 @@ Ask: "Per teacher, per school, per week, or overall?"
 
 | Table | Role |
 |-------|------|
-| `tbproddb.events_partitioned` | **USE THIS** — partitioned daily on `created`, filter required. 7.5 GB |
-| `tbproddb.analytics_analyticsevent` | **AVOID** — unpartitioned, 68.6 GB, full scan every query. Only use if `events_partitioned` is missing data |
+| `tbproddb.analytics_events` | **USE THIS** — CANONICAL event table. Partitioned daily on `sent_at`, 70M+ rows. Always filter on `sent_at`. |
+| `tbproddb.events_partitioned` | **FALLBACK** — older partitioned copy on `created`. Use only if `analytics_events` is missing needed data. |
+| `tbproddb.analytics_analyticsevent` | **NEVER USE** — unpartitioned, 68.6 GB full scan. Legacy table. |
 | `tbproddb.lp_info_all_types` | Pre-computed: one row per teacher x LP x date x type (Core + User Generated) |
 | `tbproddb.schools_schoolclasstimetable` | Weekly schedule — `daysOfWeek` string where digits 1-5 = weekdays |
 | `tbproddb.schools_schoolclasssubject` | Teacher-to-class-subject assignments |

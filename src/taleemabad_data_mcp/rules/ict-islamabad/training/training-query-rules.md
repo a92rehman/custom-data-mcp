@@ -38,10 +38,11 @@ The base query produces one row per **teacher x training level** (cross join of 
 Pass status comes from two sources, merged via COALESCE (q1 preferred, q2 fallback):
 
 ### q1 — Analytics Events
-- Event: `'trainingExamLevelPassed'` from `analytics_analyticsevent`
+- Event: `'trainingExamLevelPassed'` from `analytics_events` (preferred) or `analytics_analyticsevent` (legacy fallback)
+- Use `analytics_events` with `WHERE sent_at >= DATE('...')` — it is the CANONICAL partitioned event table (70M+ rows, partitioned daily on `sent_at`)
 - Level: `JSON_VALUE(properties, '$.ep_level_name')` — lowercased and trimmed
 - Join to levels on: `LOWER(TRIM(training_level)) = level_name`
-- Low-volume event — unpartitioned table acceptable here but be cost-aware on large date ranges
+- Low-volume event — but still use partitioned table to avoid unnecessary scans
 
 ### q2 — Assessment Results
 - Table: `teacher_training_assessment` (derived table)
@@ -58,7 +59,8 @@ Pass status comes from two sources, merged via COALESCE (q1 preferred, q2 fallba
 |-------|------|
 | `tbproddb.teacher_training_level` | Level definitions — name, order |
 | `tbproddb.teacher_training_assessment` | Assessment results — score, grand_quiz_id, profile_id |
-| `tbproddb.analytics_analyticsevent` | Event source for `trainingExamLevelPassed` |
+| `tbproddb.analytics_events` | **USE THIS** — CANONICAL event source for `trainingExamLevelPassed`. Partitioned on `sent_at`. |
+| `tbproddb.analytics_analyticsevent` | Legacy unpartitioned — avoid, use `analytics_events` instead |
 | `tbproddb.user_school_profiles` | Teacher dimension — cross join with levels to build the full matrix |
 
 ## Aggregation Patterns

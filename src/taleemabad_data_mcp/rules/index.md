@@ -72,7 +72,7 @@ Cross-region comparison is limited to **volume and coverage metrics**. Qualitati
 | KPI | ICT Source | RWP Source | Comparable Metric |
 |-----|-----------|-----------|-------------------|
 | User data | user_school_profiles | TaleemHub_DB.users | Teacher count, cohort size |
-| Lesson plans | events_partitioned | RUMI_DB.lesson_plans | Volume only |
+| Lesson plans | analytics_events (canonical) | RUMI_DB.lesson_plans | Volume only |
 | Coaching - Human | coaching_observation (scored) | mentoring_visits (narrative) | Session count + coverage % |
 | Coaching - AI | observation stack (automated) | coaching_sessions | Session count + completion rate |
 | Student results - AI | not active | reading_assessments | Not comparable yet |

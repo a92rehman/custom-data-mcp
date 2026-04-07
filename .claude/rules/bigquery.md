@@ -8,9 +8,16 @@
 - Handle errors by type: `BadRequest` (syntax), `Forbidden` (permissions), `NotFound` (table), `InternalServerError` (circuit breaker)
 - Unpartitioned tables → log as partition debt, don't run full scan
 
-## Event Tables — Always Use Partitioned Version
-- `tbproddb.events_partitioned` — **USE THIS** for event queries. Partitioned daily on `created`, filter required. 7.5 GB.
-- `tbproddb.analytics_analyticsevent` — **NEVER query directly**. Unpartitioned, 68.6 GB, full table scan. Only use if `events_partitioned` is confirmed missing the needed data.
-- Always include `WHERE created >= DATE('...')` when querying `events_partitioned`
+## Event Tables — Hierarchy
+
+| Table | Status | Partition | Size | Notes |
+|-------|--------|-----------|------|-------|
+| `tbproddb.analytics_events` | **USE THIS** | DAY on `sent_at` | 70M+ rows | CANONICAL. Partitioned, most complete. Prefer this for all event queries. |
+| `tbproddb.events_partitioned` | **FALLBACK** | DAY on `created` | 7.5 GB | Older partitioned copy. Use only if `analytics_events` is missing needed data. |
+| `tbproddb.analytics_analyticsevent` | **NEVER USE** | None (unpartitioned) | 68.6 GB | Full table scan. Legacy, do not query directly. |
+
+- Always include `WHERE sent_at >= DATE('...')` when querying `analytics_events`
+- Always include `WHERE created >= DATE('...')` when querying `events_partitioned` (fallback only)
+- The description on `analytics_events` mentions "Prefer `taleemabad_analytics.activity_events`" — this is a cross-dataset alias; use the `tbproddb.analytics_events` path
 
 - Design rationale: docs/VISION.md Section 10
