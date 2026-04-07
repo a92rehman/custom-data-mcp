@@ -8,13 +8,13 @@ from taleemabad_data_mcp.dashboard.components.charts import (
     line_chart,
     stacked_bar_chart,
 )
-from taleemabad_data_mcp.dashboard.components.filters import render_sidebar_filters
+from taleemabad_data_mcp.dashboard.components.filters import render_filters
 from taleemabad_data_mcp.dashboard.data.queries import get_activity_log
 
 st.header("Query Analytics")
 st.caption("Deep dive into query patterns, volume, and user behavior")
 
-filters = render_sidebar_filters()
+filters = render_filters()
 df = get_activity_log(**filters)
 
 if df.empty:
