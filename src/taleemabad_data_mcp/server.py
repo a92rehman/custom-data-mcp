@@ -82,7 +82,6 @@ async def app_lifespan(server: FastMCP):
 mcp = FastMCP(
     f"Taleemabad Data Navigator v{__version__}",
     lifespan=app_lifespan,
-    version=__version__,
 )
 
 
