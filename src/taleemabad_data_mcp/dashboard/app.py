@@ -11,7 +11,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 st.set_page_config(
-    page_title="Taleemabad MCP Observatory",
+    page_title="Overview",
     page_icon="T",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -57,6 +57,22 @@ st.markdown("""
     div[data-testid="stMetric"] [data-testid="stMetricValue"] {
         font-size: 1.6rem; font-weight: 700; color: #1E293B;
     }
+    .kpi-card {
+        background: white; border: 1px solid #E2E8F0; border-radius: 12px;
+        padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        position: relative;
+    }
+    .kpi-card .kpi-label { font-weight: 500; color: #64748B; font-size: 0.85rem; }
+    .kpi-card .kpi-value { font-size: 1.6rem; font-weight: 700; color: #1E293B; margin: 4px 0 0; }
+    .kpi-info-btn {
+        position: absolute; top: 10px; right: 12px;
+        width: 20px; height: 20px; border-radius: 50%;
+        background: #F1F5F9; border: 1px solid #E2E8F0;
+        color: #94A3B8; font-size: 11px; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; transition: all 0.2s;
+    }
+    .kpi-info-btn:hover { background: #3B82F6; color: white; border-color: #3B82F6; }
     .section-header {
         font-size: 0.95rem; font-weight: 600; color: #1E293B;
         margin: 0.6rem 0 0.3rem 0; padding-bottom: 0.25rem;
@@ -146,15 +162,59 @@ else:
 confidence = success_rate * 0.7 + satisfaction * 0.3 if feedback_count > 0 else success_rate
 
 # ======================================================================
-# ROW 1: PRIMARY KPIs (the 3 key metrics + supporting ones)
+# ROW 1: PRIMARY KPIs with info buttons
 # ======================================================================
-c1, c2, c3, c4, c5, c6 = st.columns(6)
-c1.metric("Active Users", active_users)
-c2.metric("Total Queries", f"{total_queries:,}")
-c3.metric("Confidence", f"{confidence:.0f}%")
-c4.metric("Satisfaction", f"{satisfaction:.0f}%" if feedback_count else "N/A")
-c5.metric("Error Rate", f"{error_rate:.1f}%")
-c6.metric("Total Cost", f"${total_cost:.2f}")
+KPI_HELP = {
+    "Active Users": (
+        "Unique users who ran at least one query in the selected time range. "
+        "Excludes dry runs."
+    ),
+    "Total Queries": (
+        "Total executed queries (excludes dry-run cost estimates). "
+        "Includes both successful and failed queries."
+    ),
+    "Confidence": (
+        "Level of Confidence in the governed data layer. "
+        "Composite score: 70% query success rate (no errors) + "
+        "30% user satisfaction (thumbs up ratio). "
+        "Higher = system reliably returns correct governed data."
+    ),
+    "Satisfaction": (
+        "Percentage of thumbs-up ratings out of all feedback received. "
+        "Feedback is optional — users rate results only when they choose to. "
+        "N/A means no feedback has been submitted yet."
+    ),
+    "Error Rate": (
+        "Percentage of queries that failed (BadRequest, Forbidden, NotFound, etc.). "
+        "Excludes dry runs. Lower is better. "
+        "Check the Errors page for details on specific failure types."
+    ),
+    "Total Cost": (
+        "Total BigQuery spend in USD for executed queries. "
+        "Calculated from bytes billed at $6.25/TB. "
+        "Check the Cost page for per-user and per-domain breakdowns."
+    ),
+}
+
+kpi_data = [
+    ("Active Users", str(active_users)),
+    ("Total Queries", f"{total_queries:,}"),
+    ("Confidence", f"{confidence:.0f}%"),
+    ("Satisfaction", f"{satisfaction:.0f}%" if feedback_count else "N/A"),
+    ("Error Rate", f"{error_rate:.1f}%"),
+    ("Total Cost", f"${total_cost:.2f}"),
+]
+
+cols = st.columns(6)
+for col, (label, value) in zip(cols, kpi_data, strict=True):
+    with col:
+        # Info button using Streamlit popover
+        top_row = st.columns([5, 1])
+        with top_row[1], st.popover("i", use_container_width=True):
+            st.markdown(f"**{label}**")
+            st.markdown(KPI_HELP[label])
+        with top_row[0]:
+            st.metric(label=label, value=value)
 
 st.markdown("")
 
