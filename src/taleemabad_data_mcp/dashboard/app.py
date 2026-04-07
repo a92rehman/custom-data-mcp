@@ -46,33 +46,44 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700&display=swap');
     .stApp { font-family: 'Fira Sans', system-ui, sans-serif; }
     .block-container { padding-top: 1.2rem; padding-bottom: 0.5rem; }
-    div[data-testid="stMetric"] {
-        background: white;
-        border: 1px solid #E2E8F0;
-        border-radius: 12px;
-        padding: 14px 18px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-    div[data-testid="stMetric"] label { font-weight: 500; color: #64748B; font-size: 0.85rem; }
-    div[data-testid="stMetric"] [data-testid="stMetricValue"] {
-        font-size: 1.6rem; font-weight: 700; color: #1E293B;
-    }
     .kpi-card {
         background: white; border: 1px solid #E2E8F0; border-radius: 12px;
-        padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-        position: relative;
+        padding: 16px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        position: relative; min-height: 88px;
     }
-    .kpi-card .kpi-label { font-weight: 500; color: #64748B; font-size: 0.85rem; }
-    .kpi-card .kpi-value { font-size: 1.6rem; font-weight: 700; color: #1E293B; margin: 4px 0 0; }
-    .kpi-info-btn {
-        position: absolute; top: 10px; right: 12px;
-        width: 20px; height: 20px; border-radius: 50%;
-        background: #F1F5F9; border: 1px solid #E2E8F0;
-        color: #94A3B8; font-size: 11px; font-weight: 700;
-        display: flex; align-items: center; justify-content: center;
-        cursor: pointer; transition: all 0.2s;
+    .kpi-card .kpi-label { font-weight: 500; color: #64748B; font-size: 0.82rem; }
+    .kpi-card .kpi-value {
+        font-size: 1.55rem; font-weight: 700; color: #1E293B; margin: 4px 0 0;
     }
-    .kpi-info-btn:hover { background: #3B82F6; color: white; border-color: #3B82F6; }
+    .kpi-info {
+        position: absolute; top: 10px; right: 10px;
+        width: 18px; height: 18px; border-radius: 50%;
+        background: #F1F5F9; border: 1px solid #CBD5E1;
+        color: #64748B; font-size: 10px; font-weight: 700;
+        display: inline-flex; align-items: center; justify-content: center;
+        cursor: pointer; transition: all 0.2s; line-height: 1;
+        text-decoration: none;
+    }
+    .kpi-info:hover { background: #3B82F6; color: white; border-color: #3B82F6; }
+    .kpi-tooltip {
+        display: none; position: absolute; top: 32px; right: 0;
+        width: 240px; padding: 10px 12px; background: #1E293B;
+        color: #F8FAFC; font-size: 0.75rem; font-weight: 400;
+        border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 100; line-height: 1.45;
+    }
+    .kpi-tooltip::before {
+        content: ''; position: absolute; top: -6px; right: 12px;
+        width: 0; height: 0;
+        border-left: 6px solid transparent; border-right: 6px solid transparent;
+        border-bottom: 6px solid #1E293B;
+    }
+    .kpi-info:hover + .kpi-tooltip, .kpi-tooltip:hover { display: block; }
+    /* Rename "app" to "Overview" in sidebar navigation */
+    [data-testid="stSidebarNav"] li:first-child a span { font-size: 0; }
+    [data-testid="stSidebarNav"] li:first-child a span::after {
+        content: "Overview"; font-size: 14px;
+    }
     .section-header {
         font-size: 0.95rem; font-weight: 600; color: #1E293B;
         margin: 0.6rem 0 0.3rem 0; padding-bottom: 0.25rem;
@@ -205,16 +216,26 @@ kpi_data = [
     ("Total Cost", f"${total_cost:.2f}"),
 ]
 
+
+def _render_kpi(label: str, value: str, tooltip: str) -> str:
+    """Return HTML for a KPI card with info tooltip."""
+    return (
+        f'<div class="kpi-card">'
+        f'<span class="kpi-info">!</span>'
+        f'<div class="kpi-tooltip">{tooltip}</div>'
+        f'<div class="kpi-label">{label}</div>'
+        f'<div class="kpi-value">{value}</div>'
+        f"</div>"
+    )
+
+
 cols = st.columns(6)
 for col, (label, value) in zip(cols, kpi_data, strict=True):
     with col:
-        # Info button using Streamlit popover
-        top_row = st.columns([5, 1])
-        with top_row[1], st.popover("i", use_container_width=True):
-            st.markdown(f"**{label}**")
-            st.markdown(KPI_HELP[label])
-        with top_row[0]:
-            st.metric(label=label, value=value)
+        st.markdown(
+            _render_kpi(label, value, KPI_HELP[label]),
+            unsafe_allow_html=True,
+        )
 
 st.markdown("")
 
