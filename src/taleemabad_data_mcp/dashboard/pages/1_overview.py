@@ -3,7 +3,12 @@
 import pandas as pd
 import streamlit as st
 
-from taleemabad_data_mcp.dashboard.components.charts import bar_chart, kpi_card, line_chart, stacked_bar_chart
+from taleemabad_data_mcp.dashboard.components.charts import (
+    bar_chart,
+    kpi_card,
+    line_chart,
+    stacked_bar_chart,
+)
 from taleemabad_data_mcp.dashboard.components.filters import render_sidebar_filters
 from taleemabad_data_mcp.dashboard.data.queries import get_activity_log, get_feedback
 
@@ -44,7 +49,8 @@ st.divider()
 df["date"] = pd.to_datetime(df["timestamp"]).dt.date
 dau = df.groupby("date")["user_name"].nunique().reset_index()
 dau.columns = ["Date", "Active Users"]
-st.plotly_chart(line_chart(dau, "Date", "Active Users", "Daily Active Users"), use_container_width=True)
+fig = line_chart(dau, "Date", "Active Users", "Daily Active Users")
+st.plotly_chart(fig, use_container_width=True)
 
 vol = df.groupby(["date", "domain"]).size().reset_index(name="Queries")
 st.plotly_chart(

@@ -40,10 +40,15 @@ if errors.empty:
 
 errors["date"] = pd.to_datetime(errors["timestamp"]).dt.date
 daily_errors = errors.groupby("date").size().reset_index(name="Errors")
-st.plotly_chart(line_chart(daily_errors, "date", "Errors", "Errors Over Time"), use_container_width=True)
+fig = line_chart(daily_errors, "date", "Errors", "Errors Over Time")
+st.plotly_chart(fig, use_container_width=True)
 
-type_counts = errors.groupby("error_type").size().reset_index(name="Count").sort_values("Count", ascending=False)
-st.plotly_chart(bar_chart(type_counts, "error_type", "Count", "Errors by Type"), use_container_width=True)
+type_counts = (
+    errors.groupby("error_type").size()
+    .reset_index(name="Count").sort_values("Count", ascending=False)
+)
+fig = bar_chart(type_counts, "error_type", "Count", "Errors by Type")
+st.plotly_chart(fig, use_container_width=True)
 
 st.subheader("Governance Gaps")
 gaps = errors[

@@ -42,15 +42,24 @@ if cost_df.empty:
 cost_df["date"] = pd.to_datetime(cost_df["timestamp"]).dt.date
 daily_cost = cost_df.groupby("date")["cost_usd"].sum().reset_index()
 daily_cost.columns = ["Date", "Cost (USD)"]
-st.plotly_chart(line_chart(daily_cost, "Date", "Cost (USD)", "Daily Spend"), use_container_width=True)
+fig = line_chart(daily_cost, "Date", "Cost (USD)", "Daily Spend")
+st.plotly_chart(fig, use_container_width=True)
 
-user_cost = cost_df.groupby("user_name")["cost_usd"].sum().reset_index().sort_values("cost_usd", ascending=False)
+user_cost = (
+    cost_df.groupby("user_name")["cost_usd"]
+    .sum().reset_index().sort_values("cost_usd", ascending=False)
+)
 user_cost.columns = ["User", "Cost (USD)"]
-st.plotly_chart(bar_chart(user_cost.head(10), "User", "Cost (USD)", "Top Spenders"), use_container_width=True)
+fig = bar_chart(user_cost.head(10), "User", "Cost (USD)", "Top Spenders")
+st.plotly_chart(fig, use_container_width=True)
 
-domain_cost = cost_df.groupby("domain")["cost_usd"].sum().reset_index().sort_values("cost_usd", ascending=False)
+domain_cost = (
+    cost_df.groupby("domain")["cost_usd"]
+    .sum().reset_index().sort_values("cost_usd", ascending=False)
+)
 domain_cost.columns = ["Domain", "Cost (USD)"]
-st.plotly_chart(bar_chart(domain_cost, "Domain", "Cost (USD)", "Cost by Domain"), use_container_width=True)
+fig = bar_chart(domain_cost, "Domain", "Cost (USD)", "Cost by Domain")
+st.plotly_chart(fig, use_container_width=True)
 
 large = cost_df.nlargest(10, "cost_bytes")
 if not large.empty:

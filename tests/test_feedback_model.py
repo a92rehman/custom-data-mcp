@@ -1,6 +1,7 @@
 """Tests for FeedbackEntry model."""
 
 import pytest
+from pydantic import ValidationError
 
 from taleemabad_data_mcp.models.feedback import FeedbackEntry
 
@@ -28,7 +29,7 @@ def test_feedback_entry_with_comment():
 
 
 def test_feedback_entry_invalid_rating():
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         FeedbackEntry(event_id="abc-123", rating="maybe")
 
 

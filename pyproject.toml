@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "taleemabad-data-mcp"
-version = "0.2.0"
+version = "0.3.0"
 description = "Taleemabad's Data Navigator — governed semantic layer for BigQuery"
 requires-python = ">=3.11"
 dependencies = [
@@ -41,6 +41,9 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/taleemabad_data_mcp/dashboard/pages/*.py" = ["N999"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

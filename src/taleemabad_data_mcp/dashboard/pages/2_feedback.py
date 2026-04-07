@@ -14,7 +14,10 @@ fb = get_feedback(days=filters["days"])
 activity = get_activity_log(**filters)
 
 if fb.empty:
-    st.info("No feedback data found. Feedback is collected when users voluntarily rate query results.")
+    st.info(
+        "No feedback data found. Feedback is collected when users "
+        "voluntarily rate query results."
+    )
     st.stop()
 
 col1, col2, col3 = st.columns(3)

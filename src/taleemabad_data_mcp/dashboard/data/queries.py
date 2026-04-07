@@ -9,7 +9,7 @@ from taleemabad_data_mcp.dashboard.data.client import get_bq_client, get_config
 def _full_table(table_key: str) -> str:
     """Build fully qualified table name."""
     cfg = get_config()
-    table_name = cfg[table_key] if table_key in cfg else table_key
+    table_name = cfg.get(table_key, table_key)
     return f"`{cfg['project']}.{cfg['audit_dataset']}.{table_name}`"
 
 
