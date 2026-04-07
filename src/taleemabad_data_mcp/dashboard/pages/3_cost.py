@@ -1,16 +1,26 @@
-"""Cost tracking — BigQuery spend analysis."""
+"""Cost — BigQuery spend analysis and optimization insights."""
 
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 
-from taleemabad_data_mcp.dashboard.components.charts import bar_chart, kpi_card, line_chart
+from taleemabad_data_mcp.dashboard.components.charts import DOMAIN_COLORS
 from taleemabad_data_mcp.dashboard.components.filters import render_filters
+from taleemabad_data_mcp.dashboard.components.styles import (
+    CHART_H,
+    CHART_H_SM,
+    COLORS,
+    inject_page_css,
+)
 from taleemabad_data_mcp.dashboard.data.queries import get_activity_log
+
+inject_page_css()
 
 st.header("Cost Tracking")
 st.caption("BigQuery spend analysis — who is querying what, and how much does it cost?")
 
 filters = render_filters()
+st.markdown("---")
 df = get_activity_log(**filters)
 
 if df.empty:
@@ -19,53 +29,130 @@ if df.empty:
 
 cost_df = df[df["cost_usd"].notna() & (df["cost_usd"] > 0)].copy()
 
-col1, col2, col3 = st.columns(3)
+# -- KPI row --
+total_cost = cost_df["cost_usd"].sum() if not cost_df.empty else 0
+total_bytes = cost_df["cost_bytes"].sum() if not cost_df.empty else 0
+avg_cost = cost_df["cost_usd"].mean() if not cost_df.empty else 0
+num_queries = len(cost_df)
+max_query = cost_df["cost_usd"].max() if not cost_df.empty else 0
 
-with col1:
-    total_cost = cost_df["cost_usd"].sum() if not cost_df.empty else 0
-    kpi_card("Total Spend", f"${total_cost:.2f}")
+c1, c2, c3, c4, c5 = st.columns(5)
+c1.metric("Total Spend", f"${total_cost:.2f}")
+c2.metric("Data Scanned", f"{total_bytes / (1024**3):.1f} GB")
+c3.metric("Avg per Query", f"${avg_cost:.4f}")
+c4.metric("Billed Queries", f"{num_queries:,}")
+c5.metric("Most Expensive", f"${max_query:.4f}")
 
-with col2:
-    total_bytes = cost_df["cost_bytes"].sum() if not cost_df.empty else 0
-    gb = total_bytes / (1024 ** 3)
-    kpi_card("Total Data Scanned", f"{gb:.1f} GB")
-
-with col3:
-    avg_cost = cost_df["cost_usd"].mean() if not cost_df.empty else 0
-    kpi_card("Avg Cost/Query", f"${avg_cost:.4f}")
-
-st.divider()
+st.markdown("")
 
 if cost_df.empty:
     st.info("No queries with cost data in this period.")
     st.stop()
 
+# -- Row 1: Spend trend + Cumulative spend --
 cost_df["date"] = pd.to_datetime(cost_df["timestamp"]).dt.date
-daily_cost = cost_df.groupby("date")["cost_usd"].sum().reset_index()
-daily_cost.columns = ["Date", "Cost (USD)"]
-fig = line_chart(daily_cost, "Date", "Cost (USD)", "Daily Spend")
-st.plotly_chart(fig, use_container_width=True)
+col1, col2 = st.columns(2)
 
-user_cost = (
-    cost_df.groupby("user_name")["cost_usd"]
-    .sum().reset_index().sort_values("cost_usd", ascending=False)
-)
-user_cost.columns = ["User", "Cost (USD)"]
-fig = bar_chart(user_cost.head(10), "User", "Cost (USD)", "Top Spenders")
-st.plotly_chart(fig, use_container_width=True)
-
-domain_cost = (
-    cost_df.groupby("domain")["cost_usd"]
-    .sum().reset_index().sort_values("cost_usd", ascending=False)
-)
-domain_cost.columns = ["Domain", "Cost (USD)"]
-fig = bar_chart(domain_cost, "Domain", "Cost (USD)", "Cost by Domain")
-st.plotly_chart(fig, use_container_width=True)
-
-large = cost_df.nlargest(10, "cost_bytes")
-if not large.empty:
-    st.subheader("Largest Queries")
-    st.dataframe(
-        large[["timestamp", "user_name", "domain", "cost_usd", "cost_bytes", "query_text"]],
-        use_container_width=True,
+with col1:
+    st.markdown(
+        '<div class="section-header">Daily Spend</div>',
+        unsafe_allow_html=True,
     )
+    daily = cost_df.groupby("date")["cost_usd"].sum().reset_index()
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=daily["date"], y=daily["cost_usd"],
+        marker_color=COLORS["primary"],
+        text=[f"${v:.3f}" for v in daily["cost_usd"]],
+        textposition="outside", textfont_size=9,
+    ))
+    fig.update_layout(
+        template="plotly_white",
+        margin=dict(l=10, r=10, t=10, b=10), height=CHART_H,
+        xaxis=dict(title=None), yaxis=dict(title=None),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+with col2:
+    st.markdown(
+        '<div class="section-header">Cumulative Spend</div>',
+        unsafe_allow_html=True,
+    )
+    daily_sorted = daily.sort_values("date")
+    daily_sorted["cumulative"] = daily_sorted["cost_usd"].cumsum()
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=daily_sorted["date"], y=daily_sorted["cumulative"],
+        mode="lines+markers", fill="tozeroy",
+        line=dict(color=COLORS["accent"], width=2),
+        marker=dict(size=4),
+    ))
+    fig.update_layout(
+        template="plotly_white",
+        margin=dict(l=10, r=10, t=10, b=10), height=CHART_H,
+        xaxis=dict(title=None), yaxis=dict(title=None),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+# -- Row 2: Cost by domain + Cost by user --
+col3, col4 = st.columns(2)
+
+with col3:
+    st.markdown(
+        '<div class="section-header">Cost by Domain</div>',
+        unsafe_allow_html=True,
+    )
+    by_domain = (
+        cost_df.groupby("domain")["cost_usd"]
+        .sum().reset_index().sort_values("cost_usd", ascending=True)
+    )
+    d_colors = [
+        DOMAIN_COLORS.get(d, "#94A3B8") for d in by_domain["domain"]
+    ]
+    fig = go.Figure(go.Bar(
+        x=by_domain["cost_usd"], y=by_domain["domain"],
+        orientation="h", marker_color=d_colors,
+        text=[f"${v:.3f}" for v in by_domain["cost_usd"]],
+        textposition="auto",
+    ))
+    fig.update_layout(
+        template="plotly_white",
+        margin=dict(l=10, r=10, t=10, b=10), height=CHART_H_SM,
+        xaxis=dict(title=None), yaxis=dict(title=None),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+with col4:
+    st.markdown(
+        '<div class="section-header">Cost by User</div>',
+        unsafe_allow_html=True,
+    )
+    by_user = (
+        cost_df.groupby("user_name")["cost_usd"]
+        .sum().reset_index().sort_values("cost_usd", ascending=True)
+    )
+    fig = go.Figure(go.Bar(
+        x=by_user["cost_usd"], y=by_user["user_name"],
+        orientation="h", marker_color=COLORS["primary"],
+        text=[f"${v:.3f}" for v in by_user["cost_usd"]],
+        textposition="auto",
+    ))
+    fig.update_layout(
+        template="plotly_white",
+        margin=dict(l=10, r=10, t=10, b=10), height=CHART_H_SM,
+        xaxis=dict(title=None), yaxis=dict(title=None),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+# -- Most expensive queries --
+st.markdown(
+    '<div class="section-header">Most Expensive Queries</div>',
+    unsafe_allow_html=True,
+)
+top = cost_df.nlargest(10, "cost_usd")
+display_cols = [
+    "timestamp", "user_name", "domain", "cost_usd",
+    "cost_bytes", "query_text",
+]
+available = [c for c in display_cols if c in top.columns]
+st.dataframe(top[available], use_container_width=True, hide_index=True)
