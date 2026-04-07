@@ -323,3 +323,21 @@ async def submit_feedback(
     )
 
     return f"Feedback recorded (id: {entry.feedback_id}). Thank you."
+
+
+@mcp.tool()
+async def get_version() -> str:
+    """Get the installed version of the Taleemabad Data MCP.
+
+    Use this when the user asks what version they are running,
+    or when troubleshooting to confirm the installed version.
+    """
+    ctx = mcp.get_context()
+    app: AppContext = ctx.request_context.lifespan_context
+
+    return (
+        f"Taleemabad Data Navigator v{__version__}\n"
+        f"User: {app.config.taleemabad_user}\n"
+        f"Project: {app.config.bigquery_project}\n"
+        f"Datasets: {', '.join(app.config.bigquery_datasets)}"
+    )

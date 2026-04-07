@@ -150,6 +150,14 @@ def main() -> None:
     """Taleemabad Data Navigator — governed semantic layer for BigQuery."""
 
 
+@main.command(name="version")
+def show_version() -> None:
+    """Show the installed version."""
+    from taleemabad_data_mcp import __version__
+
+    click.echo(f"taleemabad-data-mcp v{__version__}")
+
+
 @main.command()
 @click.option("--user", required=True, help="Your name (for activity tracking).")
 @click.option(
