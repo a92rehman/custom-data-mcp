@@ -40,6 +40,8 @@ cd your-project
 claude
 ```
 
+> **Do NOT run `taleemabad-data-mcp` directly.** Always use the full path with `& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\..."`. See [INSTALL.md](docs/INSTALL.md) for troubleshooting.
+
 ### Verify
 
 Run `/mcp` in Claude Code — you should see `taleemabad-data · ✔ connected`.
