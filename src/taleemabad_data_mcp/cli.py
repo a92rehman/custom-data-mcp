@@ -158,6 +158,54 @@ def show_version() -> None:
     click.echo(f"taleemabad-data-mcp v{__version__}")
 
 
+@main.command(name="bump")
+@click.option(
+    "--minor", is_flag=True, default=False,
+    help="Bump minor version (0.X.0) for bigger releases. Default is patch (0.0.X).",
+)
+def bump_version(minor: bool) -> None:
+    """Bump version, update files, and commit.
+
+    Patch bump (default): 0.3.0 → 0.3.1 (fixes, small changes)
+    Minor bump (--minor): 0.3.1 → 0.4.0 (new features, bigger releases)
+    """
+    import re
+
+    init_file = Path(__file__).parent / "__init__.py"
+    pyproject_file = Path(__file__).parent.parent.parent / "pyproject.toml"
+
+    # Read current version
+    init_text = init_file.read_text(encoding="utf-8")
+    match = re.search(r'__version__\s*=\s*"(\d+)\.(\d+)\.(\d+)"', init_text)
+    if not match:
+        click.echo("Error: could not find __version__ in __init__.py", err=True)
+        sys.exit(1)
+
+    major, mid, patch = int(match.group(1)), int(match.group(2)), int(match.group(3))
+    old_version = f"{major}.{mid}.{patch}"
+
+    new_version = f"{major}.{mid + 1}.0" if minor else f"{major}.{mid}.{patch + 1}"
+
+    # Update __init__.py
+    new_init = init_text.replace(f'__version__ = "{old_version}"', f'__version__ = "{new_version}"')
+    init_file.write_text(new_init, encoding="utf-8")
+
+    # Update pyproject.toml
+    if pyproject_file.exists():
+        pyproject_text = pyproject_file.read_text(encoding="utf-8")
+        new_pyproject = pyproject_text.replace(
+            f'version = "{old_version}"', f'version = "{new_version}"',
+        )
+        pyproject_file.write_text(new_pyproject, encoding="utf-8")
+
+    click.echo(f"Version bumped: {old_version} -> {new_version}")
+    click.echo(f"Updated: {init_file.name}, {pyproject_file.name}")
+    click.echo()
+    click.echo("Now commit and push:")
+    click.echo(f'  git add -A && git commit -m "chore: bump version to v{new_version}"')
+    click.echo("  git push origin master && git push origin master:main")
+
+
 @main.command()
 @click.option("--user", required=True, help="Your name (for activity tracking).")
 @click.option(
