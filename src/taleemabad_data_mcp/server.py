@@ -12,6 +12,7 @@ import structlog
 from google.cloud import bigquery
 from mcp.server.fastmcp import FastMCP
 
+from taleemabad_data_mcp import __version__
 from taleemabad_data_mcp.config import ServerConfig
 from taleemabad_data_mcp.engine.audit_logger import AuditLogger
 from taleemabad_data_mcp.engine.cost_estimator import CostEstimator
@@ -78,7 +79,11 @@ async def app_lifespan(server: FastMCP):
         bq_client.close()
 
 
-mcp = FastMCP("Taleemabad Data Navigator", lifespan=app_lifespan)
+mcp = FastMCP(
+    f"Taleemabad Data Navigator v{__version__}",
+    lifespan=app_lifespan,
+    version=__version__,
+)
 
 
 @mcp.tool()
