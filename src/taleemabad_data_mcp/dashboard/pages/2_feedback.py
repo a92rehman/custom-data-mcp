@@ -8,6 +8,7 @@ from taleemabad_data_mcp.dashboard.components.filters import render_sidebar_filt
 from taleemabad_data_mcp.dashboard.data.queries import get_activity_log, get_feedback
 
 st.header("Expectation vs Reality")
+st.caption("Are MCP answers meeting user expectations? Feedback collected voluntarily.")
 
 filters = render_sidebar_filters()
 fb = get_feedback(days=filters["days"])
@@ -32,7 +33,8 @@ with col2:
     kpi_card("Thumbs Down", int(down_count))
 with col3:
     total_queries = len(activity) if not activity.empty else 0
-    unrated_pct = f"{(1 - total_fb / total_queries) * 100:.0f}%" if total_queries > 0 else "N/A"
+    ratio = (1 - total_fb / total_queries) * 100 if total_queries > 0 else 0
+    unrated_pct = f"{ratio:.0f}%" if total_queries > 0 else "N/A"
     kpi_card("Unrated Queries", unrated_pct)
 
 st.divider()

@@ -8,6 +8,7 @@ from taleemabad_data_mcp.dashboard.components.filters import render_sidebar_filt
 from taleemabad_data_mcp.dashboard.data.queries import get_activity_log
 
 st.header("Cost Tracking")
+st.caption("BigQuery spend analysis — who is querying what, and how much does it cost?")
 
 filters = render_sidebar_filters()
 df = get_activity_log(**filters)
