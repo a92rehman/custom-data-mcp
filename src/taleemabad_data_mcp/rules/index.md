@@ -10,7 +10,7 @@ This file is auto-loaded every session. Read the relevant section based on the u
 ## Step 1: Determine Region
 Always clarify which region before reading domain rules:
 - `organization_id = 1` → **ICT/Islamabad** → read `ict-islamabad/`
-- Punjab/RWP → read `punjab-rwp/` (not yet available)
+- Rawalpindi → read `rawalpindi/`
 - Moawin → read `moawin/` (not yet available)
 
 If the region's rules don't exist yet, tell the user: "Rules for [region] haven't been added yet."
@@ -41,11 +41,43 @@ When: FICO scores, Section B/C/D, observer activity, feedback
 When: teacher training levels, pass rates, completion status
 - `training-query-rules.md` — pass threshold (>=80), two data sources, level ordering
 
-## Region: Punjab/RWP (`punjab-rwp/`)
-Not yet available. Will follow same domain structure when added.
+## Region: Rawalpindi (`rawalpindi/`)
+Datasets: `RUMI_DB` + `TaleemHub_DB` | Join key: `phone_number` | Cohort: `TaleemHub_DB.users`
+
+### rawalpindi/dimensions/users/
+When: teacher profiles, user counts, school assignments, cohort size
+- `user-query-rules.md` — TaleemHub canonical roster, Rumi join via phone_number, role/status filters
+
+### rawalpindi/lesson_plans/
+When: AI lesson plan generation counts, LP volume by grade/subject
+- `lp-query-rules.md` — Rumi lesson_plans, RWP cohort via phone_number bridge
+
+### rawalpindi/coaching/
+When: human mentoring visits, AI coaching sessions, coaching results
+- `human-coaching-rules.md` — TaleemHub mentoring_visits, narrative feedback, geo-verification
+- `ai-coaching-rules.md` — Rumi coaching_sessions + quality_metrics, audio-based AI coaching pipeline
+
+### rawalpindi/student_results/
+When: reading assessments (AI), ASER assessments (human)
+- `ai-assessment-rules.md` — Rumi reading_assessments (WCPM, accuracy, comprehension)
+- `human-assessment-rules.md` — DRAFT — TaleemHub ASER results, pending rubric verification
 
 ## Region: Moawin (`moawin/`)
 Not yet available. Will follow same domain structure when added.
+
+## Cross-Region KPI Comparability
+
+Cross-region comparison is limited to **volume and coverage metrics**. Qualitative comparison (scores, outcomes) is NOT valid because regions use fundamentally different tools and scoring frameworks.
+
+| KPI | ICT Source | RWP Source | Comparable Metric |
+|-----|-----------|-----------|-------------------|
+| User data | user_school_profiles | TaleemHub_DB.users | Teacher count, cohort size |
+| Lesson plans | events_partitioned | RUMI_DB.lesson_plans | Volume only |
+| Coaching - Human | coaching_observation (scored) | mentoring_visits (narrative) | Session count + coverage % |
+| Coaching - AI | observation stack (automated) | coaching_sessions | Session count + completion rate |
+| Student results - AI | not active | reading_assessments | Not comparable yet |
+| Student results - Human | ODK ASER | TaleemHub ASER | Volume only |
+| Training | teacher_training_level | Not in scope | ICT only |
 
 ## BigQuery Context
 - Project: `niete-bq-prod`
