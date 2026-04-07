@@ -98,19 +98,23 @@ After setup, ask a question in Claude Code:
 
 ## Update
 
-When the data team releases an update:
+When the data team releases an update, you do NOT need to re-enter your name or credentials. Just two commands:
 
 **Windows:**
 ```powershell
 & "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\pip.exe" install --force-reinstall "git+https://github.com/Orenda-Project/taleemabad-data-mcp"
-& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -m taleemabad_data_mcp setup --user "Your Name" --credentials "C:\path\to\key.json"
+& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -m taleemabad_data_mcp upgrade
 ```
 
 **macOS / Linux:**
 ```bash
 ~/.claude/taleemabad-venv/bin/pip install --force-reinstall "git+https://github.com/Orenda-Project/taleemabad-data-mcp"
-~/.claude/taleemabad-venv/bin/python -m taleemabad_data_mcp setup --user "Your Name" --credentials /path/to/key.json
+~/.claude/taleemabad-venv/bin/python -m taleemabad_data_mcp upgrade
 ```
+
+The `upgrade` command reads your saved credentials from the first setup — no need to pass `--user` or `--credentials` again.
+
+After upgrading, restart Claude Code and run `/mcp` to see the new version number.
 
 ## Uninstall
 

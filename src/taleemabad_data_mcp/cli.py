@@ -211,6 +211,72 @@ def setup(user: str, credentials: str) -> None:
     click.echo("This creates .mcp.json so Claude Code connects to the data MCP.")
 
 
+def _read_saved_config() -> dict[str, str]:
+    """Read saved user config from ~/.claude/taleemabad-data-mcp.env."""
+    env_path = _env_path()
+    if not env_path.exists():
+        return {}
+    env_vars = {}
+    for line in env_path.read_text(encoding="utf-8").strip().split("\n"):
+        if "=" in line:
+            key, value = line.split("=", 1)
+            env_vars[key] = value
+    return env_vars
+
+
+@main.command()
+def upgrade() -> None:
+    """Update rules and MCP config using your saved credentials.
+
+    Run this after updating the package. No need to re-enter your name
+    or credentials path — they are read from your first setup.
+    """
+    saved = _read_saved_config()
+    user_name = saved.get("TALEEMABAD_USER")
+    credentials = saved.get("GOOGLE_APPLICATION_CREDENTIALS")
+
+    if not user_name or not credentials:
+        click.echo(
+            "Error: no saved config found. Run setup first:\n"
+            '  python -m taleemabad_data_mcp setup --user "Name" '
+            "--credentials /path/to/key.json",
+            err=True,
+        )
+        sys.exit(1)
+
+    if not Path(credentials).exists():
+        click.echo(
+            f"Error: saved credentials file not found: {credentials}\n"
+            "Re-run setup with the correct path.",
+            err=True,
+        )
+        sys.exit(1)
+
+    # Copy rules
+    src_rules = _bundled_rules_dir()
+    dest_rules = _rules_dest()
+    if dest_rules.exists():
+        shutil.rmtree(dest_rules)
+    shutil.copytree(src_rules, dest_rules)
+    click.echo(f"Rules updated in {dest_rules}")
+
+    # Update MCP server config
+    settings = _load_settings()
+    if "mcpServers" not in settings:
+        settings["mcpServers"] = {}
+    settings["mcpServers"]["taleemabad-data"] = _mcp_server_config(
+        credentials, user_name,
+    )
+    _save_settings(settings)
+    click.echo(f"MCP config updated in {_settings_path()}")
+
+    from taleemabad_data_mcp import __version__
+
+    click.echo()
+    click.echo(f"Upgrade complete! Now running v{__version__}")
+    click.echo("Restart Claude Code and run /mcp to verify.")
+
+
 @main.command()
 def init() -> None:
     """Add .mcp.json to the current project directory.
@@ -218,23 +284,12 @@ def init() -> None:
     Run this in any project where you want the Taleemabad data MCP available.
     Reads your credentials from the setup config.
     """
-    env_path = _env_path()
-    if not env_path.exists():
-        click.echo("Error: run 'taleemabad-data-mcp setup' first.", err=True)
-        sys.exit(1)
+    saved = _read_saved_config()
+    user_name = saved.get("TALEEMABAD_USER", "unknown")
+    credentials = saved.get("GOOGLE_APPLICATION_CREDENTIALS", "")
 
-    # Read saved config
-    env_vars = {}
-    for line in env_path.read_text(encoding="utf-8").strip().split("\n"):
-        if "=" in line:
-            key, value = line.split("=", 1)
-            env_vars[key] = value
-
-    user_name = env_vars.get("TALEEMABAD_USER", "unknown")
-    credentials = env_vars.get("GOOGLE_APPLICATION_CREDENTIALS", "")
-
-    if not credentials:
-        click.echo("Error: no credentials found in config. Re-run setup.", err=True)
+    if not credentials or not user_name:
+        click.echo("Error: run setup first.", err=True)
         sys.exit(1)
 
     cwd = Path.cwd()

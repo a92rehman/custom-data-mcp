@@ -51,15 +51,19 @@ Then ask a question:
 
 ## Update
 
+No need to re-enter your name or credentials:
+
 ```bash
 # macOS / Linux
-~/.claude/taleemabad-venv/bin/pip install --upgrade "git+https://github.com/Orenda-Project/taleemabad-data-mcp"
-~/.claude/taleemabad-venv/bin/python -m taleemabad_data_mcp setup --user "Your Name" --credentials /path/to/key.json
+~/.claude/taleemabad-venv/bin/pip install --force-reinstall "git+https://github.com/Orenda-Project/taleemabad-data-mcp"
+~/.claude/taleemabad-venv/bin/python -m taleemabad_data_mcp upgrade
 
 # Windows
-& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\pip.exe" install --upgrade "git+https://github.com/Orenda-Project/taleemabad-data-mcp"
-& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -m taleemabad_data_mcp setup --user "Your Name" --credentials "C:\path\to\key.json"
+& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\pip.exe" install --force-reinstall "git+https://github.com/Orenda-Project/taleemabad-data-mcp"
+& "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -m taleemabad_data_mcp upgrade
 ```
+
+Run `/mcp` in Claude Code to verify the new version.
 
 ## Uninstall
 
