@@ -29,19 +29,17 @@ def fake_repo(tmp_path):
     (rules / "index.md").write_text("# Rules Index\n")
     (rules / "bigquery.md").write_text("# BigQuery\n")
 
-    # Create plugin directory (what bump_version writes TO)
-    plugin_dir = tmp_path / "plugin"
-    plugin_dir.mkdir()
-    (plugin_dir / ".current-version").write_text("v0.4.8\n")
+    # Create root-level plugin files (what bump_version writes TO)
+    (tmp_path / ".current-version").write_text("v0.4.8\n")
 
-    manifest_dir = plugin_dir / ".claude-plugin"
+    manifest_dir = tmp_path / ".claude-plugin"
     manifest_dir.mkdir()
     (manifest_dir / "plugin.json").write_text(
         json.dumps({"name": "taleemabad-data", "version": "0.4.8"}) + "\n"
     )
 
-    # Existing plugin/rules with stale content (should be replaced by bump)
-    plugin_rules = plugin_dir / "rules"
+    # Existing rules/ with stale content (should be replaced by bump)
+    plugin_rules = tmp_path / "rules"
     plugin_rules.mkdir()
     (plugin_rules / "old-stale.md").write_text("stale content\n")
 
@@ -76,9 +74,9 @@ def test_bump_updates_pyproject(fake_repo):
 
 
 def test_bump_syncs_rules_to_plugin(fake_repo):
-    """After bump, plugin/rules/ should contain src rules, not stale content."""
+    """After bump, rules/ at repo root should contain src rules, not stale content."""
     _call_bump(fake_repo, minor=False)
-    plugin_rules = fake_repo / "plugin" / "rules"
+    plugin_rules = fake_repo / "rules"
     assert (plugin_rules / "index.md").exists()
     assert (plugin_rules / "bigquery.md").exists()
     # Old stale file should be gone (directory was replaced)
@@ -88,12 +86,12 @@ def test_bump_syncs_rules_to_plugin(fake_repo):
 def test_bump_updates_plugin_manifest_version(fake_repo):
     _call_bump(fake_repo, minor=False)
     manifest = json.loads(
-        (fake_repo / "plugin" / ".claude-plugin" / "plugin.json").read_text()
+        (fake_repo / ".claude-plugin" / "plugin.json").read_text()
     )
     assert manifest["version"] == "0.4.9"
 
 
 def test_bump_updates_current_version_file(fake_repo):
     _call_bump(fake_repo, minor=False)
-    content = (fake_repo / "plugin" / ".current-version").read_text().strip()
+    content = (fake_repo / ".current-version").read_text().strip()
     assert content == "v0.4.9"

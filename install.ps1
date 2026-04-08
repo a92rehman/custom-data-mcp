@@ -52,7 +52,7 @@ if (Test-Path $PLUGIN_DIR) {
         $savedCreds = ($envContent | Where-Object Key -eq 'GOOGLE_APPLICATION_CREDENTIALS').Value
         if ($savedUser -and $savedCreds) {
             $winPython = "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -replace '\\', '\\\\'
-            $mcpTemplate = Get-Content "$PLUGIN_DIR\plugin\.mcp.json" -Raw
+            $mcpTemplate = Get-Content "$PLUGIN_DIR\.mcp.json" -Raw
             $mcpFinal = $mcpTemplate `
                 -replace [regex]::Escape('${HOME}/.claude/taleemabad-venv/bin/python'), $winPython `
                 -replace '\$\{HOME\}', ($env:USERPROFILE -replace '\\', '\\\\') `
@@ -108,7 +108,7 @@ Write-Host "✓ Config saved to $ENV_FILE"
 # --- Write final .mcp.json with substituted values ---
 # On Windows, replace the Unix venv path pattern with the Windows equivalent
 $winPython = "$env:USERPROFILE\.claude\taleemabad-venv\Scripts\python.exe" -replace '\\', '\\\\'
-$mcpTemplate = Get-Content "$PLUGIN_DIR\plugin\.mcp.json" -Raw
+$mcpTemplate = Get-Content "$PLUGIN_DIR\.mcp.json" -Raw
 $mcpFinal = $mcpTemplate `
     -replace [regex]::Escape('${HOME}/.claude/taleemabad-venv/bin/python'), $winPython `
     -replace '\$\{HOME\}', ($env:USERPROFILE -replace '\\', '\\\\') `

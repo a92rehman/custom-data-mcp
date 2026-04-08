@@ -45,7 +45,7 @@ if [ -d "$PLUGIN_DIR" ]; then
       export _CREDS="$SAVED_CREDS"
       python3 - << 'PYEOF'
 import json, os, sys
-template = open(os.path.join(os.environ['PLUGIN_DIR'], 'plugin', '.mcp.json')).read()
+template = open(os.path.join(os.environ['PLUGIN_DIR'], '.mcp.json')).read()
 result = template \
     .replace('${HOME}', os.environ['HOME']) \
     .replace('${TALEEMABAD_CREDENTIALS}', os.environ['_CREDS']) \
@@ -117,7 +117,7 @@ export _USER="$TALEEMABAD_USER"
 export _CREDS="$CREDENTIALS_PATH"
 python3 - << 'PYEOF'
 import json, os, sys
-template = open(os.path.join(os.environ['PLUGIN_DIR'], 'plugin', '.mcp.json')).read()
+template = open(os.path.join(os.environ['PLUGIN_DIR'], '.mcp.json')).read()
 result = template \
     .replace('${HOME}', os.environ['HOME']) \
     .replace('${TALEEMABAD_CREDENTIALS}', os.environ['_CREDS']) \

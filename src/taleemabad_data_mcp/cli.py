@@ -170,7 +170,7 @@ def bump_version(minor: bool = False) -> None:
     repo_root = Path(__file__).parent.parent.parent
     pyproject_file = repo_root / "pyproject.toml"
     src_rules_dir = Path(__file__).parent / "rules"
-    plugin_rules_dir = repo_root / "plugin" / "rules"
+    plugin_rules_dir = repo_root / "rules"
 
     # Read current version
     init_text = init_file.read_text(encoding="utf-8")
@@ -204,14 +204,14 @@ def bump_version(minor: bool = False) -> None:
         shutil.copytree(src_rules_dir, plugin_rules_dir)
 
     # Update plugin manifest version
-    plugin_json = repo_root / "plugin" / ".claude-plugin" / "plugin.json"
+    plugin_json = repo_root / ".claude-plugin" / "plugin.json"
     if plugin_json.exists():
         manifest = json.loads(plugin_json.read_text(encoding="utf-8"))
         manifest["version"] = new_version
         plugin_json.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
     # Update plugin/.current-version
-    current_version_file = repo_root / "plugin" / ".current-version"
+    current_version_file = repo_root / ".current-version"
     if current_version_file.exists():
         current_version_file.write_text(f"v{new_version}\n", encoding="utf-8")
 

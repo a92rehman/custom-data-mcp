@@ -1,7 +1,7 @@
 {
   "name": "taleemabad-data",
   "version": "0.5.0",
-  "description": "Governed BigQuery analytics for Taleemabad \u2014 ICT/Islamabad and Rawalpindi regions. Enforces data governance rules, audit logging, and cost guardrails.",
+  "description": "Governed BigQuery analytics for Taleemabad \u2014 two intelligent agents with self-healing query loop, auto-updating governance rules, and full audit trail",
   "author": {
     "name": "Orenda Project",
     "url": "https://github.com/Orenda-Project"
@@ -19,5 +19,8 @@
   "agents": [
     "./agents/data-analyst.md",
     "./agents/data-admin.md"
+  ],
+  "commands": [
+    "./commands/setup.md"
   ]
 }
