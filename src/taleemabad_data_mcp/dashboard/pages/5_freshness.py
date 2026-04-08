@@ -1,5 +1,11 @@
 """Freshness — how up-to-date are the data tables powering governed metrics."""
 
+import sys as _sys
+from pathlib import Path as _Path
+_src = str(_Path(__file__).parent.parent.parent.parent)
+if _src not in _sys.path:
+    _sys.path.insert(0, _src)
+
 from datetime import UTC, datetime
 
 import pandas as pd

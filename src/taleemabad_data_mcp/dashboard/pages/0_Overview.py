@@ -1,5 +1,11 @@
 """Executive overview — the full story at a glance."""
 
+import sys as _sys
+from pathlib import Path as _Path
+_src = str(_Path(__file__).parent.parent.parent.parent)
+if _src not in _sys.path:
+    _sys.path.insert(0, _src)
+
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
