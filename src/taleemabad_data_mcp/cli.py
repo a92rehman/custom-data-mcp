@@ -158,28 +158,25 @@ def show_version() -> None:
     click.echo(f"taleemabad-data-mcp v{__version__}")
 
 
-@main.command(name="bump")
-@click.option(
-    "--minor", is_flag=True, default=False,
-    help="Bump minor version (0.X.0) for bigger releases. Default is patch (0.0.X).",
-)
-def bump_version(minor: bool) -> None:
-    """Bump version, update files, and commit.
+def bump_version(minor: bool = False) -> None:
+    """Bump package version (patch or minor) and sync plugin rules.
 
-    Patch bump (default): 0.3.0 → 0.3.1 (fixes, small changes)
-    Minor bump (--minor): 0.3.1 → 0.4.0 (new features, bigger releases)
+    Patch bump (default): 0.3.0 -> 0.3.1 (fixes, small changes)
+    Minor bump (minor=True): 0.3.1 -> 0.4.0 (new features, bigger releases)
     """
     import re
 
     init_file = Path(__file__).parent / "__init__.py"
-    pyproject_file = Path(__file__).parent.parent.parent / "pyproject.toml"
+    repo_root = Path(__file__).parent.parent.parent
+    pyproject_file = repo_root / "pyproject.toml"
+    src_rules_dir = Path(__file__).parent / "rules"
+    plugin_rules_dir = repo_root / "plugin" / "rules"
 
     # Read current version
     init_text = init_file.read_text(encoding="utf-8")
     match = re.search(r'__version__\s*=\s*"(\d+)\.(\d+)\.(\d+)"', init_text)
     if not match:
-        click.echo("Error: could not find __version__ in __init__.py", err=True)
-        sys.exit(1)
+        raise RuntimeError("Could not find __version__ in __init__.py")
 
     major, mid, patch = int(match.group(1)), int(match.group(2)), int(match.group(3))
     old_version = f"{major}.{mid}.{patch}"
@@ -187,7 +184,9 @@ def bump_version(minor: bool) -> None:
     new_version = f"{major}.{mid + 1}.0" if minor else f"{major}.{mid}.{patch + 1}"
 
     # Update __init__.py
-    new_init = init_text.replace(f'__version__ = "{old_version}"', f'__version__ = "{new_version}"')
+    new_init = init_text.replace(
+        f'__version__ = "{old_version}"', f'__version__ = "{new_version}"'
+    )
     init_file.write_text(new_init, encoding="utf-8")
 
     # Update pyproject.toml
@@ -198,12 +197,44 @@ def bump_version(minor: bool) -> None:
         )
         pyproject_file.write_text(new_pyproject, encoding="utf-8")
 
-    click.echo(f"Version bumped: {old_version} -> {new_version}")
-    click.echo(f"Updated: {init_file.name}, {pyproject_file.name}")
-    click.echo()
-    click.echo("Now commit and push:")
-    click.echo(f'  git add -A && git commit -m "chore: bump version to v{new_version}"')
-    click.echo("  git push origin master && git push origin master:main")
+    # Sync plugin/rules/ from src rules
+    if src_rules_dir.exists():
+        if plugin_rules_dir.exists():
+            shutil.rmtree(plugin_rules_dir)
+        shutil.copytree(src_rules_dir, plugin_rules_dir)
+
+    # Update plugin manifest version
+    plugin_json = repo_root / "plugin" / ".claude-plugin" / "plugin.json"
+    if plugin_json.exists():
+        manifest = json.loads(plugin_json.read_text(encoding="utf-8"))
+        manifest["version"] = new_version
+        plugin_json.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+    # Update plugin/.current-version
+    current_version_file = repo_root / "plugin" / ".current-version"
+    if current_version_file.exists():
+        current_version_file.write_text(f"v{new_version}\n", encoding="utf-8")
+
+    print(f"Version bumped: {old_version} -> {new_version}")
+    print(f"  Next: git add -A && git commit -m 'chore: bump version to v{new_version}' && git push")
+
+
+@main.command(name="bump")
+@click.option(
+    "--minor", is_flag=True, default=False,
+    help="Bump minor version (0.X.0) for bigger releases. Default is patch (0.0.X).",
+)
+def bump_cmd(minor: bool) -> None:
+    """Bump version, sync plugin rules, and print next steps.
+
+    Patch bump (default): 0.3.0 -> 0.3.1 (fixes, small changes)
+    Minor bump (--minor): 0.3.1 -> 0.4.0 (new features, bigger releases)
+    """
+    try:
+        bump_version(minor=minor)
+    except RuntimeError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        sys.exit(1)
 
 
 @main.command()
