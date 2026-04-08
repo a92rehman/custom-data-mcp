@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Make the package importable when running directly from source
+export PYTHONPATH="${PYTHONPATH}:/app/src"
+
 # Write GCP credentials from env var to file (Railway can't upload files)
 if [ -n "$GOOGLE_CREDENTIALS_JSON" ]; then
     echo "$GOOGLE_CREDENTIALS_JSON" > /tmp/credentials.json
