@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "taleemabad-data": {
+      "command": "~/.claude/uv",
+      "args": [
+        "run",
+        "--with", "git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@v0.5.3",
+        "--python", "3.11",
+        "python", "-m", "taleemabad_data_mcp", "serve"
+      ],
+      "env": {
+        "BIGQUERY_PROJECT": "niete-bq-prod",
+        "BIGQUERY_DATASETS": "RUMI_DB,TaleemHub_DB,tbproddb,odk,mcp_audit",
+        "GOOGLE_APPLICATION_CREDENTIALS": "/path/to/your/credentials.json",
+        "TALEEMABAD_USER": "Your Name"
+      }
+    }
+  }
+}
