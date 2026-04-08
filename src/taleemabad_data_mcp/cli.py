@@ -421,4 +421,4 @@ def dashboard() -> None:
         click.echo(f"Dashboard app not found at {dashboard_app}", err=True)
         sys.exit(1)
 
-    sp.run(["streamlit", "run", str(dashboard_app)], check=False)
+    sp.run([sys.executable, "-m", "streamlit", "run", str(dashboard_app)], check=False)
