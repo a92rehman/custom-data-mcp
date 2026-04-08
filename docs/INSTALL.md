@@ -1,5 +1,50 @@
 # Install Taleemabad Data MCP
 
+## Installing as a Claude Code Plugin
+
+The recommended installation method for team members is the one-command plugin installer.
+This installs the plugin globally in Claude Code and auto-updates rules on every session start.
+
+### Unix (macOS/Linux)
+
+```bash
+curl -sLO https://raw.githubusercontent.com/Orenda-Project/taleemabad-data-mcp/main/plugin/install.sh
+chmod +x install.sh && ./install.sh
+```
+
+### Windows (PowerShell)
+
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Orenda-Project/taleemabad-data-mcp/main/plugin/install.ps1" -OutFile install.ps1
+.\install.ps1
+```
+
+### Prerequisites
+
+- Python 3.11+, Git, Node.js 18+ (for analytics MCP), GCP service account JSON, Claude Code
+
+### Migrating from Manual Setup
+
+If you previously installed via the manual setup (rules in `~/.claude/rules/taleemabad/`):
+
+1. Run the install script above — it detects the old setup and offers to migrate
+2. If not auto-removed: `rm -rf ~/.claude/rules/taleemabad/`
+3. Edit `~/.claude/settings.json` — remove the `taleemabad-data` key from `mcpServers`
+4. Restart Claude Code
+5. Verify: ask "what version of taleemabad data am I running?"
+
+### Pinning a Version
+
+To prevent auto-updates:
+
+```bash
+export TALEEMABAD_PIN_VERSION=v1.0.0
+```
+
+---
+
+## Manual Setup
+
 One-time setup. Takes ~2 minutes.
 
 ## What You Need

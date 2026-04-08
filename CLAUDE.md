@@ -38,6 +38,7 @@ python -m taleemabad_data_mcp version    # Show installed version
 python -m taleemabad_data_mcp serve      # Run MCP server (used by Claude Code)
 python -m taleemabad_data_mcp dashboard  # Launch Streamlit dashboard (needs [dashboard] extra)
 python -m taleemabad_data_mcp uninstall  # Remove rules, config, venv
+python -m taleemabad_data_mcp bump       # Patch version bump (bump --minor for minor)
 ```
 
 ## Project Structure

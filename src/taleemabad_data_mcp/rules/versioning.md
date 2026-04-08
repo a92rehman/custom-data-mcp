@@ -29,3 +29,10 @@ This updates both `__init__.py` and `pyproject.toml` automatically.
 5. `git push origin master && git push origin master:main`
 
 Never push without bumping. Users check `/mcp` and `version` command to know what they're running.
+
+## What `bump` Does
+
+Running `python -m taleemabad_data_mcp bump` also:
+- Syncs `plugin/rules/` from `src/taleemabad_data_mcp/rules/` (ensures plugin ships latest rules)
+- Updates `plugin/.claude-plugin/plugin.json` version field
+- Updates `plugin/.current-version`
