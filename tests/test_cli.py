@@ -1,10 +1,11 @@
 """Tests for CLI setup/uninstall commands."""
 
 import json
+from pathlib import Path
 
 from click.testing import CliRunner
 
-from taleemabad_data_mcp.cli import _bundled_rules_dir, main
+from taleemabad_data_mcp.cli import _bundled_rules_dir, _mcp_server_config, _uv_path, main
 
 
 def _mock_patches(monkeypatch, claude_dir):
@@ -54,9 +55,10 @@ def test_setup_copies_rules_and_config(tmp_path, monkeypatch):
     settings = json.loads((claude_dir / "settings.json").read_text())
     assert "mcpServers" in settings
     assert "taleemabad-data" in settings["mcpServers"]
-    # Verify it points to local python, not uvx
+    # Verify it uses uv-based config
     server_config = settings["mcpServers"]["taleemabad-data"]
-    assert server_config["args"] == ["-m", "taleemabad_data_mcp", "serve"]
+    assert server_config["args"][0] == "run"
+    assert "--with" in server_config["args"]
     assert "TALEEMABAD_USER" in server_config["env"]
     assert server_config["env"]["TALEEMABAD_USER"] == "Test User"
 
@@ -131,3 +133,35 @@ def test_bundled_rules_exist():
     assert (rules_dir / "index.md").exists()
     assert (rules_dir / "data-governance.md").exists()
     assert (rules_dir / "bigquery.md").exists()
+
+
+def test_uv_path_windows(monkeypatch):
+    monkeypatch.setattr("taleemabad_data_mcp.cli.sys.platform", "win32")
+    result = _uv_path()
+    assert result.name == "uv.exe"
+    assert ".claude" in str(result)
+
+
+def test_uv_path_unix(monkeypatch):
+    monkeypatch.setattr("taleemabad_data_mcp.cli.sys.platform", "linux")
+    result = _uv_path()
+    assert result.name == "uv"
+    assert ".claude" in str(result)
+
+
+def test_mcp_server_config_uses_uv(monkeypatch):
+    fake_uv = Path("/fake/.claude/uv")
+    monkeypatch.setattr("taleemabad_data_mcp.cli._uv_path", lambda: fake_uv)
+    config = _mcp_server_config("/path/to/creds.json", "Test User")
+    assert config["command"] == str(fake_uv)
+    assert config["args"][0] == "run"
+    assert "--with" in config["args"]
+
+
+def test_mcp_server_config_git_url_format(monkeypatch):
+    monkeypatch.setattr("taleemabad_data_mcp.cli._uv_path", lambda: Path("/fake/uv"))
+    config = _mcp_server_config("/path/to/creds.json", "Test User")
+    with_idx = config["args"].index("--with")
+    git_url = config["args"][with_idx + 1]
+    assert git_url.startswith("git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@v")
+    assert "TALEEMABAD_HOSTNAME" not in config.get("env", {})

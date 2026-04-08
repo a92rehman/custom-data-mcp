@@ -40,6 +40,13 @@ def _venv_python() -> Path:
     return venv / "bin" / "python"
 
 
+def _uv_path() -> Path:
+    """Return ~/.claude/uv.exe (Windows) or ~/.claude/uv (Unix)."""
+    if sys.platform == "win32":
+        return _claude_dir() / "uv.exe"
+    return _claude_dir() / "uv"
+
+
 def _settings_path() -> Path:
     """Return ~/.claude/settings.json path."""
     return _claude_dir() / "settings.json"
@@ -59,7 +66,12 @@ def _load_settings() -> dict:
     """Load existing settings.json or return empty dict."""
     path = _settings_path()
     if path.exists():
-        return json.loads(path.read_text(encoding="utf-8"))
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data
+        except json.JSONDecodeError:
+            pass
     return {}
 
 
@@ -87,18 +99,23 @@ def _to_bash_path(p: Path) -> str:
 
 
 def _mcp_server_config(credentials: str, user_name: str) -> dict:
-    """Build the MCP server configuration entry."""
-    python_path = _to_bash_path(_venv_python())
-    credentials_bash = _to_bash_path(Path(credentials))
+    """Build the MCP server configuration entry (uv-based)."""
+    from taleemabad_data_mcp import __version__
+    uv = str(_uv_path())
+    git_ref = f"git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@v{__version__}"
     return {
-        "command": python_path,
-        "args": ["-m", "taleemabad_data_mcp", "serve"],
+        "command": uv,
+        "args": [
+            "run",
+            "--with", git_ref,
+            "--python", "3.11",
+            "python", "-m", "taleemabad_data_mcp", "serve",
+        ],
         "env": {
             "BIGQUERY_PROJECT": "niete-bq-prod",
-            "BIGQUERY_DATASETS": "RUMI_DB,TaleemHub_DB,tbproddb",
-            "GOOGLE_APPLICATION_CREDENTIALS": credentials_bash,
+            "BIGQUERY_DATASETS": "RUMI_DB,TaleemHub_DB,tbproddb,odk,mcp_audit",
+            "GOOGLE_APPLICATION_CREDENTIALS": credentials,
             "TALEEMABAD_USER": user_name,
-            "TALEEMABAD_HOSTNAME": platform.node(),
         },
     }
 
