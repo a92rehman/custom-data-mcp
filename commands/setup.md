@@ -1,31 +1,189 @@
----
-name: taleemabad-setup
-description: One-time setup for Taleemabad Data plugin — installs Python venv, configures credentials, and wires MCP server
----
+# /taleemabad-setup
 
-Run the Taleemabad Data plugin setup. This is a one-time step after `claude install`.
+Set up the Taleemabad Data MCP server on this computer. Perform all steps via Bash tool without asking the user to run any commands themselves.
 
-## What this does
-1. Creates a Python venv at `~/.claude/taleemabad-venv`
-2. Installs the `taleemabad-data-mcp` package
-3. Prompts for your name and GCP credentials path
-4. Writes the configured `.mcp.json` to the plugin directory
-5. Saves credentials to `~/.claude/taleemabad-data-mcp.env` for future upgrades
+## Steps
 
-## Instructions for Claude
+### Step 1: Detect OS and architecture
+Run: `python -c "import platform; print(platform.system(), platform.machine())"`
+Save the OS (Windows/Darwin/Linux) and architecture (x86_64/arm64/aarch64).
 
-When this command is invoked:
+### Step 2: Read installed version
+Run: `python -c "import glob, os; files = glob.glob(os.path.expanduser('~/.claude/plugins/cache/Orenda-Project/taleemabad-data/*/.current-version')); print(open(files[0]).read().strip()) if files else print('NOT_FOUND')"`
+Save the version string (e.g. `v0.5.3`).
 
-1. Check if `~/.claude/taleemabad-venv` exists
-   - If yes: ask "Venv already exists. Re-run setup? (y/n)"
-   - If no: proceed
+If NOT_FOUND, tell the user: "Plugin not found. Run `claude plugin install taleemabad-data@Orenda-Project` first, then re-run /taleemabad-setup."
+Stop if not found.
 
-2. Determine OS:
-   - Windows: use `$env:USERPROFILE`, venv at `\Scripts\python.exe`
-   - Unix: use `$HOME`, venv at `/bin/python`
+### Step 3: Download uv (if not already present)
+Check if `~/.claude/uv.exe` (Windows) or `~/.claude/uv` (Mac/Linux) exists:
+```
+python -c "import os; print(os.path.exists(os.path.expanduser('~/.claude/uv.exe' if __import__('platform').system()=='Windows' else '~/.claude/uv')))"
+```
 
-3. Run setup script appropriate for OS:
-   - Windows: run `.\install.ps1` from the plugin directory
-   - Unix: run `bash install.sh` from the plugin directory
+If False, download it:
 
-4. Tell the user to restart Claude Code when done.
+**Windows (x86_64):**
+```python
+import urllib.request, zipfile, os, pathlib
+url = "https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-pc-windows-msvc.zip"
+dest = pathlib.Path.home() / ".claude"
+dest.mkdir(exist_ok=True)
+zip_path = dest / "uv.zip"
+print("Downloading uv (~10MB)...")
+urllib.request.urlretrieve(url, zip_path)
+with zipfile.ZipFile(zip_path) as z:
+    for name in z.namelist():
+        if name.endswith("uv.exe") and "/" not in name.replace("uv.exe",""):
+            z.extract(name, dest)
+            import shutil; shutil.move(str(dest / name), str(dest / "uv.exe"))
+            break
+zip_path.unlink()
+print("uv downloaded to", dest / "uv.exe")
+```
+
+**Mac ARM (aarch64/arm64):** URL = `https://github.com/astral-sh/uv/releases/latest/download/uv-aarch64-apple-darwin.tar.gz`
+**Mac Intel (x86_64):** URL = `https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-apple-darwin.tar.gz`
+**Linux x86_64:** URL = `https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-unknown-linux-gnu.tar.gz`
+
+For tar.gz files (Mac/Linux), extract with:
+```python
+import urllib.request, tarfile, os, pathlib, stat
+dest = pathlib.Path.home() / ".claude"
+dest.mkdir(exist_ok=True)
+tgz_path = dest / "uv.tar.gz"
+urllib.request.urlretrieve(url, tgz_path)
+with tarfile.open(tgz_path) as t:
+    for m in t.getmembers():
+        if m.name.endswith("/uv") or m.name == "uv":
+            m.name = "uv"
+            t.extract(m, dest)
+            break
+tgz_path.unlink()
+uv = dest / "uv"
+uv.chmod(uv.stat().st_mode | stat.S_IEXEC)
+print("uv downloaded to", uv)
+```
+
+After download, verify: run `~/.claude/uv.exe version` (Windows) or `~/.claude/uv version` (Mac/Linux) and show the output.
+
+If download fails, tell the user: "Could not download uv automatically. Download manually from https://github.com/astral-sh/uv/releases and save the binary to ~/.claude/uv (or uv.exe on Windows). Then re-run /taleemabad-setup."
+
+### Step 4: Check for old venv
+Run: `python -c "import os; print(os.path.exists(os.path.expanduser('~/.claude/taleemabad-venv')))"`
+If True: Tell the user "Found old Python environment at ~/.claude/taleemabad-venv — this is no longer needed." Ask: "Delete it to free up space? (y/n)"
+If yes: `python -c "import shutil, os; shutil.rmtree(os.path.expanduser('~/.claude/taleemabad-venv')); print('Removed.')"`
+
+### Step 5: Check for saved config
+Run: `python -c "import os; p=os.path.expanduser('~/.claude/taleemabad-data-mcp.env'); print(open(p).read()) if os.path.exists(p) else print('NOT_FOUND')"`
+
+If saved config found, parse TALEEMABAD_USER and GOOGLE_APPLICATION_CREDENTIALS from it.
+Show the saved values and ask: "Found saved config — Name: [name], Credentials: [path]. Use these? (y/n)"
+If yes, skip Steps 6 and 7. If no, proceed to Step 6.
+
+### Step 6: Ask for name
+Ask: "What is your name? (used for audit logs)"
+Save as user_name.
+
+### Step 7: Ask for credentials path
+Ask: "Paste the full path to your GCP service account JSON file."
+
+Validate the file exists:
+```
+python -c "import os; print('EXISTS' if os.path.exists(r'<path>') else 'NOT_FOUND')"
+```
+
+If NOT_FOUND, ask again with: "File not found at that path. Please check and paste the correct path."
+Do not proceed until the file exists.
+
+### Step 8: Write settings.json
+Build the MCP server config and merge it into `~/.claude/settings.json` using Python's json module:
+
+```python
+import json, os, platform, pathlib
+
+version = "<VERSION_FROM_STEP_2>"  # e.g. v0.5.3
+user_name = "<NAME_FROM_STEP_6>"
+credentials_path = r"<PATH_FROM_STEP_7>"
+
+settings_path = pathlib.Path.home() / ".claude" / "settings.json"
+uv_path = str(pathlib.Path.home() / ".claude" / ("uv.exe" if platform.system() == "Windows" else "uv"))
+
+settings = {}
+if settings_path.exists():
+    try:
+        data = json.loads(settings_path.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            settings = data
+    except json.JSONDecodeError:
+        pass
+
+settings.setdefault("mcpServers", {})["taleemabad-data"] = {
+    "command": uv_path,
+    "args": [
+        "run",
+        "--with", f"git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@{version}",
+        "--python", "3.11",
+        "python", "-m", "taleemabad_data_mcp", "serve"
+    ],
+    "env": {
+        "BIGQUERY_PROJECT": "niete-bq-prod",
+        "BIGQUERY_DATASETS": "RUMI_DB,TaleemHub_DB,tbproddb,odk,mcp_audit",
+        "GOOGLE_APPLICATION_CREDENTIALS": credentials_path,
+        "TALEEMABAD_USER": user_name,
+    }
+}
+
+settings_path.parent.mkdir(parents=True, exist_ok=True)
+settings_path.write_text(json.dumps(settings, indent=2), encoding="utf-8")
+print("settings.json updated.")
+```
+
+Run this as a `python -c "..."` Bash call with the actual values substituted. Do NOT use shell variables or `<UV_PATH>` — embed the actual values directly in the Python string.
+
+### Step 9: Save env file
+Save name + credentials for future upgrades:
+```python
+import pathlib
+env_path = pathlib.Path.home() / ".claude" / "taleemabad-data-mcp.env"
+env_path.write_text(f"TALEEMABAD_USER=<name>\nGOOGLE_APPLICATION_CREDENTIALS=<path>\n", encoding="utf-8")
+print("Config saved.")
+```
+
+### Step 10: Pre-warm uv cache
+Tell the user: "Downloading data package (first-time setup, ~30-60 seconds)..."
+
+Run (Windows):
+```
+~/.claude/uv.exe run --with "git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@<VERSION>" --python 3.11 python -m taleemabad_data_mcp version
+```
+
+Run (Mac/Linux):
+```
+~/.claude/uv run --with "git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@<VERSION>" --python 3.11 python -m taleemabad_data_mcp version
+```
+
+If this fails with an authentication error, tell the user: "Git access to Orenda-Project org is required. Ask IT to add your GitHub account to the Orenda-Project organization, then re-run /taleemabad-setup."
+
+If it succeeds, show the version output.
+
+### Step 11: Done
+Tell the user:
+```
+Setup complete!
+
+To activate: Restart Claude Code (close and reopen, or press Ctrl+R).
+
+After restart, the Taleemabad Data MCP will be available. Try:
+  "How many primary teachers are in ICT Islamabad?"
+```
+
+## Error handling summary
+
+| Scenario | Action |
+|----------|--------|
+| Plugin not installed | Tell user to run claude plugin install first |
+| uv download fails | Give manual download instructions |
+| Credentials file not found | Re-ask, do not write config |
+| Pre-warm auth error | Tell user to ask IT for GitHub org access |
+| settings.json parse error | Start fresh (only write taleemabad-data key) |
