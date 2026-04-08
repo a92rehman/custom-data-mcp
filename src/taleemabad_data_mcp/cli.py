@@ -70,16 +70,33 @@ def _save_settings(settings: dict) -> None:
     path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
 
 
+def _to_bash_path(p: Path) -> str:
+    """Convert a Windows path to a bash-compatible path (e.g. C:\\foo -> /c/foo).
+
+    Claude Code on Windows runs in bash (Git Bash / MSYS2), which cannot resolve
+    Windows-style paths as executable commands. Convert drive letter paths so the
+    MCP server config works correctly on Windows.
+    """
+    if sys.platform == "win32":
+        parts = p.parts  # ('C:\\', 'Users', ...)
+        if parts and len(parts[0]) == 3 and parts[0][1] == ":":
+            drive = parts[0][0].lower()
+            rest = "/".join(parts[1:])
+            return f"/{drive}/{rest}"
+    return str(p)
+
+
 def _mcp_server_config(credentials: str, user_name: str) -> dict:
     """Build the MCP server configuration entry."""
-    python_path = str(_venv_python())
+    python_path = _to_bash_path(_venv_python())
+    credentials_bash = _to_bash_path(Path(credentials))
     return {
         "command": python_path,
         "args": ["-m", "taleemabad_data_mcp", "serve"],
         "env": {
             "BIGQUERY_PROJECT": "niete-bq-prod",
             "BIGQUERY_DATASETS": "RUMI_DB,TaleemHub_DB,tbproddb",
-            "GOOGLE_APPLICATION_CREDENTIALS": credentials,
+            "GOOGLE_APPLICATION_CREDENTIALS": credentials_bash,
             "TALEEMABAD_USER": user_name,
             "TALEEMABAD_HOSTNAME": platform.node(),
         },
