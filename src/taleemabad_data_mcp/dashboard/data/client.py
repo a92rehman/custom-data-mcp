@@ -18,6 +18,14 @@ def get_bq_client() -> bigquery.Client:
     """
     project = os.environ.get("BIGQUERY_PROJECT", "niete-bq-prod")
 
+    # Raw JSON credentials (Railway: GOOGLE_CREDENTIALS_JSON env var)
+    raw_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    if raw_json:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write(raw_json)
+            temp_path = f.name
+        return bigquery.Client.from_service_account_json(temp_path, project=project)
+
     b64_creds = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_BASE64")
     if b64_creds:
         creds_json = base64.b64decode(b64_creds).decode("utf-8")
