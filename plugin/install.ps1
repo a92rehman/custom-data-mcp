@@ -101,6 +101,7 @@ if (-not (Test-Path $CREDENTIALS_PATH)) {
 
 # --- Save config ---
 "TALEEMABAD_USER=$TALEEMABAD_USER`nGOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_PATH" | Set-Content $ENV_FILE
+icacls $ENV_FILE /inheritance:r /grant:r "${env:USERNAME}:(R,W)" | Out-Null
 Write-Host "✓ Config saved to $ENV_FILE"
 
 # --- Write final .mcp.json with substituted values ---
