@@ -7,3 +7,4 @@ click>=8.0
 streamlit>=1.30
 plotly>=5.18
 pandas>=2.0
+db-dtypes>=1.0
