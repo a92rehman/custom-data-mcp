@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "taleemabad-data": {
+      "command": "${HOME}/.claude/taleemabad-venv/bin/python",
+      "args": ["-m", "taleemabad_data_mcp", "serve"],
+      "env": {
+        "BIGQUERY_PROJECT": "niete-bq-prod",
+        "BIGQUERY_DATASETS": "RUMI_DB,TaleemHub_DB,tbproddb,odk,mcp_audit",
+        "GOOGLE_APPLICATION_CREDENTIALS": "${TALEEMABAD_CREDENTIALS}",
+        "BIGQUERY_MAX_BYTES": "1073741824",
+        "TALEEMABAD_USER": "${TALEEMABAD_USER}",
+        "LOG_LEVEL": "INFO"
+      }
+    },
+    "bigquery-analytics": {
+      "command": "npx",
+      "args": ["-y", "@ergut/bigquery-mcp@latest"],
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "${TALEEMABAD_CREDENTIALS}",
+        "BIGQUERY_PROJECT": "niete-bq-prod"
+      }
+    }
+  }
+}
