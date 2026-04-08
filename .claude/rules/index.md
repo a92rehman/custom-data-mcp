@@ -21,6 +21,7 @@ If the region's rules don't exist yet, tell the user: "Rules for [region] haven'
 - `caching.md` — freshness, invalidation, loop prevention
 - `failure-handling.md` — retries, circuit breaker, dead letter queue
 - `observability.md` — 3-layer telemetry, audit log, structured logging
+- `versioning.md` — **ALWAYS bump version before push**, patch vs minor rules
 
 ## Region: ICT/Islamabad (`ict-islamabad/`)
 Dataset: `tbproddb` | organization_id: 1 | School reference: `FDE_Schools`
