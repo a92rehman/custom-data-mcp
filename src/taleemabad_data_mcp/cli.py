@@ -215,8 +215,8 @@ def bump_version(minor: bool = False) -> None:
     if current_version_file.exists():
         current_version_file.write_text(f"v{new_version}\n", encoding="utf-8")
 
-    print(f"Version bumped: {old_version} -> {new_version}")
-    print(f"  Next: git add -A && git commit -m 'chore: bump version to v{new_version}' && git push")
+    click.echo(f"Version bumped: {old_version} -> {new_version}")
+    click.echo(f"  Next: git add -A && git commit -m 'chore: bump version to v{new_version}' && git push")
 
 
 @main.command(name="bump")
