@@ -4,6 +4,10 @@ __pycache__/
 *.json
 !package.json
 !.claude/settings.json
+!plugin/.claude-plugin/plugin.json
+!plugin/.mcp.json
+!plugin/hooks/hooks.json
+!plugin/package.json
 .venv/
 dist/
 *.egg-info/

@@ -1,0 +1,17 @@
+{
+  "name": "taleemabad-data",
+  "version": "1.0.0",
+  "description": "Governed BigQuery analytics for Taleemabad — ICT/Islamabad and Rawalpindi regions. Enforces data governance rules, audit logging, and cost guardrails.",
+  "author": {
+    "name": "Orenda Project",
+    "url": "https://github.com/Orenda-Project"
+  },
+  "homepage": "https://github.com/Orenda-Project/taleemabad-data-mcp",
+  "repository": "https://github.com/Orenda-Project/taleemabad-data-mcp",
+  "license": "MIT",
+  "keywords": ["bigquery", "data-governance", "analytics", "taleemabad", "education"],
+  "agents": [
+    "./agents/data-analyst.md",
+    "./agents/data-admin.md"
+  ]
+}
