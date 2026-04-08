@@ -4,6 +4,10 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from taleemabad_data_mcp.dashboard.components.auto_refresh import (
+    clear_cache_if_needed,
+    inject_auto_refresh,
+)
 from taleemabad_data_mcp.dashboard.components.filters import render_filters
 from taleemabad_data_mcp.dashboard.data.queries import (
     get_activity_log,
@@ -98,6 +102,8 @@ st.markdown(
 )
 
 filters = render_filters()
+inject_auto_refresh(filters["refresh_seconds"])
+clear_cache_if_needed(filters["refresh_seconds"])
 st.markdown("---")
 
 df = get_activity_log(**filters)

@@ -7,14 +7,23 @@ from taleemabad_data_mcp.dashboard.data.queries import (
     get_distinct_users,
 )
 
+# Refresh interval options (seconds)
+REFRESH_OPTIONS = {
+    "Off": 0,
+    "1 min": 60,
+    "2 min": 120,
+    "5 min": 300,
+    "10 min": 600,
+}
+
 
 def render_filters() -> dict:
     """Render horizontal filter bar at the top of the page.
 
     Returns:
-        dict with keys: days, users, domains
+        dict with keys: days, users, domains, refresh_seconds
     """
-    col1, col2, col3 = st.columns([1, 2, 2])
+    col1, col2, col3, col4 = st.columns([1, 2, 2, 1])
 
     with col1:
         days = st.selectbox(
@@ -36,8 +45,16 @@ def render_filters() -> dict:
             ]
         domains = st.multiselect("Domains", options=available_domains)
 
+    with col4:
+        refresh_label = st.selectbox(
+            "Auto-Refresh",
+            options=list(REFRESH_OPTIONS.keys()),
+            index=2,  # default: 5 min
+        )
+
     return {
         "days": days,
         "users": users or None,
         "domains": domains or None,
+        "refresh_seconds": REFRESH_OPTIONS[refresh_label],
     }
