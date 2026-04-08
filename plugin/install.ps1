@@ -41,7 +41,8 @@ if (Test-Path $PLUGIN_DIR) {
     git fetch --tags --quiet
     $LATEST = (git tag -l 'v*' --sort=-v:refname | Select-Object -First 1)
     if ($LATEST) { git checkout $LATEST --quiet; Set-Content .current-version $LATEST }
-    & "$VENV_DIR\Scripts\pip" install --quiet --force-reinstall "git+${REPO}@${LATEST}"
+    $installRef = if ($LATEST) { $LATEST } else { "main" }
+    & "$VENV_DIR\Scripts\pip" install --quiet --force-reinstall "git+${REPO}@${installRef}"
     # Re-substitute .mcp.json in case template changed in this release
     if (Test-Path $ENV_FILE) {
         $envContent = Get-Content $ENV_FILE | ForEach-Object {
@@ -120,7 +121,7 @@ Write-Host ""
 Write-Host "=== Installation Complete ===" -ForegroundColor Green
 Write-Host ""
 Write-Host "Plugin installed at: $PLUGIN_DIR"
-Write-Host "Version: $LATEST"
+Write-Host "Version: $(if ($LATEST) { $LATEST } else { 'latest' })"
 Write-Host ""
 Write-Host "Restart Claude Code to activate the plugin."
 Write-Host "Ask 'what version of taleemabad data am I running?' to verify."

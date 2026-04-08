@@ -40,10 +40,17 @@ if [ -d "$PLUGIN_DIR" ]; then
     SAVED_USER=$(grep '^TALEEMABAD_USER=' "$ENV_FILE" | cut -d= -f2-)
     SAVED_CREDS=$(grep '^GOOGLE_APPLICATION_CREDENTIALS=' "$ENV_FILE" | cut -d= -f2-)
     if [ -n "$SAVED_USER" ] && [ -n "$SAVED_CREDS" ]; then
-      sed -e "s|\${HOME}|${HOME}|g" \
-          -e "s|\${TALEEMABAD_CREDENTIALS}|${SAVED_CREDS}|g" \
-          -e "s|\${TALEEMABAD_USER}|${SAVED_USER}|g" \
-          "${PLUGIN_DIR}/plugin/.mcp.json" > "${PLUGIN_DIR}/.mcp.json"
+      export _USER="$SAVED_USER"
+      export _CREDS="$SAVED_CREDS"
+      python3 - << 'PYEOF'
+import json, os, sys
+template = open(os.path.join(os.environ['PLUGIN_DIR'], 'plugin', '.mcp.json')).read()
+result = template \
+    .replace('${HOME}', os.environ['HOME']) \
+    .replace('${TALEEMABAD_CREDENTIALS}', os.environ['_CREDS']) \
+    .replace('${TALEEMABAD_USER}', os.environ['_USER'])
+open(os.path.join(os.environ['PLUGIN_DIR'], '.mcp.json'), 'w').write(result)
+PYEOF
       echo "✓ MCP config refreshed"
     fi
   fi
@@ -98,17 +105,24 @@ fi
 
 # --- Save config ---
 cat > "$ENV_FILE" << EOF
-TALEEMABAD_USER=${TALEEMABAD_USER}
-GOOGLE_APPLICATION_CREDENTIALS=${CREDENTIALS_PATH}
+TALEEMABAD_USER="${TALEEMABAD_USER}"
+GOOGLE_APPLICATION_CREDENTIALS="${CREDENTIALS_PATH}"
 EOF
 chmod 600 "$ENV_FILE"
 echo "✓ Config saved to ${ENV_FILE}"
 
 # --- Write final .mcp.json with substituted values ---
-sed -e "s|\${HOME}|${HOME}|g" \
-    -e "s|\${TALEEMABAD_CREDENTIALS}|${CREDENTIALS_PATH}|g" \
-    -e "s|\${TALEEMABAD_USER}|${TALEEMABAD_USER}|g" \
-    "${PLUGIN_DIR}/plugin/.mcp.json" > "${PLUGIN_DIR}/.mcp.json"
+export _USER="$TALEEMABAD_USER"
+export _CREDS="$CREDENTIALS_PATH"
+python3 - << 'PYEOF'
+import json, os, sys
+template = open(os.path.join(os.environ['PLUGIN_DIR'], 'plugin', '.mcp.json')).read()
+result = template \
+    .replace('${HOME}', os.environ['HOME']) \
+    .replace('${TALEEMABAD_CREDENTIALS}', os.environ['_CREDS']) \
+    .replace('${TALEEMABAD_USER}', os.environ['_USER'])
+open(os.path.join(os.environ['PLUGIN_DIR'], '.mcp.json'), 'w').write(result)
+PYEOF
 echo "✓ MCP config written"
 
 # --- Migrate old setup ---
