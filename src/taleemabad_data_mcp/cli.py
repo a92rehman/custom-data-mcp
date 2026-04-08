@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import platform
 import shutil
 import subprocess
 import sys
@@ -316,7 +315,6 @@ def setup(user: str, credentials: str) -> None:
     # 4. Write user config env file
     env_content = (
         f"TALEEMABAD_USER={user}\n"
-        f"TALEEMABAD_HOSTNAME={platform.node()}\n"
         f"GOOGLE_APPLICATION_CREDENTIALS={credentials_abs}\n"
     )
     env_path = _env_path()
