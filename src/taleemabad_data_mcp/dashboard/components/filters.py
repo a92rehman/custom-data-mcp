@@ -21,7 +21,8 @@ def render_filters() -> dict:
     """Render horizontal filter bar at the top of the page.
 
     Returns:
-        dict with keys: days, users, domains, refresh_seconds
+        dict with keys: days, users, domains
+        (refresh_seconds stored in st.session_state, not in the returned dict)
     """
     col1, col2, col3, col4 = st.columns([1, 2, 2, 1])
 
@@ -52,9 +53,16 @@ def render_filters() -> dict:
             index=2,  # default: 5 min
         )
 
+    # Store refresh in session state so pages can access it
+    st.session_state["refresh_seconds"] = REFRESH_OPTIONS[refresh_label]
+
     return {
         "days": days,
         "users": users or None,
         "domains": domains or None,
-        "refresh_seconds": REFRESH_OPTIONS[refresh_label],
     }
+
+
+def get_refresh_seconds() -> int:
+    """Get the current auto-refresh interval from session state."""
+    return st.session_state.get("refresh_seconds", 300)

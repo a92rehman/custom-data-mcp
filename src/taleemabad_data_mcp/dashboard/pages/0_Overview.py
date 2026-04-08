@@ -8,7 +8,7 @@ from taleemabad_data_mcp.dashboard.components.auto_refresh import (
     clear_cache_if_needed,
     inject_auto_refresh,
 )
-from taleemabad_data_mcp.dashboard.components.filters import render_filters
+from taleemabad_data_mcp.dashboard.components.filters import get_refresh_seconds, render_filters
 from taleemabad_data_mcp.dashboard.data.queries import (
     get_activity_log,
     get_feedback,
@@ -102,8 +102,8 @@ st.markdown(
 )
 
 filters = render_filters()
-inject_auto_refresh(filters["refresh_seconds"])
-clear_cache_if_needed(filters["refresh_seconds"])
+inject_auto_refresh(get_refresh_seconds())
+clear_cache_if_needed(get_refresh_seconds())
 st.markdown("---")
 
 df = get_activity_log(**filters)
