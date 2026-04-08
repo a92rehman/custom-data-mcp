@@ -7,6 +7,7 @@ REPO="https://github.com/Orenda-Project/taleemabad-data-mcp.git"
 PLUGIN_DIR="${HOME}/.claude/plugins/taleemabad-data"
 VENV_DIR="${HOME}/.claude/taleemabad-venv"
 ENV_FILE="${HOME}/.claude/taleemabad-data-mcp.env"
+export PLUGIN_DIR
 
 echo ""
 echo "=== Taleemabad Data Plugin Installer ==="
@@ -37,8 +38,8 @@ if [ -d "$PLUGIN_DIR" ]; then
     "git+${REPO}@${LATEST:-main}[dashboard]"
   # Re-substitute .mcp.json in case template changed in this release
   if [ -f "$ENV_FILE" ]; then
-    SAVED_USER=$(grep '^TALEEMABAD_USER=' "$ENV_FILE" | cut -d= -f2-)
-    SAVED_CREDS=$(grep '^GOOGLE_APPLICATION_CREDENTIALS=' "$ENV_FILE" | cut -d= -f2-)
+    SAVED_USER=$(grep '^TALEEMABAD_USER=' "$ENV_FILE" | cut -d= -f2- | tr -d '"')
+    SAVED_CREDS=$(grep '^GOOGLE_APPLICATION_CREDENTIALS=' "$ENV_FILE" | cut -d= -f2- | tr -d '"')
     if [ -n "$SAVED_USER" ] && [ -n "$SAVED_CREDS" ]; then
       export _USER="$SAVED_USER"
       export _CREDS="$SAVED_CREDS"
