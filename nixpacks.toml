@@ -2,7 +2,7 @@
 nixPkgs = ["python311"]
 
 [phases.install]
-cmds = ["pip install -r requirements.txt", "pip install -e ."]
+cmds = ["pip install -r requirements.txt", "pip install hatchling", "pip install -e ."]
 
 [start]
 cmd = "bash railway_start.sh"
