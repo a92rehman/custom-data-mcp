@@ -100,10 +100,9 @@ def _to_bash_path(p: Path) -> str:
 def _mcp_server_config(credentials: str, user_name: str) -> dict:
     """Build the MCP server configuration entry (uv-based)."""
     from taleemabad_data_mcp import __version__
-    uv = str(_uv_path())
     git_ref = f"git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@v{__version__}"
     return {
-        "command": uv,
+        "command": "uv",
         "args": [
             "run",
             "--with", git_ref,
