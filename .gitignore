@@ -27,5 +27,10 @@ htmlcov/
 .coverage
 bash.exe.stackdump
 
-# Dev rules copy (derived from src/taleemabad_data_mcp/rules/ by bump command)
+# .claude/ dev environment (personal — never commit)
 .claude/rules/
+.claude/skills/
+.claude/scripts/
+.claude/settings.json
+.claude/settings.local.json
+.claude/agents/

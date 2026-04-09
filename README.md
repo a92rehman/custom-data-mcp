@@ -73,13 +73,19 @@ This reads your saved credentials and writes `.mcp.json` to the current project.
 
 ## Update
 
-The plugin auto-updates on session start. To manually update:
+**Rules and agents auto-update** on every Claude Code session start. No action needed.
+
+To manually force a plugin update:
 
 ```bash
 claude plugin update taleemabad-data@Orenda-Project
 ```
 
-Then run `/taleemabad-setup` again in your project to refresh the MCP config.
+To update the MCP server version in a project (updates `.mcp.json` to latest tag):
+
+```
+/taleemabad-setup
+```
 
 ## Uninstall
 
