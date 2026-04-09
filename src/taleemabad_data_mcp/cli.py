@@ -113,16 +113,17 @@ def _find_uv_command() -> str:
 
 
 def _mcp_server_config(credentials: str, user_name: str) -> dict:
-    """Build the MCP server configuration entry (uv-based)."""
-    from taleemabad_data_mcp import __version__
-    git_ref = f"git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@v{__version__}"
+    """Build the MCP server configuration entry (venv-based).
+
+    Uses the dedicated venv at ~/.claude/taleemabad-venv/ for instant startup.
+    The uv-based approach (git+ references) was abandoned because uv does a
+    git fetch on every startup, causing MCP connection timeouts in Claude Code.
+    """
+    python_path = _venv_python()
     return {
-        "command": _find_uv_command(),
+        "command": _to_bash_path(python_path),
         "args": [
-            "run",
-            "--with", git_ref,
-            "--python", "3.11",
-            "python", "-m", "taleemabad_data_mcp", "serve",
+            "-m", "taleemabad_data_mcp", "serve",
         ],
         "env": {
             "BIGQUERY_PROJECT": "niete-bq-prod",

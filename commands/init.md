@@ -12,31 +12,19 @@ Run:
 python -c "import os; p=os.path.expanduser('~/.claude/taleemabad-data-mcp.env'); print(open(p).read()) if os.path.exists(p) else print('NOT_FOUND')"
 ```
 
-Parse `TALEEMABAD_USER`, `GOOGLE_APPLICATION_CREDENTIALS`, and `UV_COMMAND` from the output.
+Parse `TALEEMABAD_USER` and `GOOGLE_APPLICATION_CREDENTIALS` from the output.
 
 If NOT_FOUND, tell the user: "No saved config found. Run `/taleemabad-setup` first to configure your credentials."
 Stop.
 
-If `UV_COMMAND` is missing from the env file, detect it:
-```
-python -c "import shutil, platform, pathlib; p = shutil.which('uv'); print('uv') if p else (lambda lp: print(('/' + lp.parts[0][0].lower() + '/' + '/'.join(lp.parts[1:])) if platform.system()=='Windows' else str(lp)) if lp.exists() else print('NOT_FOUND'))(pathlib.Path.home() / '.claude' / ('uv.exe' if platform.system()=='Windows' else 'uv'))"
-```
-If NOT_FOUND, tell the user: "uv is not installed. Run `/taleemabad-setup` to install it."
-
-**IMPORTANT:** On Windows, the `UV_COMMAND` in `.mcp.json` MUST be a bash-compatible path (e.g. `/c/Users/name/.claude/uv.exe`), NOT a Windows path (e.g. `C:\Users\name\.claude\uv.exe`). Claude Code runs in Git Bash which cannot resolve Windows-style paths.
-
-### Step 2: Read plugin version
+### Step 2: Verify venv exists
 Run:
 ```
-python -c "import glob, os; files = glob.glob(os.path.expanduser('~/.claude/plugins/cache/Orenda-Project/taleemabad-data/*/.current-version')); print(open(files[0]).read().strip()) if files else print('NOT_FOUND')"
+python -c "import os, platform, pathlib; p = pathlib.Path.home() / '.claude' / 'taleemabad-venv' / ('Scripts/python.exe' if platform.system()=='Windows' else 'bin/python'); print('OK' if p.exists() else 'NOT_FOUND')"
 ```
 
-If NOT_FOUND, fall back to reading the version from the package:
-```
-python -c "import importlib.metadata; print('v' + importlib.metadata.version('taleemabad-data-mcp'))"
-```
-
-If still NOT_FOUND, use `v0.6.3` as default.
+If NOT_FOUND, tell the user: "Taleemabad venv not found. Run `/taleemabad-setup` first to install the package."
+Stop.
 
 ### Step 3: Check if .mcp.json already exists
 Run: `python -c "import os; print('EXISTS' if os.path.exists('.mcp.json') else 'NOT_FOUND')"`
@@ -45,26 +33,27 @@ If EXISTS, ask: "This project already has .mcp.json. Overwrite it? (y/n)"
 If no, stop.
 
 ### Step 4: Write .mcp.json
-Write the MCP config to the current project directory:
 
 ```python
-import json, pathlib
+import json, pathlib, platform
 
-version = "<VERSION_FROM_STEP_2>"  # e.g. v0.6.3
 user_name = "<NAME_FROM_STEP_1>"
 credentials_path = r"<CREDENTIALS_FROM_STEP_1>"
-uv_command = "<UV_COMMAND_FROM_STEP_1>"  # "uv" or absolute path
+
+home = pathlib.Path.home()
+if platform.system() == "Windows":
+    python_path = str(home / ".claude" / "taleemabad-venv" / "Scripts" / "python.exe")
+    parts = pathlib.Path(python_path).parts
+    drive = parts[0][0].lower()
+    python_bash = "/" + drive + "/" + "/".join(parts[1:])
+else:
+    python_bash = str(home / ".claude" / "taleemabad-venv" / "bin" / "python")
 
 mcp = {
     "mcpServers": {
         "taleemabad-data": {
-            "command": uv_command,
-            "args": [
-                "run",
-                "--with", f"git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@{version}",
-                "--python", "3.11",
-                "python", "-m", "taleemabad_data_mcp", "serve"
-            ],
+            "command": python_bash,
+            "args": ["-m", "taleemabad_data_mcp", "serve"],
             "env": {
                 "BIGQUERY_PROJECT": "niete-bq-prod",
                 "BIGQUERY_DATASETS": "RUMI_DB,TaleemHub_DB,tbproddb,odk,mcp_audit",
