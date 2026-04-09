@@ -1,10 +1,10 @@
 {
   "mcpServers": {
     "taleemabad-data": {
-      "command": "~/.claude/uv",
+      "command": "uv",
       "args": [
         "run",
-        "--with", "git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@v0.5.3",
+        "--with", "git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@v0.6.0",
         "--python", "3.11",
         "python", "-m", "taleemabad_data_mcp", "serve"
       ],
