@@ -181,7 +181,28 @@ env_path.write_text(
 print("Config saved.")
 ```
 
-### Step 10: Warn about .gitignore
+### Step 10: Install governance rules
+Copy the governance rules from the plugin cache to `~/.claude/rules/taleemabad/` so Claude Code can read them during conversations:
+
+```python
+import shutil, pathlib, glob
+
+# Find rules in plugin cache
+plugin_dirs = glob.glob(str(pathlib.Path.home() / ".claude" / "plugins" / "cache" / "Orenda-Project" / "taleemabad-data" / "*" / "rules"))
+if not plugin_dirs:
+    print("WARNING: No rules found in plugin cache")
+else:
+    src = pathlib.Path(plugin_dirs[0])
+    dest = pathlib.Path.home() / ".claude" / "rules" / "taleemabad"
+    if dest.exists():
+        shutil.rmtree(dest)
+    shutil.copytree(src, dest)
+    print(f"Governance rules installed to {dest}")
+```
+
+This step is critical — without it, the data agents cannot follow governed query patterns.
+
+### Step 11: Warn about .gitignore
 Check if the current project's `.gitignore` contains `.mcp.json`:
 ```
 python -c "import os; gi = open('.gitignore').read() if os.path.exists('.gitignore') else ''; print('COVERED' if '.mcp.json' in gi else 'NOT_COVERED')"
@@ -190,7 +211,7 @@ python -c "import os; gi = open('.gitignore').read() if os.path.exists('.gitigno
 If NOT_COVERED, tell the user:
 > ".mcp.json contains your credentials path. Consider adding `.mcp.json` to your `.gitignore`."
 
-### Step 11: Pre-warm uv cache
+### Step 12: Pre-warm uv cache
 Tell the user: "Downloading data package (first-time setup, ~30-60 seconds)..."
 
 Run: `<uv_command> run --with "git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@<VERSION>" --python 3.11 python -m taleemabad_data_mcp version`
@@ -201,7 +222,7 @@ If this fails with an authentication error, tell the user: "Git access to Orenda
 
 If it succeeds, show the version output.
 
-### Step 12: Done
+### Step 13: Done
 Tell the user:
 ```
 Setup complete!

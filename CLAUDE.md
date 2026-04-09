@@ -102,15 +102,14 @@ AUDIT_TABLE=activity_log                   # Default
 ```
 
 ## Distribution
-Teams install via dedicated venv:
+Teams install via Claude Code plugin system:
 ```bash
-python -m venv ~/.claude/taleemabad-venv
-~/.claude/taleemabad-venv/bin/pip install "git+https://github.com/Orenda-Project/taleemabad-data-mcp"
-~/.claude/taleemabad-venv/bin/python -m taleemabad_data_mcp setup --user "Name" --credentials /path/to/key.json
+claude plugin marketplace add Orenda-Project/taleemabad-data-mcp
+claude plugin install taleemabad-data@Orenda-Project
+# Then in Claude Code: /taleemabad-setup
+# For additional projects: /taleemabad-init
 ```
-This copies rules to `~/.claude/rules/taleemabad/`, adds MCP config to `~/.claude/settings.json`, and saves credentials for future upgrades.
-
-Updates only need: `pip install --force-reinstall ... && python -m taleemabad_data_mcp upgrade`
+Setup copies rules to `~/.claude/rules/taleemabad/`, writes `.mcp.json` to the project, and saves credentials for `/taleemabad-init` reuse.
 
 ## Code Conventions
 - Type hints on all function signatures
