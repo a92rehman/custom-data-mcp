@@ -19,9 +19,11 @@ Stop.
 
 If `UV_COMMAND` is missing from the env file, detect it:
 ```
-python -c "import shutil, os, platform, pathlib; p = shutil.which('uv'); print(p if p else (str(pathlib.Path.home() / '.claude' / ('uv.exe' if platform.system()=='Windows' else 'uv')) if (pathlib.Path.home() / '.claude' / ('uv.exe' if platform.system()=='Windows' else 'uv')).exists() else 'NOT_FOUND'))"
+python -c "import shutil, platform, pathlib; p = shutil.which('uv'); print('uv') if p else (lambda lp: print(('/' + lp.parts[0][0].lower() + '/' + '/'.join(lp.parts[1:])) if platform.system()=='Windows' else str(lp)) if lp.exists() else print('NOT_FOUND'))(pathlib.Path.home() / '.claude' / ('uv.exe' if platform.system()=='Windows' else 'uv'))"
 ```
 If NOT_FOUND, tell the user: "uv is not installed. Run `/taleemabad-setup` to install it."
+
+**IMPORTANT:** On Windows, the `UV_COMMAND` in `.mcp.json` MUST be a bash-compatible path (e.g. `/c/Users/name/.claude/uv.exe`), NOT a Windows path (e.g. `C:\Users\name\.claude\uv.exe`). Claude Code runs in Git Bash which cannot resolve Windows-style paths.
 
 ### Step 2: Read plugin version
 Run:

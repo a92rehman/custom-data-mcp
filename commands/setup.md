@@ -30,10 +30,17 @@ If found on PATH, save `uv_command = "uv"` (use the PATH-based command).
 
 If NOT on PATH, check if already downloaded to `~/.claude/`:
 ```
-python -c "import os, platform; p = os.path.expanduser('~/.claude/' + ('uv.exe' if platform.system()=='Windows' else 'uv')); print(p if os.path.exists(p) else 'NOT_FOUND')"
+python -c "import os, platform, pathlib; p = pathlib.Path.home() / '.claude' / ('uv.exe' if platform.system()=='Windows' else 'uv'); print(p if p.exists() else 'NOT_FOUND')"
 ```
 
-If found at `~/.claude/`, save `uv_command = <that absolute path>`.
+If found at `~/.claude/`, save `uv_command` as a **bash-compatible path**:
+- On **Windows**, convert `C:\Users\name\.claude\uv.exe` to `/c/Users/name/.claude/uv.exe`
+- On **macOS/Linux**, use the path as-is (e.g. `/Users/name/.claude/uv`)
+
+To convert on Windows, run:
+```
+python -c "import pathlib; p = pathlib.Path(r'<WINDOWS_PATH>'); parts = p.parts; drive = parts[0][0].lower(); print('/' + drive + '/' + '/'.join(parts[1:]))"
+```
 
 If neither found, download it:
 

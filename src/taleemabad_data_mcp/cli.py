@@ -98,13 +98,17 @@ def _to_bash_path(p: Path) -> str:
 
 
 def _find_uv_command() -> str:
-    """Find the uv command — prefer PATH, fall back to ~/.claude/uv."""
+    """Find the uv command — prefer PATH, fall back to ~/.claude/uv.
+
+    On Windows, returns a bash-compatible path since Claude Code runs
+    in Git Bash / MSYS2 which cannot resolve Windows-style paths.
+    """
     uv_on_path = shutil.which("uv")
     if uv_on_path:
         return "uv"
     local_uv = _uv_path()
     if local_uv.exists():
-        return str(local_uv)
+        return _to_bash_path(local_uv)
     return "uv"  # hope it's on PATH at runtime
 
 
