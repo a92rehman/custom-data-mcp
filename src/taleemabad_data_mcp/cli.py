@@ -179,7 +179,7 @@ def _bigquery_analytics_config(credentials: str) -> dict:
     """Build the bigquery-analytics MCP server configuration entry."""
     return {
         "command": "npx",
-        "args": ["-y", "@ergut/bigquery-mcp@latest"],
+        "args": ["-y", "@ergut/mcp-bigquery-server@latest"],
         "env": {
             "GOOGLE_APPLICATION_CREDENTIALS": credentials,
             "BIGQUERY_PROJECT": "niete-bq-prod",

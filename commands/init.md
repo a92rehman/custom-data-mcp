@@ -74,7 +74,7 @@ mcp = {
         },
         "bigquery-analytics": {
             "command": "npx",
-            "args": ["-y", "@ergut/bigquery-mcp@latest"],
+            "args": ["-y", "@ergut/mcp-bigquery-server@latest"],
             "env": {
                 "GOOGLE_APPLICATION_CREDENTIALS": credentials_path,
                 "BIGQUERY_PROJECT": "niete-bq-prod"
