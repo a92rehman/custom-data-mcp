@@ -266,6 +266,14 @@ def bump_version(minor: bool = False) -> None:
         manifest["version"] = new_version
         plugin_json.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
+    # Update marketplace manifest version
+    marketplace_json = repo_root / ".claude-plugin" / "marketplace.json"
+    if marketplace_json.exists():
+        mp = json.loads(marketplace_json.read_text(encoding="utf-8"))
+        if "plugins" in mp and len(mp["plugins"]) > 0:
+            mp["plugins"][0]["version"] = new_version
+        marketplace_json.write_text(json.dumps(mp, indent=2) + "\n", encoding="utf-8")
+
     # Update plugin/.current-version
     current_version_file = repo_root / ".current-version"
     if current_version_file.exists():

@@ -5,16 +5,36 @@
     "email": "tech@orenda.pk"
   },
   "metadata": {
-    "description": "Taleemabad Data MCP — governed BigQuery analytics for Taleemabad education platform",
-    "version": "0.6.1"
+    "description": "Taleemabad Data MCP — governed BigQuery analytics for Taleemabad education platform"
   },
   "plugins": [
     {
       "name": "taleemabad-data",
       "source": "./",
       "description": "Governed semantic layer for Taleemabad BigQuery data. Two AI agents with self-healing query loop, auto-updating governance rules, and full audit trail.",
+      "version": "0.7.2",
+      "author": {
+        "name": "Orenda Project",
+        "email": "tech@orenda.pk"
+      },
+      "homepage": "https://github.com/Orenda-Project/taleemabad-data-mcp",
+      "repository": "https://github.com/Orenda-Project/taleemabad-data-mcp",
+      "license": "MIT",
+      "keywords": [
+        "bigquery",
+        "analytics",
+        "data-governance",
+        "education",
+        "taleemabad"
+      ],
       "category": "data",
-      "tags": ["bigquery", "analytics", "data-governance", "education", "taleemabad"]
+      "tags": [
+        "bigquery",
+        "analytics",
+        "data-governance",
+        "education",
+        "taleemabad"
+      ]
     }
   ]
 }
