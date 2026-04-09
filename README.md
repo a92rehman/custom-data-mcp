@@ -8,7 +8,11 @@ See [VISION.md](docs/VISION.md) for why this exists and where it's going.
 
 One-time setup. Takes ~2 minutes. You need Python 3.11+, Git, [Claude Code](https://claude.ai/code), and the service account key file (ask the data team).
 
-See **[INSTALL.md](docs/INSTALL.md)** for detailed step-by-step instructions with troubleshooting.
+**For v0.6.0+:** See **[CROSS_PLATFORM_SETUP.md](docs/CROSS_PLATFORM_SETUP.md)** for all platforms (Windows, macOS, iOS).
+
+**Upgrading from v0.5.x?** See **[MIGRATION_v0.5_to_v0.6.md](docs/MIGRATION_v0.5_to_v0.6.md)** — one config change fixes MCP server on all platforms.
+
+**Detailed reference:** See **[INSTALL.md](docs/INSTALL.md)** for comprehensive step-by-step instructions with troubleshooting.
 
 ### Quick Start (macOS / Linux)
 
