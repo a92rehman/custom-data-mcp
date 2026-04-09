@@ -14,6 +14,7 @@ PACKAGE_NAME = "taleemabad-data-mcp"
 RULES_DIR_NAME = "taleemabad"
 VENV_DIR_NAME = "taleemabad-venv"
 GITHUB_URL = "git+https://github.com/Orenda-Project/taleemabad-data-mcp"
+CREDENTIALS_FILENAME = "niete-bq-prod-48ae5260d1ea.json"
 
 
 def _claude_dir() -> Path:
@@ -317,24 +318,51 @@ def bump_cmd(minor: bool) -> None:
 @click.option("--user", required=True, help="Your name (for activity tracking).")
 @click.option(
     "--credentials",
-    required=True,
+    required=False,
     type=click.Path(exists=True),
-    help="Path to Google Cloud service account JSON key.",
+    default=None,
+    help="Path to GCP service account JSON key. Default: auto-detect in current directory.",
 )
-def setup(user: str, credentials: str) -> None:
-    """Install rules and configure Claude Code MCP connection."""
-    credentials_abs = str(Path(credentials).resolve())
+def setup(user: str, credentials: str | None) -> None:
+    """Install rules and configure Claude Code MCP connection.
 
-    # 1. Create venv and install package
+    Credentials: Place niete-bq-prod-48ae5260d1ea.json in your project
+    directory. The setup will auto-detect it and use a relative path
+    (./<filename>) so the .mcp.json is portable.
+    """
+    cwd = Path.cwd()
+
+    # 1. Find credentials file
+    if credentials:
+        creds_path = Path(credentials)
+    else:
+        creds_path = cwd / CREDENTIALS_FILENAME
+    if not creds_path.exists():
+        click.echo(
+            f"Error: GCP credentials file not found.\n"
+            f"Expected: {creds_path}\n\n"
+            f"Copy '{CREDENTIALS_FILENAME}' into this project directory,\n"
+            f"then re-run: python -m taleemabad_data_mcp setup --user \"{user}\"",
+            err=True,
+        )
+        sys.exit(1)
+
+    # Use relative path if file is in cwd (portable .mcp.json)
+    try:
+        rel = creds_path.resolve().relative_to(cwd.resolve())
+        credentials_for_config = f"./{rel}"
+    except ValueError:
+        credentials_for_config = str(creds_path.resolve())
+
+    # 2. Create venv and install package
     _create_venv_and_install()
 
-    # Verify the venv python works
     python_path = _venv_python()
     if not python_path.exists():
         click.echo(f"Error: Python not found at {python_path}", err=True)
         sys.exit(1)
 
-    # 2. Copy rules to ~/.claude/rules/taleemabad/
+    # 3. Copy rules to ~/.claude/rules/taleemabad/
     src_rules = _bundled_rules_dir()
     dest_rules = _rules_dest()
 
@@ -347,17 +375,14 @@ def setup(user: str, credentials: str) -> None:
     shutil.copytree(src_rules, dest_rules)
     click.echo(f"Rules installed to {dest_rules}")
 
-    # 3. Write .mcp.json to current project directory
-    cwd = Path.cwd()
-    mcp_path = _write_mcp_json(cwd, credentials_abs, user)
+    # 4. Write .mcp.json to current project directory
+    mcp_path = _write_mcp_json(cwd, credentials_for_config, user)
     click.echo(f"MCP config written to {mcp_path}")
 
-    # 4. Write user config env file (includes UV_COMMAND for future init)
-    uv_cmd = _find_uv_command()
+    # 5. Save user config for future init commands
     env_content = (
         f"TALEEMABAD_USER={user}\n"
-        f"GOOGLE_APPLICATION_CREDENTIALS={credentials_abs}\n"
-        f"UV_COMMAND={uv_cmd}\n"
+        f"GOOGLE_APPLICATION_CREDENTIALS={CREDENTIALS_FILENAME}\n"
     )
     env_path = _env_path()
     env_path.write_text(env_content, encoding="utf-8")
@@ -366,9 +391,8 @@ def setup(user: str, credentials: str) -> None:
     click.echo()
     click.echo("Setup complete! Restart Claude Code to connect.")
     click.echo()
-    click.echo("For other projects, run:")
-    click.echo("  /taleemabad-init    (in Claude Code)")
-    click.echo("  or: python -m taleemabad_data_mcp init  (from CLI)")
+    click.echo("For other projects: copy the credentials JSON file there,")
+    click.echo("then run /taleemabad-init or: python -m taleemabad_data_mcp init")
 
 
 def _read_saved_config() -> dict[str, str]:
@@ -441,22 +465,43 @@ def init() -> None:
     """Add .mcp.json to the current project directory.
 
     Run this in any project where you want the Taleemabad data MCP available.
-    Reads your credentials from the setup config.
+    Requires niete-bq-prod-48ae5260d1ea.json in the project directory.
     """
     saved = _read_saved_config()
-    user_name = saved.get("TALEEMABAD_USER", "unknown")
-    credentials = saved.get("GOOGLE_APPLICATION_CREDENTIALS", "")
+    user_name = saved.get("TALEEMABAD_USER")
 
-    if not credentials or not user_name:
-        click.echo("Error: run setup first.", err=True)
+    if not user_name:
+        click.echo(
+            "Error: run setup first:\n"
+            '  python -m taleemabad_data_mcp setup --user "Your Name"',
+            err=True,
+        )
         sys.exit(1)
 
+    # Check venv exists
+    if not _venv_python().exists():
+        click.echo(
+            "Error: taleemabad-venv not found. Run setup first:\n"
+            '  python -m taleemabad_data_mcp setup --user "Your Name"',
+            err=True,
+        )
+        sys.exit(1)
+
+    # Check credentials file in current directory
     cwd = Path.cwd()
-    mcp_path = _write_mcp_json(cwd, credentials, user_name)
+    creds_path = cwd / CREDENTIALS_FILENAME
+    if not creds_path.exists():
+        click.echo(
+            f"Error: '{CREDENTIALS_FILENAME}' not found in this directory.\n"
+            f"Copy the GCP service account key here first.",
+            err=True,
+        )
+        sys.exit(1)
+
+    credentials_for_config = f"./{CREDENTIALS_FILENAME}"
+    mcp_path = _write_mcp_json(cwd, credentials_for_config, user_name)
     click.echo(f"Created {mcp_path}")
-    click.echo()
-    click.echo("Open Claude Code here and run /mcp to verify.")
-    click.echo('Then ask: "Show me LP adoption for ICT schools this month"')
+    click.echo("Restart Claude Code and run /mcp to verify.")
 
 
 @main.command()
