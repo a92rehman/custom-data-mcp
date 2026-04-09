@@ -6,7 +6,6 @@ __pycache__/
 !.claude/settings.json
 !.claude-plugin/plugin.json
 !.claude-plugin/marketplace.json
-!.mcp.json
 !hooks/hooks.json
 !.current-version
 .venv/

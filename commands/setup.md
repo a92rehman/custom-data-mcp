@@ -10,18 +10,28 @@ Save the OS (Windows/Darwin/Linux) and architecture (x86_64/arm64/aarch64).
 
 ### Step 2: Read installed version
 Run: `python -c "import glob, os; files = glob.glob(os.path.expanduser('~/.claude/plugins/cache/Orenda-Project/taleemabad-data/*/.current-version')); print(open(files[0]).read().strip()) if files else print('NOT_FOUND')"`
-Save the version string (e.g. `v0.5.3`).
+Save the version string (e.g. `v0.6.2`).
 
 If NOT_FOUND, tell the user: "Plugin not found. Run `claude plugin install taleemabad-data@Orenda-Project` first, then re-run /taleemabad-setup."
 Stop if not found.
 
-### Step 3: Download uv (if not already present)
-Check if `~/.claude/uv.exe` (Windows) or `~/.claude/uv` (Mac/Linux) exists:
+### Step 3: Find or download uv
+
+**First check if uv is already on PATH:**
 ```
-python -c "import os; print(os.path.exists(os.path.expanduser('~/.claude/uv.exe' if __import__('platform').system()=='Windows' else '~/.claude/uv')))"
+python -c "import shutil; p = shutil.which('uv'); print(p if p else 'NOT_FOUND')"
 ```
 
-If False, download it:
+If found on PATH, save `uv_command = "uv"` (use the PATH-based command).
+
+If NOT on PATH, check if already downloaded to `~/.claude/`:
+```
+python -c "import os, platform; p = os.path.expanduser('~/.claude/' + ('uv.exe' if platform.system()=='Windows' else 'uv')); print(p if os.path.exists(p) else 'NOT_FOUND')"
+```
+
+If found at `~/.claude/`, save `uv_command = <that absolute path>`.
+
+If neither found, download it:
 
 **Windows (x86_64):**
 ```python
@@ -65,9 +75,10 @@ uv.chmod(uv.stat().st_mode | stat.S_IEXEC)
 print("uv downloaded to", uv)
 ```
 
-After download, verify: run `~/.claude/uv.exe version` (Windows) or `~/.claude/uv version` (Mac/Linux) and show the output.
+After download, save `uv_command = <absolute path to downloaded uv>`.
+Verify by running: `<uv_command> version` and show the output.
 
-If download fails, tell the user: "Could not download uv automatically. Download manually from https://github.com/astral-sh/uv/releases and save the binary to ~/.claude/uv (or uv.exe on Windows). Then re-run /taleemabad-setup."
+If download fails, tell the user: "Could not download uv automatically. Install uv from https://docs.astral.sh/uv/getting-started/installation/ and re-run /taleemabad-setup."
 
 ### Step 4: Check for old venv
 Run: `python -c "import os; print(os.path.exists(os.path.expanduser('~/.claude/taleemabad-venv')))"`
@@ -102,12 +113,12 @@ Build the MCP server config and merge it into `~/.claude/settings.json` using Py
 ```python
 import json, os, platform, pathlib
 
-version = "<VERSION_FROM_STEP_2>"  # e.g. v0.5.3
+version = "<VERSION_FROM_STEP_2>"  # e.g. v0.6.2
 user_name = "<NAME_FROM_STEP_6>"
 credentials_path = r"<PATH_FROM_STEP_7>"
+uv_command = "<UV_COMMAND_FROM_STEP_3>"  # "uv" if on PATH, or absolute path
 
 settings_path = pathlib.Path.home() / ".claude" / "settings.json"
-uv_path = str(pathlib.Path.home() / ".claude" / ("uv.exe" if platform.system() == "Windows" else "uv"))
 
 settings = {}
 if settings_path.exists():
@@ -119,7 +130,7 @@ if settings_path.exists():
         pass
 
 settings.setdefault("mcpServers", {})["taleemabad-data"] = {
-    "command": uv_path,
+    "command": uv_command,
     "args": [
         "run",
         "--with", f"git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@{version}",
@@ -139,7 +150,11 @@ settings_path.write_text(json.dumps(settings, indent=2), encoding="utf-8")
 print("settings.json updated.")
 ```
 
-Run this as a `python -c "..."` Bash call with the actual values substituted. Do NOT use shell variables or `<UV_PATH>` — embed the actual values directly in the Python string.
+Run this as a `python -c "..."` Bash call with the actual values substituted. Do NOT use shell variables — embed the actual values directly in the Python string.
+
+**IMPORTANT:** Use the `uv_command` value from Step 3:
+- If uv was found on PATH → use `"uv"`
+- If uv was downloaded to ~/.claude/ → use the absolute path (e.g. `"C:\\Users\\name\\.claude\\uv.exe"` or `"/Users/name/.claude/uv"`)
 
 ### Step 9: Save env file
 Save name + credentials for future upgrades:
@@ -153,15 +168,9 @@ print("Config saved.")
 ### Step 10: Pre-warm uv cache
 Tell the user: "Downloading data package (first-time setup, ~30-60 seconds)..."
 
-Run (Windows):
-```
-~/.claude/uv.exe run --with "git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@<VERSION>" --python 3.11 python -m taleemabad_data_mcp version
-```
+Run: `<uv_command> run --with "git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@<VERSION>" --python 3.11 python -m taleemabad_data_mcp version`
 
-Run (Mac/Linux):
-```
-~/.claude/uv run --with "git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@<VERSION>" --python 3.11 python -m taleemabad_data_mcp version
-```
+Use the same `uv_command` from Step 3.
 
 If this fails with an authentication error, tell the user: "Git access to Orenda-Project org is required. Ask IT to add your GitHub account to the Orenda-Project organization, then re-run /taleemabad-setup."
 
@@ -183,7 +192,7 @@ After restart, the Taleemabad Data MCP will be available. Try:
 | Scenario | Action |
 |----------|--------|
 | Plugin not installed | Tell user to run claude plugin install first |
-| uv download fails | Give manual download instructions |
+| uv download fails | Give manual install instructions |
 | Credentials file not found | Re-ask, do not write config |
 | Pre-warm auth error | Tell user to ask IT for GitHub org access |
 | settings.json parse error | Start fresh (only write taleemabad-data key) |

@@ -3,15 +3,25 @@
 # Uses .current-version file to avoid git describe / detached HEAD issues
 # Set TALEEMABAD_PIN_VERSION env var to skip updates and stay on current version
 
-PLUGIN_DIR="${HOME}/.claude/plugins/taleemabad-data"
+# Use CLAUDE_PLUGIN_ROOT if available, otherwise try common paths
+PLUGIN_DIR="${CLAUDE_PLUGIN_ROOT:-}"
+if [ -z "$PLUGIN_DIR" ]; then
+  # Fallback: search in plugin cache
+  for d in "${HOME}/.claude/plugins/cache/Orenda-Project/taleemabad-data"/*; do
+    if [ -d "$d/.claude-plugin" ]; then
+      PLUGIN_DIR="$d"
+      break
+    fi
+  done
+fi
 
 # Respect pin — if user has pinned a version, skip update silently
 if [ -n "$TALEEMABAD_PIN_VERSION" ]; then
   exit 0
 fi
 
-# Must be inside the plugin directory
-if [ ! -d "$PLUGIN_DIR" ]; then
+# Must have a valid plugin directory
+if [ -z "$PLUGIN_DIR" ] || [ ! -d "$PLUGIN_DIR" ]; then
   exit 0
 fi
 
@@ -41,9 +51,5 @@ fi
 git checkout "$LATEST" --quiet 2>/dev/null
 if [ $? -eq 0 ]; then
   echo "$LATEST" > .current-version
-  # Reinstall Python package after update
-  "${HOME}/.claude/taleemabad-venv/bin/pip" install \
-    --quiet --force-reinstall \
-    "git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@${LATEST}" 2>/dev/null
   echo "[Taleemabad Data] Updated to ${LATEST}"
 fi

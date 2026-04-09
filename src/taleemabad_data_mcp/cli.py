@@ -97,12 +97,23 @@ def _to_bash_path(p: Path) -> str:
     return str(p)
 
 
+def _find_uv_command() -> str:
+    """Find the uv command — prefer PATH, fall back to ~/.claude/uv."""
+    uv_on_path = shutil.which("uv")
+    if uv_on_path:
+        return "uv"
+    local_uv = _uv_path()
+    if local_uv.exists():
+        return str(local_uv)
+    return "uv"  # hope it's on PATH at runtime
+
+
 def _mcp_server_config(credentials: str, user_name: str) -> dict:
     """Build the MCP server configuration entry (uv-based)."""
     from taleemabad_data_mcp import __version__
     git_ref = f"git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@v{__version__}"
     return {
-        "command": "uv",
+        "command": _find_uv_command(),
         "args": [
             "run",
             "--with", git_ref,
