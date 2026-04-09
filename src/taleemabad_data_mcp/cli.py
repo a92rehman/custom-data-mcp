@@ -171,11 +171,24 @@ def _create_venv_and_install() -> None:
     click.echo("Package installed successfully.")
 
 
+def _bigquery_analytics_config(credentials: str) -> dict:
+    """Build the bigquery-analytics MCP server configuration entry."""
+    return {
+        "command": "npx",
+        "args": ["-y", "@ergut/bigquery-mcp@latest"],
+        "env": {
+            "GOOGLE_APPLICATION_CREDENTIALS": credentials,
+            "BIGQUERY_PROJECT": "niete-bq-prod",
+        },
+    }
+
+
 def _mcp_json_content(credentials: str, user_name: str) -> dict:
-    """Build the .mcp.json file content."""
+    """Build the .mcp.json file content with both MCP servers."""
     return {
         "mcpServers": {
             "taleemabad-data": _mcp_server_config(credentials, user_name),
+            "bigquery-analytics": _bigquery_analytics_config(credentials),
         },
     }
 
@@ -314,30 +327,28 @@ def setup(user: str, credentials: str) -> None:
     shutil.copytree(src_rules, dest_rules)
     click.echo(f"Rules installed to {dest_rules}")
 
-    # 3. Merge MCP server config into ~/.claude/settings.json
-    settings = _load_settings()
-    if "mcpServers" not in settings:
-        settings["mcpServers"] = {}
-    settings["mcpServers"]["taleemabad-data"] = _mcp_server_config(credentials_abs, user)
-    _save_settings(settings)
-    click.echo(f"MCP server configured in {_settings_path()}")
+    # 3. Write .mcp.json to current project directory
+    cwd = Path.cwd()
+    mcp_path = _write_mcp_json(cwd, credentials_abs, user)
+    click.echo(f"MCP config written to {mcp_path}")
 
-    # 4. Write user config env file
+    # 4. Write user config env file (includes UV_COMMAND for future init)
+    uv_cmd = _find_uv_command()
     env_content = (
         f"TALEEMABAD_USER={user}\n"
         f"GOOGLE_APPLICATION_CREDENTIALS={credentials_abs}\n"
+        f"UV_COMMAND={uv_cmd}\n"
     )
     env_path = _env_path()
     env_path.write_text(env_content, encoding="utf-8")
     click.echo(f"User config saved to {env_path}")
 
     click.echo()
-    click.echo("Setup complete!")
+    click.echo("Setup complete! Restart Claude Code to connect.")
     click.echo()
-    click.echo("Next: go to any project and run:")
-    click.echo("  taleemabad-data-mcp init")
-    click.echo()
-    click.echo("This creates .mcp.json so Claude Code connects to the data MCP.")
+    click.echo("For other projects, run:")
+    click.echo("  /taleemabad-init    (in Claude Code)")
+    click.echo("  or: python -m taleemabad_data_mcp init  (from CLI)")
 
 
 def _read_saved_config() -> dict[str, str]:
@@ -389,15 +400,14 @@ def upgrade() -> None:
     shutil.copytree(src_rules, dest_rules)
     click.echo(f"Rules updated in {dest_rules}")
 
-    # Update MCP server config
-    settings = _load_settings()
-    if "mcpServers" not in settings:
-        settings["mcpServers"] = {}
-    settings["mcpServers"]["taleemabad-data"] = _mcp_server_config(
-        credentials, user_name,
-    )
-    _save_settings(settings)
-    click.echo(f"MCP config updated in {_settings_path()}")
+    # Update .mcp.json in current project directory
+    cwd = Path.cwd()
+    mcp_json_path = cwd / ".mcp.json"
+    if mcp_json_path.exists():
+        _write_mcp_json(cwd, credentials, user_name)
+        click.echo(f"MCP config updated in {mcp_json_path}")
+    else:
+        click.echo("No .mcp.json in current directory — run 'init' to create one.")
 
     from taleemabad_data_mcp import __version__
 

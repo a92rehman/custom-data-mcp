@@ -10,7 +10,7 @@ Save the OS (Windows/Darwin/Linux) and architecture (x86_64/arm64/aarch64).
 
 ### Step 2: Read installed version
 Run: `python -c "import glob, os; files = glob.glob(os.path.expanduser('~/.claude/plugins/cache/Orenda-Project/taleemabad-data/*/.current-version')); print(open(files[0]).read().strip()) if files else print('NOT_FOUND')"`
-Save the version string (e.g. `v0.6.2`).
+Save the version string (e.g. `v0.6.3`).
 
 If NOT_FOUND, tell the user: "Plugin not found. Run `claude plugin install taleemabad-data@Orenda-Project` first, then re-run /taleemabad-setup."
 Stop if not found.
@@ -107,65 +107,79 @@ python -c "import os; print('EXISTS' if os.path.exists(r'<path>') else 'NOT_FOUN
 If NOT_FOUND, ask again with: "File not found at that path. Please check and paste the correct path."
 Do not proceed until the file exists.
 
-### Step 8: Write settings.json
-Build the MCP server config and merge it into `~/.claude/settings.json` using Python's json module:
+### Step 8: Write .mcp.json to current project
+Write the MCP config to the **current project directory** (not settings.json):
 
 ```python
-import json, os, platform, pathlib
+import json, pathlib
 
-version = "<VERSION_FROM_STEP_2>"  # e.g. v0.6.2
+version = "<VERSION_FROM_STEP_2>"  # e.g. v0.6.3
 user_name = "<NAME_FROM_STEP_6>"
 credentials_path = r"<PATH_FROM_STEP_7>"
 uv_command = "<UV_COMMAND_FROM_STEP_3>"  # "uv" if on PATH, or absolute path
 
-settings_path = pathlib.Path.home() / ".claude" / "settings.json"
-
-settings = {}
-if settings_path.exists():
-    try:
-        data = json.loads(settings_path.read_text(encoding="utf-8"))
-        if isinstance(data, dict):
-            settings = data
-    except json.JSONDecodeError:
-        pass
-
-settings.setdefault("mcpServers", {})["taleemabad-data"] = {
-    "command": uv_command,
-    "args": [
-        "run",
-        "--with", f"git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@{version}",
-        "--python", "3.11",
-        "python", "-m", "taleemabad_data_mcp", "serve"
-    ],
-    "env": {
-        "BIGQUERY_PROJECT": "niete-bq-prod",
-        "BIGQUERY_DATASETS": "RUMI_DB,TaleemHub_DB,tbproddb,odk,mcp_audit",
-        "GOOGLE_APPLICATION_CREDENTIALS": credentials_path,
-        "TALEEMABAD_USER": user_name,
+mcp = {
+    "mcpServers": {
+        "taleemabad-data": {
+            "command": uv_command,
+            "args": [
+                "run",
+                "--with", f"git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@{version}",
+                "--python", "3.11",
+                "python", "-m", "taleemabad_data_mcp", "serve"
+            ],
+            "env": {
+                "BIGQUERY_PROJECT": "niete-bq-prod",
+                "BIGQUERY_DATASETS": "RUMI_DB,TaleemHub_DB,tbproddb,odk,mcp_audit",
+                "GOOGLE_APPLICATION_CREDENTIALS": credentials_path,
+                "TALEEMABAD_USER": user_name,
+            }
+        },
+        "bigquery-analytics": {
+            "command": "npx",
+            "args": ["-y", "@ergut/bigquery-mcp@latest"],
+            "env": {
+                "GOOGLE_APPLICATION_CREDENTIALS": credentials_path,
+                "BIGQUERY_PROJECT": "niete-bq-prod"
+            }
+        }
     }
 }
 
-settings_path.parent.mkdir(parents=True, exist_ok=True)
-settings_path.write_text(json.dumps(settings, indent=2), encoding="utf-8")
-print("settings.json updated.")
+pathlib.Path(".mcp.json").write_text(json.dumps(mcp, indent=2) + "\n", encoding="utf-8")
+print(".mcp.json created in current project.")
 ```
 
 Run this as a `python -c "..."` Bash call with the actual values substituted. Do NOT use shell variables — embed the actual values directly in the Python string.
 
 **IMPORTANT:** Use the `uv_command` value from Step 3:
-- If uv was found on PATH → use `"uv"`
-- If uv was downloaded to ~/.claude/ → use the absolute path (e.g. `"C:\\Users\\name\\.claude\\uv.exe"` or `"/Users/name/.claude/uv"`)
+- If uv was found on PATH: use `"uv"`
+- If uv was downloaded to ~/.claude/: use the absolute path
 
 ### Step 9: Save env file
-Save name + credentials for future upgrades:
+Save name, credentials, and uv command for future use by `/taleemabad-init`:
 ```python
 import pathlib
 env_path = pathlib.Path.home() / ".claude" / "taleemabad-data-mcp.env"
-env_path.write_text(f"TALEEMABAD_USER=<name>\nGOOGLE_APPLICATION_CREDENTIALS=<path>\n", encoding="utf-8")
+env_path.write_text(
+    f"TALEEMABAD_USER=<name>\n"
+    f"GOOGLE_APPLICATION_CREDENTIALS=<path>\n"
+    f"UV_COMMAND=<uv_command>\n",
+    encoding="utf-8"
+)
 print("Config saved.")
 ```
 
-### Step 10: Pre-warm uv cache
+### Step 10: Warn about .gitignore
+Check if the current project's `.gitignore` contains `.mcp.json`:
+```
+python -c "import os; gi = open('.gitignore').read() if os.path.exists('.gitignore') else ''; print('COVERED' if '.mcp.json' in gi else 'NOT_COVERED')"
+```
+
+If NOT_COVERED, tell the user:
+> ".mcp.json contains your credentials path. Consider adding `.mcp.json` to your `.gitignore`."
+
+### Step 11: Pre-warm uv cache
 Tell the user: "Downloading data package (first-time setup, ~30-60 seconds)..."
 
 Run: `<uv_command> run --with "git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@<VERSION>" --python 3.11 python -m taleemabad_data_mcp version`
@@ -176,23 +190,27 @@ If this fails with an authentication error, tell the user: "Git access to Orenda
 
 If it succeeds, show the version output.
 
-### Step 11: Done
+### Step 12: Done
 Tell the user:
 ```
 Setup complete!
 
 To activate: Restart Claude Code (close and reopen, or press Ctrl+R).
 
-After restart, the Taleemabad Data MCP will be available. Try:
-  "How many primary teachers are in ICT Islamabad?"
+After restart, run /mcp to verify:
+  - taleemabad-data (governed queries)
+  - bigquery-analytics (raw BigQuery access)
+
+Then try: "How many primary teachers are in ICT Islamabad?"
+
+For other projects, run /taleemabad-init to add the MCP there too.
 ```
 
 ## Error handling summary
 
 | Scenario | Action |
 |----------|--------|
-| Plugin not installed | Tell user to run claude plugin install first |
+| Plugin not installed | Tell user to run `claude plugin install taleemabad-data@Orenda-Project` first |
 | uv download fails | Give manual install instructions |
 | Credentials file not found | Re-ask, do not write config |
 | Pre-warm auth error | Tell user to ask IT for GitHub org access |
-| settings.json parse error | Start fresh (only write taleemabad-data key) |
