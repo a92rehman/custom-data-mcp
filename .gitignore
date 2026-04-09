@@ -1,18 +1,31 @@
+# Python
 __pycache__/
 *.pyc
+*.egg-info/
+.venv/
+dist/
+
+# Environment
 .env
+
+# Credentials — NEVER commit
 *.json
-!package.json
-!.claude/settings.json
 !.claude-plugin/plugin.json
 !.claude-plugin/marketplace.json
 !hooks/hooks.json
+
+# Version file (not JSON but caught by *.json — explicitly allow)
 !.current-version
-.venv/
-dist/
-*.egg-info/
+
+# Project MCP config (contains user credentials path)
+.mcp.json
+
+# Dev artifacts
 .pytest_cache/
 .ruff_cache/
 htmlcov/
 .coverage
 bash.exe.stackdump
+
+# Dev rules copy (derived from src/taleemabad_data_mcp/rules/ by bump command)
+.claude/rules/

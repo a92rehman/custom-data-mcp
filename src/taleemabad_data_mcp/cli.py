@@ -257,11 +257,18 @@ def bump_version(minor: bool = False) -> None:
         )
         pyproject_file.write_text(new_pyproject, encoding="utf-8")
 
-    # Sync plugin/rules/ from src rules
+    # Sync rules/ at repo root from src rules (for plugin agents to read)
     if src_rules_dir.exists():
         if plugin_rules_dir.exists():
             shutil.rmtree(plugin_rules_dir)
         shutil.copytree(src_rules_dir, plugin_rules_dir)
+
+    # Sync .claude/rules/ for dev convenience (gitignored)
+    claude_rules_dir = repo_root / ".claude" / "rules"
+    if claude_rules_dir.parent.exists() and src_rules_dir.exists():
+        if claude_rules_dir.exists():
+            shutil.rmtree(claude_rules_dir)
+        shutil.copytree(src_rules_dir, claude_rules_dir)
 
     # Update plugin manifest version
     plugin_json = repo_root / ".claude-plugin" / "plugin.json"

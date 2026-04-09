@@ -43,39 +43,40 @@ python -m taleemabad_data_mcp bump       # Patch version bump (bump --minor for 
 
 ## Project Structure
 ```
-src/
-  taleemabad_data_mcp/
-    __init__.py           # Package version (__version__)
-    __main__.py           # Entry point (routes to CLI)
-    cli.py                # CLI: setup, upgrade, init, version, serve, dashboard, uninstall
-    server.py             # FastMCP instance, MCP tools
-    config.py             # Configuration management (env vars)
-    engine/
-      audit_logger.py     # BigQuery audit writes + local JSON Lines fallback
-      feedback_logger.py  # Feedback writes (thumbs up/down) + local fallback
-      cost_estimator.py   # BigQuery dry-run cost estimation
-      domain_classifier.py # Classify queries by domain (teachers, LPs, observations, training)
-    models/
-      audit.py            # AuditLogEntry with cost tracking + domain field
-      feedback.py         # FeedbackEntry (rating, comment)
-    dashboard/            # Streamlit observability dashboard
-      app.py              # Entry point with st.navigation
-      pages/              # Overview, Query Analytics, Feedback, Cost, Errors, Freshness
-      data/               # BigQuery queries + client for dashboard
-      components/         # Shared filters, charts, styles
-    rules/                # Governance rules (bundled in wheel, copied on setup)
-      index.md            # READ FIRST — routes to general rules + regions
-      bigquery.md         # Partition policy, event table hierarchy
-      ict-islamabad/      # Region: ICT (org_id=1, dataset: tbproddb)
-      rawalpindi/         # Region: RWP (RUMI_DB + TaleemHub_DB)
+src/taleemabad_data_mcp/        # Python MCP server package
+  __init__.py                   # Package version (__version__)
+  __main__.py                   # Entry point (routes to CLI)
+  cli.py                        # CLI: setup, init, upgrade, bump, serve, dashboard, uninstall
+  server.py                     # FastMCP instance, 6 MCP tools
+  config.py                     # Configuration management (env vars)
+  rules/                        # SOURCE OF TRUTH — governance rules (20 MD files)
+    index.md                    # READ FIRST — routes to general rules + regions
+    bigquery.md                 # Partition policy, event table hierarchy
+    ict-islamabad/              # Region: ICT (org_id=1, dataset: tbproddb)
+    rawalpindi/                 # Region: RWP (RUMI_DB + TaleemHub_DB)
+  engine/
+    audit_logger.py             # BigQuery audit writes + local JSON Lines fallback
+    feedback_logger.py          # Feedback writes (thumbs up/down) + local fallback
+    cost_estimator.py           # BigQuery dry-run cost estimation
+    domain_classifier.py        # Classify queries by domain
+  models/
+    audit.py                    # AuditLogEntry with cost tracking + domain field
+    feedback.py                 # FeedbackEntry (rating, comment)
+  dashboard/                    # Streamlit observability dashboard
+agents/                         # Plugin agents (loaded by Claude Code plugin system)
+  data-analyst.md               # Primary — reads rules, generates governed SQL
+  data-admin.md                 # Diagnostics — schema, freshness, audit, troubleshooting
+commands/                       # Plugin slash commands
+  setup.md                      # /taleemabad-setup — one-time install wizard
+  init.md                       # /taleemabad-init — add MCP to another project
+hooks/                          # Plugin hooks (auto-update via git tags)
+rules/                          # DERIVED COPY — synced from src/ by bump command
+                                # Plugin agents read from this location
 tests/
 docs/
-  INSTALL.md              # User installation guide with troubleshooting
-  VISION.md               # Why this exists, 15-section strategy
-  research/               # Background research (5 reports)
-  superpowers/            # Design specs and implementation plans
-.claude/
-  rules/                  # Dev copy — mirrors src/.../rules/
+  INSTALL.md                    # Quick reference (points to README)
+  VISION.md                     # Strategic vision, 15 sections
+  superpowers/                  # Historical design specs and plans
 ```
 
 ## MCP Tools
