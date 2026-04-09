@@ -19,15 +19,17 @@ Before installing, make sure you have:
 
 Works on **Windows**, **macOS**, **Linux**, and **iOS** (via Claude Code terminal).
 
-### Step 1: Install the Plugin
+### Step 1: Add Marketplace and Install Plugin
 
-Open your terminal and run:
+Open your terminal and run these two commands:
 
 ```bash
+claude plugin marketplace add Orenda-Project/taleemabad-data-mcp
 claude plugin install taleemabad-data@Orenda-Project
 ```
 
-This registers the plugin with Claude Code (agents, slash commands, governance rules).
+The first command registers the Orenda-Project repository as a plugin source.
+The second installs the plugin (agents, slash commands, governance rules).
 
 ### Step 2: Run Setup
 
@@ -83,6 +85,7 @@ Then run `/taleemabad-setup` again in your project to refresh the MCP config.
 
 ```bash
 claude plugin uninstall taleemabad-data@Orenda-Project
+claude plugin marketplace remove Orenda-Project
 ```
 
 Then delete `.mcp.json` from any projects where you ran setup or init.
@@ -120,7 +123,11 @@ Then delete `.mcp.json` from any projects where you ran setup or init.
 ## Troubleshooting
 
 ### Plugin not found after install
-Make sure you ran `claude plugin install taleemabad-data@Orenda-Project` (not just `git clone`).
+Make sure you ran both commands:
+```bash
+claude plugin marketplace add Orenda-Project/taleemabad-data-mcp
+claude plugin install taleemabad-data@Orenda-Project
+```
 
 ### /taleemabad-setup not recognized
 Restart Claude Code after installing the plugin. The slash command is provided by the plugin.

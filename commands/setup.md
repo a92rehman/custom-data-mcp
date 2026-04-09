@@ -12,7 +12,11 @@ Save the OS (Windows/Darwin/Linux) and architecture (x86_64/arm64/aarch64).
 Run: `python -c "import glob, os; files = glob.glob(os.path.expanduser('~/.claude/plugins/cache/Orenda-Project/taleemabad-data/*/.current-version')); print(open(files[0]).read().strip()) if files else print('NOT_FOUND')"`
 Save the version string (e.g. `v0.6.3`).
 
-If NOT_FOUND, tell the user: "Plugin not found. Run `claude plugin install taleemabad-data@Orenda-Project` first, then re-run /taleemabad-setup."
+If NOT_FOUND, tell the user: "Plugin not found. Run these two commands first, then re-run /taleemabad-setup:
+```
+claude plugin marketplace add Orenda-Project/taleemabad-data-mcp
+claude plugin install taleemabad-data@Orenda-Project
+```"
 Stop if not found.
 
 ### Step 3: Find or download uv
