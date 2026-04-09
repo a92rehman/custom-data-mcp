@@ -26,19 +26,28 @@ python -c "import os, platform, pathlib; p = pathlib.Path.home() / '.claude' / '
 If NOT_FOUND, tell the user: "Taleemabad venv not found. Run `/taleemabad-setup` first to install the package."
 Stop.
 
-### Step 3: Check if .mcp.json already exists
+### Step 3: Check for credentials file in project directory
+Run:
+```
+python -c "import os; print('EXISTS' if os.path.exists('niete-bq-prod-48ae5260d1ea.json') else 'NOT_FOUND')"
+```
+
+If NOT_FOUND, tell the user: "GCP credentials file not found. Copy `niete-bq-prod-48ae5260d1ea.json` into this project directory first."
+Stop.
+
+### Step 4: Check if .mcp.json already exists
 Run: `python -c "import os; print('EXISTS' if os.path.exists('.mcp.json') else 'NOT_FOUND')"`
 
 If EXISTS, ask: "This project already has .mcp.json. Overwrite it? (y/n)"
 If no, stop.
 
-### Step 4: Write .mcp.json
+### Step 5: Write .mcp.json
 
 ```python
 import json, pathlib, platform
 
 user_name = "<NAME_FROM_STEP_1>"
-credentials_path = r"<CREDENTIALS_FROM_STEP_1>"
+credentials_path = "./niete-bq-prod-48ae5260d1ea.json"
 
 home = pathlib.Path.home()
 if platform.system() == "Windows":
@@ -78,7 +87,7 @@ print(".mcp.json created.")
 
 Run this as a `python -c "..."` Bash call with the actual values substituted.
 
-### Step 5: Warn about .gitignore
+### Step 6: Warn about .gitignore
 Check if `.gitignore` exists and contains `.mcp.json`:
 ```
 python -c "import os; gi = open('.gitignore').read() if os.path.exists('.gitignore') else ''; print('COVERED' if '.mcp.json' in gi else 'NOT_COVERED')"
@@ -87,7 +96,7 @@ python -c "import os; gi = open('.gitignore').read() if os.path.exists('.gitigno
 If NOT_COVERED, tell the user:
 > ".mcp.json contains your credentials path. Add `.mcp.json` to your `.gitignore` to avoid committing it."
 
-### Step 6: Done
+### Step 7: Done
 Tell the user:
 ```
 Done! Restart Claude Code to connect.

@@ -19,16 +19,18 @@ If yes, skip Steps 3 and 4. If no, proceed to Step 3.
 Ask: "What is your name? (used for audit logs)"
 Save as user_name.
 
-### Step 4: Ask for credentials path
-Ask: "Paste the full path to your GCP service account JSON file."
-
-Validate the file exists:
+### Step 4: Check for credentials file
+First check if `niete-bq-prod-48ae5260d1ea.json` exists in the current project directory:
 ```
-python -c "import os; print('EXISTS' if os.path.exists(r'<path>') else 'NOT_FOUND')"
+python -c "import os; print('EXISTS' if os.path.exists('niete-bq-prod-48ae5260d1ea.json') else 'NOT_FOUND')"
 ```
 
-If NOT_FOUND, ask again with: "File not found at that path. Please check and paste the correct path."
-Do not proceed until the file exists.
+If EXISTS: use `./niete-bq-prod-48ae5260d1ea.json` as the credentials path. Tell user: "Found GCP credentials in project directory."
+
+If NOT_FOUND: ask the user: "GCP credentials file not found in this directory. Please copy `niete-bq-prod-48ae5260d1ea.json` (from the data team) into this project directory and re-run /taleemabad-setup."
+Stop.
+
+Save `credentials_path = "./niete-bq-prod-48ae5260d1ea.json"` — always use relative path so .mcp.json is portable.
 
 ### Step 5: Create venv and install package
 Tell the user: "Installing Taleemabad Data MCP (this may take 1-2 minutes)..."
