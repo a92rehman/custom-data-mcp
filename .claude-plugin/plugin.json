@@ -21,7 +21,6 @@
     "./agents/data-admin.md"
   ],
   "commands": [
-    "./commands/setup.md",
-    "./commands/init.md"
+    "./commands/setup.md"
   ]
 }
