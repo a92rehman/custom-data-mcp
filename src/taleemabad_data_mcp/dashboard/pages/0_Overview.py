@@ -96,6 +96,20 @@ st.markdown("""
     .mini-stat { text-align: center; padding: 6px 0; }
     .mini-stat .value { font-size: 1.3rem; font-weight: 700; color: #1E293B; }
     .mini-stat .label { font-size: 0.75rem; color: #64748B; }
+
+    /* Section containers — colored backgrounds to separate groups */
+    .section-box {
+        border-radius: 12px; padding: 16px 14px 12px 14px;
+        margin-bottom: 6px;
+    }
+    .section-box-blue { background: #EFF6FF; border: 1px solid #BFDBFE; }
+    .section-box-green { background: #F0FDF4; border: 1px solid #BBF7D0; }
+    .section-box-orange { background: #FFF7ED; border: 1px solid #FED7AA; }
+    .section-box-purple { background: #F5F3FF; border: 1px solid #DDD6FE; }
+    .section-box-slate { background: #F8FAFC; border: 1px solid #E2E8F0; }
+    .section-box-red { background: #FEF2F2; border: 1px solid #FECACA; }
+
+    .section-box .section-header { margin-top: 0; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -337,10 +351,9 @@ TILE = (
 r3a, r3b, r3c = st.columns(3)
 
 with r3a:
-    st.markdown(
-        '<div class="section-header">Feedback Snapshot</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="section-box section-box-green">', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Feedback Snapshot</div>',
+                unsafe_allow_html=True)
     fc1, fc2, fc3 = st.columns(3)
     fc1.markdown(TILE.format(label="Thumbs Up", value=up_count,
                              style=' style="color:#22C55E;"'), unsafe_allow_html=True)
@@ -348,7 +361,6 @@ with r3a:
                              style=' style="color:#EF4444;"'), unsafe_allow_html=True)
     fc3.markdown(TILE.format(label="Rated", value=f"{rated_pct:.0f}%",
                              style=""), unsafe_allow_html=True)
-    # Bar chart: satisfaction by domain
     if not fb.empty:
         fb_domain = fb.groupby("domain")["rating"].apply(
             lambda x: (x == "up").sum() / len(x) * 100
@@ -360,14 +372,15 @@ with r3a:
         ))
         fig.update_layout(template="plotly_white", margin=dict(l=10, r=10, t=5, b=10),
                           height=150, xaxis=dict(title=None, range=[0, 100]),
-                          yaxis=dict(title=None))
+                          yaxis=dict(title=None), plot_bgcolor="rgba(0,0,0,0)",
+                          paper_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig, use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with r3b:
-    st.markdown(
-        '<div class="section-header">Cost by Domain</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="section-box section-box-orange">', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Cost by Domain</div>',
+                unsafe_allow_html=True)
     cc1, cc2, cc3 = st.columns(3)
     cc1.markdown(TILE.format(label="Total Cost", value=f"${total_cost:.2f}",
                              style=""), unsafe_allow_html=True)
@@ -376,7 +389,6 @@ with r3b:
                              style=""), unsafe_allow_html=True)
     cc3.markdown(TILE.format(label="Avg/Query", value=f"${avg_cost:.4f}",
                              style=""), unsafe_allow_html=True)
-    # Bar chart: cost by domain
     if not cost_df.empty:
         cost_by_domain = (
             cost_df.groupby("domain")["cost_usd"]
@@ -388,14 +400,15 @@ with r3b:
             text=[f"${v:.3f}" for v in cost_by_domain["cost_usd"]], textposition="auto",
         ))
         fig.update_layout(template="plotly_white", margin=dict(l=10, r=10, t=5, b=10),
-                          height=150, xaxis=dict(title=None), yaxis=dict(title=None))
+                          height=150, xaxis=dict(title=None), yaxis=dict(title=None),
+                          plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig, use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with r3c:
-    st.markdown(
-        '<div class="section-header">Most Active Users</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="section-box section-box-blue">', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Most Active Users</div>',
+                unsafe_allow_html=True)
     uc1, uc2, uc3 = st.columns(3)
     uc1.markdown(TILE.format(label="Users", value=active_users,
                              style=""), unsafe_allow_html=True)
@@ -403,7 +416,6 @@ with r3c:
                              style=""), unsafe_allow_html=True)
     uc3.markdown(TILE.format(label="Top User", value=top_user_name,
                              style=""), unsafe_allow_html=True)
-    # Bar chart: top users
     user_activity = (
         real_queries.groupby("user_name")
         .size().reset_index(name="queries")
@@ -415,8 +427,10 @@ with r3c:
         text=user_activity["queries"], textposition="auto",
     ))
     fig.update_layout(template="plotly_white", margin=dict(l=10, r=10, t=5, b=10),
-                      height=150, xaxis=dict(title=None), yaxis=dict(title=None))
+                      height=150, xaxis=dict(title=None), yaxis=dict(title=None),
+                      plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
     st.plotly_chart(fig, use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ======================================================================
 # ROW 4: Errors + Freshness + Feedback — summary KPI cards
@@ -444,6 +458,7 @@ except Exception:
 r4a, r4b, r4c = st.columns(3)
 
 with r4a:
+    st.markdown('<div class="section-box section-box-red">', unsafe_allow_html=True)
     st.markdown('<div class="section-header">Errors</div>', unsafe_allow_html=True)
     ec1, ec2 = st.columns(2)
     err_color = COLORS["success"] if error_count == 0 else COLORS["danger"]
@@ -451,8 +466,10 @@ with r4a:
                              style=f' style="color:{err_color};"'), unsafe_allow_html=True)
     ec2.markdown(TILE.format(label="Error Types", value=error_types_count,
                              style=""), unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with r4b:
+    st.markdown('<div class="section-box section-box-purple">', unsafe_allow_html=True)
     st.markdown('<div class="section-header">Data Freshness</div>', unsafe_allow_html=True)
     dc1, dc2, dc3 = st.columns(3)
     dc1.markdown(TILE.format(label="Tables", value=tables_tracked,
@@ -463,8 +480,10 @@ with r4b:
     dc3.markdown(TILE.format(label="Stale (&gt;24h)", value=stale_count,
                              style=f' style="color:{COLORS["danger"]};"'),
                  unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with r4c:
+    st.markdown('<div class="section-box section-box-slate">', unsafe_allow_html=True)
     st.markdown('<div class="section-header">Feedback</div>', unsafe_allow_html=True)
     fbc1, fbc2 = st.columns(2)
     fbc1.markdown(TILE.format(label="Total Ratings", value=feedback_count,
@@ -473,6 +492,7 @@ with r4c:
     sat_color = COLORS["success"] if satisfaction >= 70 else COLORS["warning"]
     fbc2.markdown(TILE.format(label="Satisfaction", value=sat_display,
                               style=f' style="color:{sat_color};"'), unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ======================================================================
 # ROW 5: Action Items — auto-generated from data
