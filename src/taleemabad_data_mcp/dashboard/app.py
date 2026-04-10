@@ -50,6 +50,7 @@ pg = st.navigation([
     st.Page(pages_dir / "3_cost.py", title="Cost"),
     st.Page(pages_dir / "4_errors.py", title="Errors"),
     st.Page(pages_dir / "5_freshness.py", title="Freshness"),
+    st.Page(pages_dir / "6_Governance.py", title="Governance"),
 ])
 
 pg.run()
