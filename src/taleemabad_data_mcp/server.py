@@ -8,6 +8,7 @@ import json
 import re as _re
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from pathlib import Path
 
 import structlog
 from google.cloud import bigquery
@@ -36,6 +37,28 @@ _SAFE_FILTER_RE = _re.compile(
 )
 _SAFE_IDENTIFIER_RE = _re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
+_ENV_FILE = Path.home() / ".claude" / "taleemabad-data-mcp.env"
+
+
+def _read_user_from_env_file() -> str | None:
+    """Read TALEEMABAD_USER from saved env file.
+
+    The plugin .mcp.json passes ${TALEEMABAD_USER} but Claude Code does not
+    expand arbitrary env vars. This function reads the value directly from
+    the env file written by /taleemabad-setup.
+    """
+    if not _ENV_FILE.exists():
+        return None
+    try:
+        for line in _ENV_FILE.read_text(encoding="utf-8").strip().split("\n"):
+            if "=" in line:
+                key, value = line.split("=", 1)
+                if key.strip() == "TALEEMABAD_USER" and value.strip():
+                    return value.strip()
+    except Exception:
+        pass
+    return None
+
 
 @dataclass
 class AppContext:
@@ -57,6 +80,13 @@ def _require_bq(app: "AppContext") -> str | None:
 async def app_lifespan(server: FastMCP):
     """Initialize server-wide resources. Gracefully degrades if credentials missing."""
     config = ServerConfig()
+
+    # Override user name from env file if config has unexpanded var or default
+    if config.taleemabad_user in ("unknown", "", "${TALEEMABAD_USER}"):
+        env_user = _read_user_from_env_file()
+        if env_user:
+            config.taleemabad_user = env_user
+            logger.info("user_name_loaded", source="env_file", user=env_user)
 
     bq_client = None
     audit_logger = None
