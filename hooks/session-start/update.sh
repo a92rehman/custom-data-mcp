@@ -34,13 +34,11 @@ if [ -f "$ENV_FILE" ]; then
   done < "$ENV_FILE"
 fi
 
-# --- Always sync rules (even if version unchanged) ---
+# --- Always sync rules (every session, ensures new files are picked up) ---
 if [ -d "$RULES_SRC" ]; then
   mkdir -p "$(dirname "$RULES_DEST")"
-  if [ ! -d "$RULES_DEST" ] || [ "$RULES_SRC/index.md" -nt "$RULES_DEST/index.md" ] 2>/dev/null; then
-    rm -rf "$RULES_DEST"
-    cp -r "$RULES_SRC" "$RULES_DEST"
-  fi
+  rm -rf "$RULES_DEST"
+  cp -r "$RULES_SRC" "$RULES_DEST"
 fi
 
 # Respect pin
