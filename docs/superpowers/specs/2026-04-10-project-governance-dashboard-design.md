@@ -10,9 +10,10 @@ There are 17 datasets in BigQuery across 9+ projects. Only 3 projects (ICT, Tale
 
 ## Solution
 
-Two things:
-1. **Project Registry** — a config file listing all projects, their datasets, and status
-2. **Two Dashboard Tabs** — Project Overview + Table-Level Governance
+Three things:
+1. **Project Registry** — a YAML config listing all projects and their status
+2. **Project Status section on Overview page** — compact table showing all projects at a glance
+3. **New "Governance" tab** — detailed table-level view of which tables are governed
 
 ## Project Registry
 
@@ -22,8 +23,8 @@ A YAML file at `src/taleemabad_data_mcp/projects.yaml`:
 projects:
   - name: "ICT/Islamabad"
     dataset: "tbproddb"
-    status: "active"        # active | inactive | system
-    region: "ict-islamabad"  # maps to rules/<region>/
+    status: "active"
+    region: "ict-islamabad"
     description: "ICT school program — teachers, lesson plans, coaching, training"
 
   - name: "TaleemHub (RWP)"
@@ -75,88 +76,93 @@ projects:
     description: "Field survey data from ODK — ASER, TEACH, baseline/endline"
 ```
 
-**Adding a new project:** Add an entry to this YAML file. No code changes needed.
+**Adding a new project:** Add one entry to this YAML file. No code changes needed.
 
-## Tab 1: Project Overview
+## Overview Page: Project Status Section
 
-Shows all projects in a single table with live BigQuery stats.
+Added to the existing `0_Overview.py` between the KPI cards (Row 1) and the Activity Trend (Row 2).
+
+### Layout
+
+A compact table inside a section box (matching the existing design system):
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Project Status                                    6 active │ 3 inactive  │
+├──────────────────┬──────────┬────────┬────────┬──────┬──────────┤
+│ Project          │ Dataset  │ Status │ Tables │ Rows │ Coverage │
+├──────────────────┼──────────┼────────┼────────┼──────┼──────────┤
+│ ICT/Islamabad    │ tbproddb │ 🟢     │ 473    │ 451M │ ████░ 3% │
+│ TaleemHub (RWP)  │ TaleemHu │ 🟢     │ 62     │ 69K  │ ██░░ 13% │
+│ Rumi AI (RWP)    │ RUMI_DB  │ 🟢     │ 72     │ 154K │ ██░░ 8%  │
+│ Muawin/Akhuwat   │ Muawin_A │ 🟡     │ 6      │ 41K  │ ░░░░ 0%  │
+│ Zaviya           │ —        │ 🔴     │ —      │ —    │ N/A      │
+│ MCP Audit        │ mcp_audi │ 🔵     │ 2      │ 104  │ System   │
+│ Rawalpindi Prod  │ rwp_prod │ ⚪     │ 260    │ 550K │ Inactive │
+│ Balochistan      │ bl_prodd │ ⚪     │ 222    │ 2.6M │ Inactive │
+│ ODK Surveys      │ odk      │ ⚪     │ 52     │ 38K  │ Inactive │
+└──────────────────┴──────────┴────────┴────────┴──────┴──────────┘
+```
+
+### Status Colors
+- 🟢 Active + has rules (governed)
+- 🟡 Active + no rules (gap — needs attention)
+- 🔴 Active + not migrated (Zaviya)
+- 🔵 System
+- ⚪ Inactive
 
 ### Data Sources
-- **Static:** `projects.yaml` for name, status, region, description
-- **Live from BigQuery:** table count, row count (from `__TABLES__` metadata)
-- **Static:** rule file count (parsed from `rules/<region>/` directory)
+- Static: `projects.yaml` for name, dataset, status, region
+- Live BigQuery: `__TABLES__` metadata for table count and row count (cached 1hr)
+- Filesystem: count `.md` files in `rules/<region>/` for rule coverage
+- Governance mapper: count governed tables per dataset
 
-### Columns
+### Integration with Existing Action Items
+Add governance-related action items to the existing Row 5 action items list:
+- Active project with 0% coverage → yellow warning: "Muawin/Akhuwat has 6 tables but no governance rules"
+- Zaviya not migrated → info: "Zaviya has no BigQuery dataset yet"
 
-| Column | Source | Description |
-|--------|--------|-------------|
-| Project | projects.yaml | Project name |
-| Dataset | projects.yaml | BigQuery dataset name, or "Not migrated" |
-| Status | projects.yaml | Active (green) / Inactive (grey) / System (blue) |
-| Tables | BigQuery `__TABLES__` | Number of tables in the dataset |
-| Rows | BigQuery `__TABLES__` | Total row count across all tables |
-| Rule Files | Filesystem scan | Count of `.md` files in `rules/<region>/` |
-| Governed Tables | Rule parser | Count of distinct tables referenced in rule files |
-| Coverage | Computed | `governed_tables / total_tables` as percentage |
+## New Tab: Governance (Detailed Table-Level View)
 
-### Visual
-- Color-coded status badges
-- Coverage shown as progress bar (e.g., 12/473 = 2.5%)
-- Active projects with 0% coverage highlighted in yellow
-- Zaviya row shows "Not migrated" with distinct styling
-
-### Refresh
-- BigQuery stats cached for 1 hour (dashboard already has caching)
-- Rule counts computed at dashboard startup (static files, fast)
-
-## Tab 2: Table-Level Governance
-
-For **active projects only**, shows every table and whether it's referenced in a governance rule.
+A new page at `src/taleemabad_data_mcp/dashboard/pages/6_Governance.py`.
 
 ### How Tables Are Mapped to Rules
 
-Parse each rule `.md` file and extract table references using patterns:
-- `` `dataset.table_name` `` (backtick-wrapped BigQuery references)
-- `FROM dataset.table_name` / `JOIN dataset.table_name`
-- Table names in markdown tables (the "Key Tables" sections in rule files)
+A Python module `governance_mapper.py` parses rule files and extracts table references:
+- `` `tbproddb.table_name` `` (backtick-wrapped BigQuery references)
+- `FROM tbproddb.table_name` / `JOIN tbproddb.table_name`
+- Table names in "Key Tables" markdown tables in rule files
 
-This produces a mapping: `{table_name: [rule_file, domain]}`.
+Returns: `{dataset.table: {rule_file, domain, region}}`
 
-### Implementation
+### Layout
 
-A Python module `src/taleemabad_data_mcp/engine/governance_mapper.py` that:
-1. Reads all rule files from `src/taleemabad_data_mcp/rules/`
-2. Extracts table references via regex
-3. Returns a dict: `{dataset.table: {rule_file, domain, region}}`
+**Top: Summary KPIs**
+```
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ Total Tables │  │  Governed    │  │ Ungoverned   │  │  Coverage    │
+│    665       │  │    ~30       │  │    ~635      │  │    4.5%      │
+└──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘
+```
 
-### Columns
+**Filters**
+- Dropdown: filter by project/dataset
+- Toggle: All / Governed only / Ungoverned only
 
-| Column | Source | Description |
-|--------|--------|-------------|
-| Dataset | BigQuery | Dataset name |
-| Table | BigQuery `__TABLES__` | Table name |
-| Rows | BigQuery `__TABLES__` | Row count |
-| Last Modified | BigQuery `__TABLES__` | Timestamp |
-| Governed | governance_mapper | Yes (green) / No (red) |
-| Rule File | governance_mapper | Which `.md` file references this table |
-| Domain | governance_mapper | teachers, coaching, training, lesson_plans, etc. |
+**Table**
 
-### Filters
-- Filter by project/dataset (dropdown)
-- Filter by governed status (All / Governed only / Ungoverned only)
-- Sort by any column
+| Dataset | Table | Rows | Last Modified | Governed | Rule File | Domain |
+|---------|-------|------|---------------|----------|-----------|--------|
+| tbproddb | coaching_observation | 6,697 | Apr 9 | ✅ | observation-query-rules.md | Coaching |
+| tbproddb | users_user | 96,731 | Apr 9 | ✅ | teacher-query-rules.md | Teachers |
+| tbproddb | community_post | 5,000 | Apr 8 | ❌ | — | — |
+| Muawin_Akhuwat_db | teachers | 866 | Apr 8 | ❌ | — | — |
 
 ### Visual
-- Governed tables: green checkmark
-- Ungoverned tables: red X
-- Summary bar at top: "42 of 473 tables governed (8.9%)" with progress bar
-
-## What This Does NOT Include
-
-- Rule creation workflow (manual — edit `.md` files)
-- Automated rule suggestions
-- Table freshness monitoring (already exists in the Freshness dashboard page)
-- Query-level governance validation (future — would need server-side enforcement)
+- Governed: green checkmark ✅
+- Ungoverned: red X ❌
+- Sortable by any column
+- Row count formatted (K, M)
 
 ## Files to Create/Modify
 
@@ -164,9 +170,16 @@ A Python module `src/taleemabad_data_mcp/engine/governance_mapper.py` that:
 |------|--------|---------|
 | `src/taleemabad_data_mcp/projects.yaml` | Create | Project registry |
 | `src/taleemabad_data_mcp/engine/governance_mapper.py` | Create | Parse rules → table mapping |
-| `src/taleemabad_data_mcp/dashboard/pages/7_Projects.py` | Create | Tab 1: Project Overview |
-| `src/taleemabad_data_mcp/dashboard/pages/8_Governance.py` | Create | Tab 2: Table-Level Governance |
 | `src/taleemabad_data_mcp/dashboard/data/projects.py` | Create | BigQuery queries for project stats |
+| `src/taleemabad_data_mcp/dashboard/pages/0_Overview.py` | Modify | Add Project Status section after KPI row |
+| `src/taleemabad_data_mcp/dashboard/pages/6_Governance.py` | Create | New tab: table-level governance detail |
+
+## What This Does NOT Include
+
+- Rule creation workflow (manual — edit `.md` files)
+- Automated rule suggestions
+- Table freshness monitoring (already in Freshness tab)
+- Query-level governance validation (future)
 
 ## Adding a New Project (User Process)
 
@@ -174,4 +187,4 @@ A Python module `src/taleemabad_data_mcp/engine/governance_mapper.py` that:
 2. If the project has data in BigQuery, add the dataset to `BIGQUERY_DATASETS` env var
 3. If you want governance rules, create `rules/<region>/` and add rule files
 4. Run `python -m taleemabad_data_mcp bump` and push
-5. Dashboard picks it up automatically on next load
+5. Dashboard picks it up on next load
