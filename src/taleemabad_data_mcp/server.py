@@ -5,6 +5,7 @@ to execute validated queries, estimate costs, and log interactions.
 """
 
 import json
+import re as _re
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
@@ -25,6 +26,15 @@ CREDENTIALS_MISSING_MSG = (
     "BigQuery credentials not found. "
     "Copy 'niete-bq-prod-48ae5260d1ea.json' to this project directory."
 )
+
+BANNED_TABLES = {"analytics_analyticsevent"}
+_SAFE_FILTER_RE = _re.compile(
+    r"^[a-zA-Z_]\w*\s*(>=|<=|>|<|=|!=|BETWEEN)\s*"
+    r"(DATE\('[^']+'\)|TIMESTAMP\('[^']+'\)|'[^']*'|\d+)"
+    r"(\s+AND\s+[a-zA-Z_]\w*\s*(>=|<=|>|<|=|!=)\s*(DATE\('[^']+'\)|'[^']*'|\d+))*$",
+    _re.IGNORECASE,
+)
+_SAFE_IDENTIFIER_RE = _re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
 @dataclass
@@ -381,3 +391,268 @@ async def get_version() -> str:
         f"Project: {app.config.bigquery_project}\n"
         f"Datasets: {', '.join(app.config.bigquery_datasets)}"
     )
+
+
+@mcp.tool()
+async def preview_table(
+    dataset: str,
+    table: str,
+    limit: int = 10,
+    partition_filter: str = "",
+) -> str:
+    """Preview rows from a BigQuery table.
+
+    For partitioned tables, provide a partition_filter (e.g., "sent_at >= DATE('2025-01-01')").
+    Blocked for banned tables (unpartitioned legacy tables).
+
+    Args:
+        dataset: BigQuery dataset name (e.g., 'tbproddb').
+        table: Table name (e.g., 'coaching_observation').
+        limit: Max rows to return (default 10, max 50).
+        partition_filter: Simple WHERE condition for partitioned tables.
+    """
+    ctx = mcp.get_context()
+    app: AppContext = ctx.request_context.lifespan_context
+    err = _require_bq(app)
+    if err:
+        return err
+
+    if dataset not in app.config.bigquery_datasets:
+        return f"Dataset '{dataset}' is not in the allowed list: {app.config.bigquery_datasets}"
+
+    if not _SAFE_IDENTIFIER_RE.match(table):
+        return f"Invalid table name: '{table}'"
+
+    if table in BANNED_TABLES:
+        return (
+            f"Table '{table}' is banned (unpartitioned legacy table). "
+            "Use a governed query instead."
+        )
+
+    limit = min(max(1, limit), 50)
+
+    where = ""
+    if partition_filter:
+        if not _SAFE_FILTER_RE.match(partition_filter.strip()):
+            return (
+                "Invalid partition_filter. Use simple comparisons only, e.g.: "
+                "sent_at >= DATE('2025-01-01')"
+            )
+        where = f"WHERE {partition_filter}"
+
+    sql = f"SELECT * FROM `{app.config.bigquery_project}.{dataset}.{table}` {where} LIMIT {limit}"
+
+    try:
+        job_config = bigquery.QueryJobConfig(
+            maximum_bytes_billed=app.config.bigquery_max_bytes,
+        )
+        query_job = app.bq_client.query(sql, job_config=job_config)
+        rows = [dict(row) for row in query_job.result()]
+
+        if app.audit_logger:
+            app.audit_logger.log(
+                query_text=f"preview: {dataset}.{table}",
+                generated_sql=sql,
+                tables_accessed=[table],
+                rows_returned=len(rows),
+                domain="PREVIEW",
+            )
+
+        if not rows:
+            return f"No rows found in {dataset}.{table}"
+
+        return json.dumps(rows, indent=2, default=str)
+
+    except Exception as e:
+        return f"Preview failed: {type(e).__name__}: {e}"
+
+
+@mcp.tool()
+async def save_query_results(
+    sql: str,
+    question: str = "",
+    format: str = "csv",
+    output_dir: str = ".",
+) -> str:
+    """Execute a governed query and save results to a file.
+
+    Files are saved to the output_dir (defaults to current working directory
+    of the Claude Code session, NOT the plugin directory).
+
+    Args:
+        sql: The governed SQL query to execute.
+        question: The user's original question (for audit logging).
+        format: Output format — 'csv' or 'json'. Default 'csv'.
+        output_dir: Directory to save the file. Default '.' (project directory).
+    """
+    ctx = mcp.get_context()
+    app: AppContext = ctx.request_context.lifespan_context
+    err = _require_bq(app)
+    if err:
+        return err
+
+    if format not in ("csv", "json"):
+        return f"Invalid format '{format}'. Must be 'csv' or 'json'."
+
+    from pathlib import Path
+    out_path = Path(output_dir)
+    if not out_path.is_dir():
+        return f"Output directory '{output_dir}' does not exist."
+
+    try:
+        job_config = bigquery.QueryJobConfig(
+            maximum_bytes_billed=app.config.bigquery_max_bytes,
+        )
+        query_job = app.bq_client.query(sql, job_config=job_config)
+        results = query_job.result()
+        rows = [dict(row) for row in results]
+
+        if not rows:
+            return "Query returned 0 rows. Nothing to save."
+
+        from datetime import UTC, datetime
+        timestamp = datetime.now(UTC).strftime("%Y-%m-%d_%H%M")
+        tables = list({ref.table_id for ref in query_job.referenced_tables})
+        domain = classify_domain(tables, sql)
+        filename = f"taleemabad_export_{timestamp}_{domain}.{format}"
+        filepath = out_path / filename
+
+        if format == "csv":
+            import csv
+            import io
+
+            output = io.StringIO()
+            output.write(f"# Exported by: {app.config.taleemabad_user}\n")
+            output.write(f"# Timestamp: {timestamp}\n")
+            output.write(f"# Domain: {domain}\n")
+            output.write(f"# Rows: {len(rows)}\n")
+
+            writer = csv.DictWriter(output, fieldnames=rows[0].keys())
+            writer.writeheader()
+            for row in rows:
+                writer.writerow({k: str(v) for k, v in row.items()})
+
+            filepath.write_text(output.getvalue(), encoding="utf-8")
+        else:
+            export_data = {
+                "metadata": {
+                    "exported_by": app.config.taleemabad_user,
+                    "timestamp": timestamp,
+                    "domain": domain,
+                    "row_count": len(rows),
+                },
+                "data": rows,
+            }
+            filepath.write_text(
+                json.dumps(export_data, indent=2, default=str), encoding="utf-8"
+            )
+
+        bytes_billed = query_job.total_bytes_billed or 0
+        cost_usd = bytes_billed / 1_099_511_627_776 * 6.25 if bytes_billed else 0.0
+
+        if app.audit_logger:
+            app.audit_logger.log(
+                query_text=question or sql,
+                generated_sql=sql,
+                tables_accessed=tables,
+                rows_returned=len(rows),
+                cost_bytes=bytes_billed,
+                cost_usd=cost_usd,
+                domain=f"EXPORT_{domain}",
+            )
+
+        return f"Saved {len(rows)} rows to {filepath} ({format.upper()})"
+
+    except Exception as e:
+        return f"Save failed: {type(e).__name__}: {e}"
+
+
+@mcp.tool()
+async def describe_data(
+    sql: str,
+    question: str = "",
+) -> str:
+    """Execute a governed query and return descriptive statistics.
+
+    Computes count, mean, min, max, nulls for numeric columns.
+    Computes count, unique values, top value for string columns.
+
+    Args:
+        sql: The governed SQL query to execute.
+        question: The user's original question (for audit logging).
+    """
+    ctx = mcp.get_context()
+    app: AppContext = ctx.request_context.lifespan_context
+    err = _require_bq(app)
+    if err:
+        return err
+
+    try:
+        job_config = bigquery.QueryJobConfig(
+            maximum_bytes_billed=app.config.bigquery_max_bytes,
+        )
+        query_job = app.bq_client.query(sql, job_config=job_config)
+        results = query_job.result()
+        rows = [dict(row) for row in results]
+
+        if not rows:
+            return "Query returned 0 rows. Nothing to describe."
+
+        tables = list({ref.table_id for ref in query_job.referenced_tables})
+        domain = classify_domain(tables, sql)
+
+        stats = {"row_count": len(rows), "columns": {}}
+        for col in rows[0]:
+            values = [row[col] for row in rows if row[col] is not None]
+            null_count = len(rows) - len(values)
+
+            numeric_vals = []
+            for v in values:
+                try:
+                    numeric_vals.append(float(v))
+                except (TypeError, ValueError):
+                    break
+
+            if len(numeric_vals) == len(values) and numeric_vals:
+                sorted_vals = sorted(numeric_vals)
+                n = len(sorted_vals)
+                if n % 2 == 0:
+                    median = (sorted_vals[n // 2 - 1] + sorted_vals[n // 2]) / 2
+                else:
+                    median = sorted_vals[n // 2]
+                stats["columns"][col] = {
+                    "type": "numeric",
+                    "count": n,
+                    "nulls": null_count,
+                    "mean": round(sum(sorted_vals) / n, 4),
+                    "min": sorted_vals[0],
+                    "max": sorted_vals[-1],
+                    "median": round(median, 4),
+                }
+            else:
+                from collections import Counter
+                str_vals = [str(v) for v in values]
+                counts = Counter(str_vals)
+                top_val, top_count = counts.most_common(1)[0] if counts else ("", 0)
+                stats["columns"][col] = {
+                    "type": "categorical",
+                    "count": len(str_vals),
+                    "nulls": null_count,
+                    "unique": len(counts),
+                    "top_value": top_val,
+                    "top_count": top_count,
+                }
+
+        if app.audit_logger:
+            app.audit_logger.log(
+                query_text=question or sql,
+                generated_sql=sql,
+                tables_accessed=tables,
+                rows_returned=len(rows),
+                domain=f"DESCRIBE_{domain}",
+            )
+
+        return json.dumps(stats, indent=2, default=str)
+
+    except Exception as e:
+        return f"Describe failed: {type(e).__name__}: {e}"
