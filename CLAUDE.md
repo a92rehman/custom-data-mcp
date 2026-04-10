@@ -41,6 +41,10 @@ python -m taleemabad_data_mcp bump       # Patch version bump (bump --minor for 
 
 ## Project Structure
 ```
+.mcp.json                       # Plugin MCP server config (uv run --directory)
+.claude-plugin/
+  plugin.json                   # Plugin manifest (agents, commands)
+  marketplace.json              # Marketplace listing
 src/taleemabad_data_mcp/        # Python MCP server package
   __init__.py                   # Package version (__version__)
   __main__.py                   # Entry point (routes to CLI)
@@ -60,7 +64,7 @@ src/taleemabad_data_mcp/        # Python MCP server package
   models/
     audit.py                    # AuditLogEntry with cost tracking + domain field
     feedback.py                 # FeedbackEntry (rating, comment)
-  dashboard/                    # Streamlit observability dashboard
+  dashboard/                    # Streamlit observability dashboard (deployed on Railway)
 agents/                         # Plugin agents (loaded by Claude Code plugin system)
   data-analyst.md               # Primary — reads rules, generates governed SQL
   data-admin.md                 # Diagnostics — schema, freshness, audit, troubleshooting
@@ -74,6 +78,12 @@ docs/
   INSTALL.md                    # Quick reference (points to README)
   VISION.md                     # Strategic vision, 15 sections
   superpowers/                  # Historical design specs and plans
+# Railway deployment (dashboard hosting)
+Procfile                        # web: bash railway_start.sh
+railway_start.sh                # Streamlit startup with GCP credentials from env
+nixpacks.toml                   # Railway build config (Python 3.11)
+runtime.txt                     # Python version for Railway
+requirements.txt                # Railway dependencies (includes dashboard extras)
 ```
 
 ## MCP Tools
