@@ -1,3 +1,3 @@
 """Taleemabad Data Navigator — governed semantic layer for BigQuery."""
 
-__version__ = "0.12.8"
+__version__ = "0.12.9"
