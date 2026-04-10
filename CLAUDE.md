@@ -31,13 +31,11 @@ uv run ruff format src/ tests/            # Format
 
 ## CLI Commands
 ```bash
-python -m taleemabad_data_mcp setup      # First-time install (--user, --credentials)
-python -m taleemabad_data_mcp upgrade    # Update rules + config (reads saved credentials)
-python -m taleemabad_data_mcp init       # Create .mcp.json in current project
+python -m taleemabad_data_mcp setup      # Save name + sync rules (--user required)
 python -m taleemabad_data_mcp version    # Show installed version
-python -m taleemabad_data_mcp serve      # Run MCP server (used by Claude Code)
+python -m taleemabad_data_mcp serve      # Run MCP server (used by Claude Code automatically)
 python -m taleemabad_data_mcp dashboard  # Launch Streamlit dashboard (needs [dashboard] extra)
-python -m taleemabad_data_mcp uninstall  # Remove rules, config, venv
+python -m taleemabad_data_mcp uninstall  # Remove rules + user config
 python -m taleemabad_data_mcp bump       # Patch version bump (bump --minor for minor)
 ```
 
@@ -46,8 +44,8 @@ python -m taleemabad_data_mcp bump       # Patch version bump (bump --minor for 
 src/taleemabad_data_mcp/        # Python MCP server package
   __init__.py                   # Package version (__version__)
   __main__.py                   # Entry point (routes to CLI)
-  cli.py                        # CLI: setup, init, upgrade, bump, serve, dashboard, uninstall
-  server.py                     # FastMCP instance, 6 MCP tools
+  cli.py                        # CLI: setup, bump, serve, dashboard, uninstall
+  server.py                     # FastMCP instance, 9 MCP tools
   config.py                     # Configuration management (env vars)
   rules/                        # SOURCE OF TRUTH — governance rules (20 MD files)
     index.md                    # READ FIRST — routes to general rules + regions
@@ -67,8 +65,7 @@ agents/                         # Plugin agents (loaded by Claude Code plugin sy
   data-analyst.md               # Primary — reads rules, generates governed SQL
   data-admin.md                 # Diagnostics — schema, freshness, audit, troubleshooting
 commands/                       # Plugin slash commands
-  setup.md                      # /taleemabad-setup — one-time install wizard
-  init.md                       # /taleemabad-init — add MCP to another project
+  setup.md                      # /taleemabad-setup — save name + sync rules
 hooks/                          # Plugin hooks (auto-update via git tags)
 rules/                          # DERIVED COPY — synced from src/ by bump command
                                 # Plugin agents read from this location
@@ -88,6 +85,9 @@ docs/
 | `check_table_freshness` | Check when a table was last modified |
 | `submit_feedback` | Log optional thumbs up/down + comment on a query result |
 | `get_version` | Return installed version, user name, project, and datasets |
+| `preview_table` | Quick peek at table data (SQL injection protected, banned table guard) |
+| `save_query_results` | Export governed query results to CSV or JSON with metadata |
+| `describe_data` | Descriptive statistics (mean, median, min, max, nulls, unique) on query results |
 
 ## Environment Variables
 ```
@@ -107,10 +107,11 @@ Teams install via Claude Code plugin system:
 ```bash
 claude plugin marketplace add Orenda-Project/taleemabad-data-mcp
 claude plugin install taleemabad-data@Orenda-Project
-# Then in Claude Code: /taleemabad-setup
-# For additional projects: /taleemabad-init
+# Copy niete-bq-prod-48ae5260d1ea.json to project directory
+# Then in Claude Code: /taleemabad-setup (one time, for audit name)
+# For new projects: just copy the credentials file — no init needed
 ```
-Setup copies rules to `~/.claude/rules/taleemabad/`, writes `.mcp.json` to the project, and saves credentials for `/taleemabad-init` reuse.
+The plugin bundles the MCP server config in `.mcp.json` — it starts automatically via `uv run --directory`. Setup syncs rules to `~/.claude/rules/taleemabad/` and saves user name.
 
 ## Code Conventions
 - Type hints on all function signatures
