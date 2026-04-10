@@ -97,19 +97,40 @@ st.markdown("""
     .mini-stat .value { font-size: 1.3rem; font-weight: 700; color: #1E293B; }
     .mini-stat .label { font-size: 0.75rem; color: #64748B; }
 
-    /* Section containers — colored backgrounds to separate groups */
+    /* Section containers — colored backgrounds to separate groups.
+       Uses outline + background on the Streamlit column wrapper via
+       adjacent-sibling targeting. We inject open/close divs around content. */
     .section-box {
-        border-radius: 12px; padding: 16px 14px 12px 14px;
-        margin-bottom: 6px;
+        border-radius: 14px; padding: 18px 16px 14px 16px;
+        margin-bottom: 8px; min-height: 100%;
     }
-    .section-box-blue { background: #EFF6FF; border: 1px solid #BFDBFE; }
-    .section-box-green { background: #F0FDF4; border: 1px solid #BBF7D0; }
-    .section-box-orange { background: #FFF7ED; border: 1px solid #FED7AA; }
-    .section-box-purple { background: #F5F3FF; border: 1px solid #DDD6FE; }
-    .section-box-slate { background: #F8FAFC; border: 1px solid #E2E8F0; }
-    .section-box-red { background: #FEF2F2; border: 1px solid #FECACA; }
+    .section-box-blue {
+        background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+        border: 2px solid #93C5FD;
+    }
+    .section-box-green {
+        background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+        border: 2px solid #86EFAC;
+    }
+    .section-box-orange {
+        background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+        border: 2px solid #FDBA74;
+    }
+    .section-box-purple {
+        background: linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%);
+        border: 2px solid #C4B5FD;
+    }
+    .section-box-slate {
+        background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+        border: 2px solid #CBD5E1;
+    }
+    .section-box-red {
+        background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+        border: 2px solid #FCA5A5;
+    }
 
     .section-box .section-header { margin-top: 0; }
+    .section-box .kpi-card { background: rgba(255,255,255,0.85); }
 </style>
 """, unsafe_allow_html=True)
 
