@@ -2,7 +2,7 @@
 # Auto-update Taleemabad Data Plugin on session start
 # - Checks for new git tags and updates plugin cache
 # - Syncs governance rules to ~/.claude/rules/taleemabad/ every session
-# - Updates the venv package when a new version is released
+# - Exports TALEEMABAD_USER from saved env file
 # Set TALEEMABAD_PIN_VERSION env var to skip updates and stay on current version
 
 # Use CLAUDE_PLUGIN_ROOT if available, otherwise try common paths
@@ -23,7 +23,16 @@ fi
 
 RULES_SRC="${PLUGIN_DIR}/rules"
 RULES_DEST="${HOME}/.claude/rules/taleemabad"
-VENV_DIR="${HOME}/.claude/taleemabad-venv"
+ENV_FILE="${HOME}/.claude/taleemabad-data-mcp.env"
+
+# --- Export TALEEMABAD_USER from saved env file ---
+if [ -f "$ENV_FILE" ]; then
+  while IFS='=' read -r key value; do
+    if [ "$key" = "TALEEMABAD_USER" ] && [ -n "$value" ]; then
+      export TALEEMABAD_USER="$value"
+    fi
+  done < "$ENV_FILE"
+fi
 
 # --- Always sync rules (even if version unchanged) ---
 if [ -d "$RULES_SRC" ]; then
@@ -60,23 +69,10 @@ git checkout "$LATEST" --quiet 2>/dev/null
 if [ $? -eq 0 ]; then
   echo "$LATEST" > .current-version
 
-  # Sync rules
+  # Sync rules after update
   if [ -d "$RULES_SRC" ]; then
     rm -rf "$RULES_DEST"
     cp -r "$RULES_SRC" "$RULES_DEST"
-  fi
-
-  # Update venv package if venv exists
-  if [ -d "$VENV_DIR" ]; then
-    if [ -f "$VENV_DIR/Scripts/pip.exe" ]; then
-      PIP="$VENV_DIR/Scripts/pip.exe"
-    elif [ -f "$VENV_DIR/bin/pip" ]; then
-      PIP="$VENV_DIR/bin/pip"
-    fi
-    if [ -n "$PIP" ]; then
-      "$PIP" install --quiet --force-reinstall \
-        "git+https://github.com/Orenda-Project/taleemabad-data-mcp.git@${LATEST}" 2>/dev/null
-    fi
   fi
 
   echo "[Taleemabad Data] Updated to ${LATEST}"
