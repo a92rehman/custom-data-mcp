@@ -1,9 +1,6 @@
 """Tests for bump_version CLI function — TDD: write tests before implementation."""
-import re
 import json
-import shutil
 import textwrap
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest

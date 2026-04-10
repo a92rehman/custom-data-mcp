@@ -26,7 +26,7 @@ def test_credentials_error_message_constant():
 
 def test_require_bq_returns_error_when_none():
     """_require_bq should return error message when bq_client is None."""
-    from taleemabad_data_mcp.server import CREDENTIALS_MISSING_MSG, _require_bq, AppContext
+    from taleemabad_data_mcp.server import CREDENTIALS_MISSING_MSG, AppContext, _require_bq
 
     app = AppContext(
         config=MagicMock(),
@@ -40,7 +40,7 @@ def test_require_bq_returns_error_when_none():
 
 def test_require_bq_returns_none_when_connected():
     """_require_bq should return None when bq_client exists."""
-    from taleemabad_data_mcp.server import _require_bq, AppContext
+    from taleemabad_data_mcp.server import AppContext, _require_bq
 
     app = AppContext(
         config=MagicMock(),
