@@ -13,7 +13,7 @@ def _full_table(table_key: str) -> str:
     return f"`{cfg['project']}.{cfg['audit_dataset']}.{table_name}`"
 
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=600)
 def get_activity_log(
     days: int = 30,
     users: list[str] | None = None,
@@ -44,7 +44,7 @@ def get_activity_log(
     return client.query(sql).to_dataframe()
 
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=600)
 def get_feedback(days: int = 30) -> pd.DataFrame:
     """Fetch feedback entries for the given time window."""
     client = get_bq_client()
@@ -63,7 +63,7 @@ def get_feedback(days: int = 30) -> pd.DataFrame:
     return client.query(sql).to_dataframe()
 
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=600)
 def get_distinct_users(days: int = 90) -> list[str]:
     """Get distinct user names from recent activity."""
     client = get_bq_client()
@@ -78,7 +78,7 @@ def get_distinct_users(days: int = 90) -> list[str]:
     return df["user_name"].tolist() if not df.empty else []
 
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=600)
 def get_distinct_domains(days: int = 90) -> list[str]:
     """Get distinct domains from recent activity."""
     client = get_bq_client()
@@ -93,7 +93,7 @@ def get_distinct_domains(days: int = 90) -> list[str]:
     return df["domain"].tolist() if not df.empty else []
 
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=600)
 def get_table_freshness(days: int = 30) -> pd.DataFrame:
     """Get freshness for tables that users have actually queried.
 

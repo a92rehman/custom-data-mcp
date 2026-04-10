@@ -7,14 +7,8 @@ from taleemabad_data_mcp.dashboard.data.queries import (
     get_distinct_users,
 )
 
-# Refresh interval options (seconds)
-REFRESH_OPTIONS = {
-    "Off": 0,
-    "1 min": 60,
-    "2 min": 120,
-    "5 min": 300,
-    "10 min": 600,
-}
+# Fixed 10-minute auto-refresh. Hard browser refresh also works.
+REFRESH_SECONDS = 600
 
 
 def render_filters() -> dict:
@@ -22,9 +16,8 @@ def render_filters() -> dict:
 
     Returns:
         dict with keys: days, users, domains
-        (refresh_seconds stored in st.session_state, not in the returned dict)
     """
-    col1, col2, col3, col4 = st.columns([1, 2, 2, 1])
+    col1, col2, col3 = st.columns([1, 2, 2])
 
     with col1:
         days = st.selectbox(
@@ -46,16 +39,6 @@ def render_filters() -> dict:
             ]
         domains = st.multiselect("Domains", options=available_domains)
 
-    with col4:
-        refresh_label = st.selectbox(
-            "Auto-Refresh",
-            options=list(REFRESH_OPTIONS.keys()),
-            index=2,  # default: 5 min
-        )
-
-    # Store refresh in session state so pages can access it
-    st.session_state["refresh_seconds"] = REFRESH_OPTIONS[refresh_label]
-
     return {
         "days": days,
         "users": users or None,
@@ -64,5 +47,5 @@ def render_filters() -> dict:
 
 
 def get_refresh_seconds() -> int:
-    """Get the current auto-refresh interval from session state."""
-    return st.session_state.get("refresh_seconds", 300)
+    """Get the fixed auto-refresh interval (10 minutes)."""
+    return REFRESH_SECONDS

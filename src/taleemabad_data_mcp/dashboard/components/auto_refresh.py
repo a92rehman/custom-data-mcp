@@ -17,10 +17,7 @@ def inject_auto_refresh(seconds: int) -> None:
 
 
 def clear_cache_if_needed(seconds: int) -> None:
-    """Clear Streamlit cache when refresh interval is shorter than default TTL.
-
-    This ensures data refreshes at the rate the user expects,
-    not at the hardcoded 300s TTL.
+    """Clear Streamlit cache if needed. Currently a no-op since refresh
+    interval (10 min) exceeds the cache TTL (5 min).
     """
-    if seconds > 0 and seconds < 300:
-        st.cache_data.clear()
+    pass
