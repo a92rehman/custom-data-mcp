@@ -1,0 +1,58 @@
+# Project Registry — single source of truth for all Taleemabad projects.
+# Adding a new project: add an entry here. No code changes needed.
+# Status values: active | inactive | system
+
+projects:
+  - name: "ICT/Islamabad"
+    dataset: "tbproddb"
+    status: "active"
+    region: "ict-islamabad"
+    description: "ICT school program — teachers, lesson plans, coaching, training"
+
+  - name: "TaleemHub (RWP)"
+    dataset: "TaleemHub_DB"
+    status: "active"
+    region: "rawalpindi"
+    description: "Rawalpindi teacher platform — roster, mentoring visits, ASER"
+
+  - name: "Rumi AI (RWP)"
+    dataset: "RUMI_DB"
+    status: "active"
+    region: "rawalpindi"
+    description: "AI coaching, lesson plans, reading assessments for RWP"
+
+  - name: "Muawin/Akhuwat"
+    dataset: "Muawin_Akhuwat_db"
+    status: "active"
+    region: "muawin-akhuwat"
+    description: "Muawin + Akhuwat school program — teachers, attendance, student scores"
+
+  - name: "Zaviya"
+    dataset: null
+    status: "active"
+    region: "zaviya"
+    description: "Zaviya program — not yet migrated to BigQuery"
+
+  - name: "MCP Audit"
+    dataset: "mcp_audit"
+    status: "system"
+    region: null
+    description: "Internal audit logging for MCP queries and feedback"
+
+  - name: "Rawalpindi Prod"
+    dataset: "rwp_proddb"
+    status: "inactive"
+    region: null
+    description: "RWP production database mirror — use TaleemHub_DB + RUMI_DB instead"
+
+  - name: "Balochistan"
+    dataset: "bl_proddb"
+    status: "inactive"
+    region: null
+    description: "Balochistan program — data exists but stale (last updated Sep 2025)"
+
+  - name: "ODK Surveys"
+    dataset: "odk"
+    status: "inactive"
+    region: null
+    description: "Field survey data from ODK — ASER, TEACH, baseline/endline"
