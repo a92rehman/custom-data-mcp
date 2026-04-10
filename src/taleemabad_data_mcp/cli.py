@@ -4,16 +4,12 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
 import click
 
-PACKAGE_NAME = "taleemabad-data-mcp"
 RULES_DIR_NAME = "taleemabad"
-VENV_DIR_NAME = "taleemabad-venv"
-GITHUB_URL = "git+https://github.com/Orenda-Project/taleemabad-data-mcp"
 CREDENTIALS_FILENAME = "niete-bq-prod-48ae5260d1ea.json"
 
 
@@ -27,31 +23,6 @@ def _rules_dest() -> Path:
     return _claude_dir() / "rules" / RULES_DIR_NAME
 
 
-def _venv_dir() -> Path:
-    """Return ~/.claude/taleemabad-venv/ path."""
-    return _claude_dir() / VENV_DIR_NAME
-
-
-def _venv_python() -> Path:
-    """Return the python executable inside the venv (cross-platform)."""
-    venv = _venv_dir()
-    if sys.platform == "win32":
-        return venv / "Scripts" / "python.exe"
-    return venv / "bin" / "python"
-
-
-def _uv_path() -> Path:
-    """Return ~/.claude/uv.exe (Windows) or ~/.claude/uv (Unix)."""
-    if sys.platform == "win32":
-        return _claude_dir() / "uv.exe"
-    return _claude_dir() / "uv"
-
-
-def _settings_path() -> Path:
-    """Return ~/.claude/settings.json path."""
-    return _claude_dir() / "settings.json"
-
-
 def _env_path() -> Path:
     """Return ~/.claude/taleemabad-data-mcp.env path."""
     return _claude_dir() / "taleemabad-data-mcp.env"
@@ -60,151 +31,6 @@ def _env_path() -> Path:
 def _bundled_rules_dir() -> Path:
     """Return the rules directory bundled inside this package."""
     return Path(__file__).parent / "rules"
-
-
-def _load_settings() -> dict:
-    """Load existing settings.json or return empty dict."""
-    path = _settings_path()
-    if path.exists():
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                return data
-        except json.JSONDecodeError:
-            pass
-    return {}
-
-
-def _save_settings(settings: dict) -> None:
-    """Write settings.json, creating directories as needed."""
-    path = _settings_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
-
-
-def _to_bash_path(p: Path) -> str:
-    """Convert a Windows path to a bash-compatible path (e.g. C:\\foo -> /c/foo).
-
-    Claude Code on Windows runs in bash (Git Bash / MSYS2), which cannot resolve
-    Windows-style paths as executable commands. Convert drive letter paths so the
-    MCP server config works correctly on Windows.
-    """
-    if sys.platform == "win32":
-        parts = p.parts  # ('C:\\', 'Users', ...)
-        if parts and len(parts[0]) == 3 and parts[0][1] == ":":
-            drive = parts[0][0].lower()
-            rest = "/".join(parts[1:])
-            return f"/{drive}/{rest}"
-    return str(p)
-
-
-def _find_uv_command() -> str:
-    """Find the uv command — prefer PATH, fall back to ~/.claude/uv.
-
-    On Windows, returns a bash-compatible path since Claude Code runs
-    in Git Bash / MSYS2 which cannot resolve Windows-style paths.
-    """
-    uv_on_path = shutil.which("uv")
-    if uv_on_path:
-        return "uv"
-    local_uv = _uv_path()
-    if local_uv.exists():
-        return _to_bash_path(local_uv)
-    return "uv"  # hope it's on PATH at runtime
-
-
-def _mcp_server_config(credentials: str, user_name: str) -> dict:
-    """Build the MCP server configuration entry (venv-based).
-
-    Uses the dedicated venv at ~/.claude/taleemabad-venv/ for instant startup.
-    The uv-based approach (git+ references) was abandoned because uv does a
-    git fetch on every startup, causing MCP connection timeouts in Claude Code.
-    """
-    python_path = _venv_python()
-    return {
-        "command": _to_bash_path(python_path),
-        "args": [
-            "-m", "taleemabad_data_mcp", "serve",
-        ],
-        "env": {
-            "BIGQUERY_PROJECT": "niete-bq-prod",
-            "BIGQUERY_DATASETS": "RUMI_DB,TaleemHub_DB,tbproddb,odk,mcp_audit",
-            "GOOGLE_APPLICATION_CREDENTIALS": credentials,
-            "TALEEMABAD_USER": user_name,
-        },
-    }
-
-
-def _running_inside_target_venv() -> bool:
-    """Check if we're already running inside the target venv."""
-    venv = _venv_dir()
-    try:
-        return Path(sys.executable).resolve().is_relative_to(venv.resolve())
-    except (ValueError, OSError):
-        return False
-
-
-def _create_venv_and_install() -> None:
-    """Create a dedicated venv and install the package from GitHub."""
-    venv = _venv_dir()
-
-    if _running_inside_target_venv():
-        click.echo("Already running from the installed environment. Skipping reinstall.")
-        return
-
-    # Create venv
-    click.echo("Creating dedicated Python environment...")
-    subprocess.run(
-        [sys.executable, "-m", "venv", str(venv), "--clear"],
-        check=True,
-        capture_output=True,
-    )
-
-    # Install package from GitHub
-    if sys.platform == "win32":
-        pip_exe = str(venv / "Scripts" / "pip.exe")
-    else:
-        pip_exe = str(venv / "bin" / "pip")
-    click.echo("Installing taleemabad-data-mcp (this may take a minute)...")
-    result = subprocess.run(
-        [pip_exe, "install", GITHUB_URL],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        click.echo(f"Installation failed:\n{result.stderr}", err=True)
-        sys.exit(1)
-    click.echo("Package installed successfully.")
-
-
-def _bigquery_analytics_config(credentials: str) -> dict:
-    """Build the bigquery-analytics MCP server configuration entry."""
-    return {
-        "command": "npx",
-        "args": [
-            "-y", "@ergut/mcp-bigquery-server@latest",
-            "--project-id", "niete-bq-prod",
-            "--key-file", credentials,
-        ],
-    }
-
-
-def _mcp_json_content(credentials: str, user_name: str) -> dict:
-    """Build the .mcp.json file content with both MCP servers."""
-    return {
-        "mcpServers": {
-            "taleemabad-data": _mcp_server_config(credentials, user_name),
-            "bigquery-analytics": _bigquery_analytics_config(credentials),
-        },
-    }
-
-
-def _write_mcp_json(directory: Path, credentials: str, user_name: str) -> None:
-    """Write .mcp.json to a directory."""
-    mcp_json_path = directory / ".mcp.json"
-    content = _mcp_json_content(credentials, user_name)
-    mcp_json_path.write_text(json.dumps(content, indent=2) + "\n", encoding="utf-8")
-    return mcp_json_path
 
 
 @click.group()
@@ -293,7 +119,10 @@ def bump_version(minor: bool = False) -> None:
         current_version_file.write_text(f"v{new_version}\n", encoding="utf-8")
 
     click.echo(f"Version bumped: {old_version} -> {new_version}")
-    click.echo(f"  Next: git add -A && git commit -m 'chore: bump version to v{new_version}' && git push")
+    click.echo(
+        f"  Next: git add -A && git commit -m "
+        f"'chore: bump version to v{new_version}' && git push"
+    )
 
 
 @main.command(name="bump")
@@ -316,53 +145,13 @@ def bump_cmd(minor: bool) -> None:
 
 @main.command()
 @click.option("--user", required=True, help="Your name (for activity tracking).")
-@click.option(
-    "--credentials",
-    required=False,
-    type=click.Path(exists=True),
-    default=None,
-    help="Path to GCP service account JSON key. Default: auto-detect in current directory.",
-)
-def setup(user: str, credentials: str | None) -> None:
-    """Install rules and configure Claude Code MCP connection.
+def setup(user: str) -> None:
+    """Save your name and sync governance rules.
 
-    Credentials: Place niete-bq-prod-48ae5260d1ea.json in your project
-    directory. The setup will auto-detect it and use a relative path
-    (./<filename>) so the .mcp.json is portable.
+    The MCP server is configured automatically by the plugin.
+    This command only needs to be run once to set your name for audit logs.
     """
-    cwd = Path.cwd()
-
-    # 1. Find credentials file
-    if credentials:
-        creds_path = Path(credentials)
-    else:
-        creds_path = cwd / CREDENTIALS_FILENAME
-    if not creds_path.exists():
-        click.echo(
-            f"Error: GCP credentials file not found.\n"
-            f"Expected: {creds_path}\n\n"
-            f"Copy '{CREDENTIALS_FILENAME}' into this project directory,\n"
-            f"then re-run: python -m taleemabad_data_mcp setup --user \"{user}\"",
-            err=True,
-        )
-        sys.exit(1)
-
-    # Use relative path if file is in cwd (portable .mcp.json)
-    try:
-        rel = creds_path.resolve().relative_to(cwd.resolve())
-        credentials_for_config = f"./{rel}"
-    except ValueError:
-        credentials_for_config = str(creds_path.resolve())
-
-    # 2. Create venv and install package
-    _create_venv_and_install()
-
-    python_path = _venv_python()
-    if not python_path.exists():
-        click.echo(f"Error: Python not found at {python_path}", err=True)
-        sys.exit(1)
-
-    # 3. Copy rules to ~/.claude/rules/taleemabad/
+    # 1. Copy rules to ~/.claude/rules/taleemabad/
     src_rules = _bundled_rules_dir()
     dest_rules = _rules_dest()
 
@@ -372,141 +161,57 @@ def setup(user: str, credentials: str | None) -> None:
 
     if dest_rules.exists():
         shutil.rmtree(dest_rules)
+    dest_rules.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(src_rules, dest_rules)
     click.echo(f"Rules installed to {dest_rules}")
 
-    # 4. Write .mcp.json to current project directory
-    mcp_path = _write_mcp_json(cwd, credentials_for_config, user)
-    click.echo(f"MCP config written to {mcp_path}")
-
-    # 5. Save user config for future init commands
+    # 2. Save user config
     env_content = (
         f"TALEEMABAD_USER={user}\n"
         f"GOOGLE_APPLICATION_CREDENTIALS={CREDENTIALS_FILENAME}\n"
     )
     env_path = _env_path()
+    env_path.parent.mkdir(parents=True, exist_ok=True)
     env_path.write_text(env_content, encoding="utf-8")
     click.echo(f"User config saved to {env_path}")
 
+    # 3. Cleanup old artifacts from previous versions
+    old_venv = _claude_dir() / "taleemabad-venv"
+    if old_venv.exists():
+        click.echo(f"\nNote: Old venv found at {old_venv}")
+        click.echo("It is no longer needed. You can delete it manually.")
+
+    cwd = Path.cwd()
+    old_mcp = cwd / ".mcp.json"
+    if old_mcp.exists():
+        click.echo(f"\nNote: Old .mcp.json found at {old_mcp}")
+        click.echo("The plugin now provides MCP config automatically.")
+        click.echo("Delete this file to avoid conflicts.")
+
+    # Remove stale MCP entry from settings.json (old versions wrote here)
+    settings_path = _claude_dir() / "settings.json"
+    if settings_path.exists():
+        try:
+            settings = json.loads(settings_path.read_text(encoding="utf-8"))
+            if "mcpServers" in settings and "taleemabad-data" in settings["mcpServers"]:
+                del settings["mcpServers"]["taleemabad-data"]
+                if not settings["mcpServers"]:
+                    del settings["mcpServers"]
+                settings_path.write_text(
+                    json.dumps(settings, indent=2) + "\n", encoding="utf-8"
+                )
+                click.echo("Removed stale MCP entry from settings.json")
+        except (json.JSONDecodeError, KeyError):
+            pass
+
     click.echo()
     click.echo("Setup complete! Restart Claude Code to connect.")
-    click.echo()
-    click.echo("For other projects: copy the credentials JSON file there,")
-    click.echo("then run /taleemabad-init or: python -m taleemabad_data_mcp init")
-
-
-def _read_saved_config() -> dict[str, str]:
-    """Read saved user config from ~/.claude/taleemabad-data-mcp.env."""
-    env_path = _env_path()
-    if not env_path.exists():
-        return {}
-    env_vars = {}
-    for line in env_path.read_text(encoding="utf-8").strip().split("\n"):
-        if "=" in line:
-            key, value = line.split("=", 1)
-            env_vars[key] = value
-    return env_vars
-
-
-@main.command()
-def upgrade() -> None:
-    """Update rules and MCP config using your saved credentials.
-
-    Run this after updating the package. No need to re-enter your name
-    or credentials path — they are read from your first setup.
-    """
-    saved = _read_saved_config()
-    user_name = saved.get("TALEEMABAD_USER")
-    credentials = saved.get("GOOGLE_APPLICATION_CREDENTIALS")
-
-    if not user_name or not credentials:
-        click.echo(
-            "Error: no saved config found. Run setup first:\n"
-            '  python -m taleemabad_data_mcp setup --user "Name" '
-            "--credentials /path/to/key.json",
-            err=True,
-        )
-        sys.exit(1)
-
-    if not Path(credentials).exists():
-        click.echo(
-            f"Error: saved credentials file not found: {credentials}\n"
-            "Re-run setup with the correct path.",
-            err=True,
-        )
-        sys.exit(1)
-
-    # Copy rules
-    src_rules = _bundled_rules_dir()
-    dest_rules = _rules_dest()
-    if dest_rules.exists():
-        shutil.rmtree(dest_rules)
-    shutil.copytree(src_rules, dest_rules)
-    click.echo(f"Rules updated in {dest_rules}")
-
-    # Update .mcp.json in current project directory
-    cwd = Path.cwd()
-    mcp_json_path = cwd / ".mcp.json"
-    if mcp_json_path.exists():
-        _write_mcp_json(cwd, credentials, user_name)
-        click.echo(f"MCP config updated in {mcp_json_path}")
-    else:
-        click.echo("No .mcp.json in current directory — run 'init' to create one.")
-
-    from taleemabad_data_mcp import __version__
-
-    click.echo()
-    click.echo(f"Upgrade complete! Now running v{__version__}")
-    click.echo("Restart Claude Code and run /mcp to verify.")
-
-
-@main.command()
-def init() -> None:
-    """Add .mcp.json to the current project directory.
-
-    Run this in any project where you want the Taleemabad data MCP available.
-    Requires niete-bq-prod-48ae5260d1ea.json in the project directory.
-    """
-    saved = _read_saved_config()
-    user_name = saved.get("TALEEMABAD_USER")
-
-    if not user_name:
-        click.echo(
-            "Error: run setup first:\n"
-            '  python -m taleemabad_data_mcp setup --user "Your Name"',
-            err=True,
-        )
-        sys.exit(1)
-
-    # Check venv exists
-    if not _venv_python().exists():
-        click.echo(
-            "Error: taleemabad-venv not found. Run setup first:\n"
-            '  python -m taleemabad_data_mcp setup --user "Your Name"',
-            err=True,
-        )
-        sys.exit(1)
-
-    # Check credentials file in current directory
-    cwd = Path.cwd()
-    creds_path = cwd / CREDENTIALS_FILENAME
-    if not creds_path.exists():
-        click.echo(
-            f"Error: '{CREDENTIALS_FILENAME}' not found in this directory.\n"
-            f"Copy the GCP service account key here first.",
-            err=True,
-        )
-        sys.exit(1)
-
-    credentials_for_config = f"./{CREDENTIALS_FILENAME}"
-    mcp_path = _write_mcp_json(cwd, credentials_for_config, user_name)
-    click.echo(f"Created {mcp_path}")
-    click.echo("Restart Claude Code and run /mcp to verify.")
+    click.echo(f"Make sure '{CREDENTIALS_FILENAME}' is in your project directory.")
 
 
 @main.command()
 def uninstall() -> None:
-    """Remove rules, MCP config, venv, and user settings."""
+    """Remove rules and user settings."""
     # 1. Remove rules
     dest_rules = _rules_dest()
     if dest_rules.exists():
@@ -515,28 +220,16 @@ def uninstall() -> None:
     else:
         click.echo("Rules directory not found (already removed).")
 
-    # 2. Remove MCP server entry from settings.json
-    settings = _load_settings()
-    if "mcpServers" in settings and "taleemabad-data" in settings["mcpServers"]:
-        del settings["mcpServers"]["taleemabad-data"]
-        if not settings["mcpServers"]:
-            del settings["mcpServers"]
-        _save_settings(settings)
-        click.echo(f"MCP server removed from {_settings_path()}")
-    else:
-        click.echo("MCP server config not found (already removed).")
-
-    # 3. Remove venv
-    venv = _venv_dir()
-    if venv.exists():
-        shutil.rmtree(venv)
-        click.echo(f"Python environment removed from {venv}")
-
-    # 4. Remove env file
+    # 2. Remove env file
     env_path = _env_path()
     if env_path.exists():
         env_path.unlink()
         click.echo(f"User config removed from {env_path}")
+
+    # 3. Note about old artifacts
+    old_venv = _claude_dir() / "taleemabad-venv"
+    if old_venv.exists():
+        click.echo(f"\nNote: Old venv at {old_venv} can be deleted manually.")
 
     click.echo("Uninstall complete.")
 
