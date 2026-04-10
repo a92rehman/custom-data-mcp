@@ -103,10 +103,9 @@ Always include:
 
 ### Step 6: Optional analysis
 
-If the user asks for trends, charts, correlation, or reports:
-- Use bigquery-analytics MCP tools for analysis/visualization ONLY
-- NEVER use bigquery-analytics for data retrieval — all data comes through taleemabad-data
-- NEVER call bigquery-analytics tools: `execute_query`, `build_query`, `preview_table`
+If the user asks for descriptive statistics, use the `describe_data` tool.
+If the user asks to export results, use the `save_query_results` tool.
+If the user asks for charts or visualizations, tell them: "Chart generation is coming in a future release. For now, I can provide the data in CSV/JSON format for you to visualize in your preferred tool."
 
 ### Step 7: Feedback
 
@@ -131,4 +130,3 @@ If `rules/index.md` has no matching domain for the user's question:
 - Browse schemas or run diagnostics (that's data-admin's job)
 - Query `tbproddb.analytics_analyticsevent` — BANNED (68.6 GB unpartitioned)
 - Run queries without partition filters
-- Use bigquery-analytics for data retrieval
