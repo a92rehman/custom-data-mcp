@@ -97,40 +97,10 @@ st.markdown("""
     .mini-stat .value { font-size: 1.3rem; font-weight: 700; color: #1E293B; }
     .mini-stat .label { font-size: 0.75rem; color: #64748B; }
 
-    /* Section containers — colored backgrounds to separate groups.
-       Uses outline + background on the Streamlit column wrapper via
-       adjacent-sibling targeting. We inject open/close divs around content. */
-    .section-box {
-        border-radius: 14px; padding: 18px 16px 14px 16px;
-        margin-bottom: 8px; min-height: 100%;
-    }
-    .section-box-blue {
-        background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
-        border: 2px solid #93C5FD;
-    }
-    .section-box-green {
-        background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
-        border: 2px solid #86EFAC;
-    }
-    .section-box-orange {
-        background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
-        border: 2px solid #FDBA74;
-    }
-    .section-box-purple {
-        background: linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%);
-        border: 2px solid #C4B5FD;
-    }
-    .section-box-slate {
-        background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
-        border: 2px solid #CBD5E1;
-    }
-    .section-box-red {
-        background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
-        border: 2px solid #FCA5A5;
-    }
-
-    .section-box .section-header { margin-top: 0; }
-    .section-box .kpi-card { background: rgba(255,255,255,0.85); }
+    /* Section containers — use Streamlit's native container border styling.
+       We mark containers with data-section-color via a hidden div, then
+       style the parent container. Since we can't do that easily, we use
+       Streamlit's st.container(border=True) and override its style. */
 </style>
 """, unsafe_allow_html=True)
 
@@ -372,86 +342,80 @@ TILE = (
 r3a, r3b, r3c = st.columns(3)
 
 with r3a:
-    st.markdown('<div class="section-box section-box-green">', unsafe_allow_html=True)
-    st.markdown('<div class="section-header">Feedback Snapshot</div>',
-                unsafe_allow_html=True)
-    fc1, fc2, fc3 = st.columns(3)
-    fc1.markdown(TILE.format(label="Thumbs Up", value=up_count,
-                             style=' style="color:#22C55E;"'), unsafe_allow_html=True)
-    fc2.markdown(TILE.format(label="Thumbs Down", value=down_count,
-                             style=' style="color:#EF4444;"'), unsafe_allow_html=True)
-    fc3.markdown(TILE.format(label="Rated", value=f"{rated_pct:.0f}%",
-                             style=""), unsafe_allow_html=True)
-    if not fb.empty:
-        fb_domain = fb.groupby("domain")["rating"].apply(
-            lambda x: (x == "up").sum() / len(x) * 100
-        ).reset_index(name="sat_pct").sort_values("sat_pct", ascending=True)
-        fig = go.Figure(go.Bar(
-            x=fb_domain["sat_pct"], y=fb_domain["domain"], orientation="h",
-            marker_color=[DOMAIN_COLORS.get(d, "#94A3B8") for d in fb_domain["domain"]],
-            text=[f"{v:.0f}%" for v in fb_domain["sat_pct"]], textposition="auto",
-        ))
-        fig.update_layout(template="plotly_white", margin=dict(l=10, r=10, t=5, b=10),
-                          height=150, xaxis=dict(title=None, range=[0, 100]),
-                          yaxis=dict(title=None), plot_bgcolor="rgba(0,0,0,0)",
-                          paper_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(fig, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown('<div class="section-header" style="border-color:#22C55E;">'
+                    'Feedback Snapshot</div>', unsafe_allow_html=True)
+        fc1, fc2, fc3 = st.columns(3)
+        fc1.markdown(TILE.format(label="Thumbs Up", value=up_count,
+                                 style=' style="color:#22C55E;"'), unsafe_allow_html=True)
+        fc2.markdown(TILE.format(label="Thumbs Down", value=down_count,
+                                 style=' style="color:#EF4444;"'), unsafe_allow_html=True)
+        fc3.markdown(TILE.format(label="Rated", value=f"{rated_pct:.0f}%",
+                                 style=""), unsafe_allow_html=True)
+        if not fb.empty:
+            fb_domain = fb.groupby("domain")["rating"].apply(
+                lambda x: (x == "up").sum() / len(x) * 100
+            ).reset_index(name="sat_pct").sort_values("sat_pct", ascending=True)
+            fig = go.Figure(go.Bar(
+                x=fb_domain["sat_pct"], y=fb_domain["domain"], orientation="h",
+                marker_color=[DOMAIN_COLORS.get(d, "#94A3B8") for d in fb_domain["domain"]],
+                text=[f"{v:.0f}%" for v in fb_domain["sat_pct"]], textposition="auto",
+            ))
+            fig.update_layout(template="plotly_white", margin=dict(l=10, r=10, t=5, b=10),
+                              height=150, xaxis=dict(title=None, range=[0, 100]),
+                              yaxis=dict(title=None))
+            st.plotly_chart(fig, use_container_width=True)
 
 with r3b:
-    st.markdown('<div class="section-box section-box-orange">', unsafe_allow_html=True)
-    st.markdown('<div class="section-header">Cost by Domain</div>',
-                unsafe_allow_html=True)
-    cc1, cc2, cc3 = st.columns(3)
-    cc1.markdown(TILE.format(label="Total Cost", value=f"${total_cost:.2f}",
-                             style=""), unsafe_allow_html=True)
-    cc2.markdown(TILE.format(label="Data Scanned",
-                             value=f"{total_bytes / (1024 ** 3):.1f} GB",
-                             style=""), unsafe_allow_html=True)
-    cc3.markdown(TILE.format(label="Avg/Query", value=f"${avg_cost:.4f}",
-                             style=""), unsafe_allow_html=True)
-    if not cost_df.empty:
-        cost_by_domain = (
-            cost_df.groupby("domain")["cost_usd"]
-            .sum().reset_index().sort_values("cost_usd", ascending=True)
-        )
-        fig = go.Figure(go.Bar(
-            x=cost_by_domain["cost_usd"], y=cost_by_domain["domain"], orientation="h",
-            marker_color=[DOMAIN_COLORS.get(d, "#94A3B8") for d in cost_by_domain["domain"]],
-            text=[f"${v:.3f}" for v in cost_by_domain["cost_usd"]], textposition="auto",
-        ))
-        fig.update_layout(template="plotly_white", margin=dict(l=10, r=10, t=5, b=10),
-                          height=150, xaxis=dict(title=None), yaxis=dict(title=None),
-                          plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(fig, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown('<div class="section-header" style="border-color:#F97316;">'
+                    'Cost by Domain</div>', unsafe_allow_html=True)
+        cc1, cc2, cc3 = st.columns(3)
+        cc1.markdown(TILE.format(label="Total Cost", value=f"${total_cost:.2f}",
+                                 style=""), unsafe_allow_html=True)
+        cc2.markdown(TILE.format(label="Data Scanned",
+                                 value=f"{total_bytes / (1024 ** 3):.1f} GB",
+                                 style=""), unsafe_allow_html=True)
+        cc3.markdown(TILE.format(label="Avg/Query", value=f"${avg_cost:.4f}",
+                                 style=""), unsafe_allow_html=True)
+        if not cost_df.empty:
+            cost_by_domain = (
+                cost_df.groupby("domain")["cost_usd"]
+                .sum().reset_index().sort_values("cost_usd", ascending=True)
+            )
+            fig = go.Figure(go.Bar(
+                x=cost_by_domain["cost_usd"], y=cost_by_domain["domain"], orientation="h",
+                marker_color=[DOMAIN_COLORS.get(d, "#94A3B8") for d in cost_by_domain["domain"]],
+                text=[f"${v:.3f}" for v in cost_by_domain["cost_usd"]], textposition="auto",
+            ))
+            fig.update_layout(template="plotly_white", margin=dict(l=10, r=10, t=5, b=10),
+                              height=150, xaxis=dict(title=None), yaxis=dict(title=None))
+            st.plotly_chart(fig, use_container_width=True)
 
 with r3c:
-    st.markdown('<div class="section-box section-box-blue">', unsafe_allow_html=True)
-    st.markdown('<div class="section-header">Most Active Users</div>',
-                unsafe_allow_html=True)
-    uc1, uc2, uc3 = st.columns(3)
-    uc1.markdown(TILE.format(label="Users", value=active_users,
-                             style=""), unsafe_allow_html=True)
-    uc2.markdown(TILE.format(label="Avg Queries", value=f"{queries_per_user:.0f}",
-                             style=""), unsafe_allow_html=True)
-    uc3.markdown(TILE.format(label="Top User", value=top_user_name,
-                             style=""), unsafe_allow_html=True)
-    user_activity = (
-        real_queries.groupby("user_name")
-        .size().reset_index(name="queries")
-        .sort_values("queries", ascending=True).tail(7)
-    )
-    fig = go.Figure(go.Bar(
-        x=user_activity["queries"], y=user_activity["user_name"], orientation="h",
-        marker_color=COLORS["primary"],
-        text=user_activity["queries"], textposition="auto",
-    ))
-    fig.update_layout(template="plotly_white", margin=dict(l=10, r=10, t=5, b=10),
-                      height=150, xaxis=dict(title=None), yaxis=dict(title=None),
-                      plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
-    st.plotly_chart(fig, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown('<div class="section-header" style="border-color:#3B82F6;">'
+                    'Most Active Users</div>', unsafe_allow_html=True)
+        uc1, uc2, uc3 = st.columns(3)
+        uc1.markdown(TILE.format(label="Users", value=active_users,
+                                 style=""), unsafe_allow_html=True)
+        uc2.markdown(TILE.format(label="Avg Queries", value=f"{queries_per_user:.0f}",
+                                 style=""), unsafe_allow_html=True)
+        uc3.markdown(TILE.format(label="Top User", value=top_user_name,
+                                 style=""), unsafe_allow_html=True)
+        user_activity = (
+            real_queries.groupby("user_name")
+            .size().reset_index(name="queries")
+            .sort_values("queries", ascending=True).tail(7)
+        )
+        fig = go.Figure(go.Bar(
+            x=user_activity["queries"], y=user_activity["user_name"], orientation="h",
+            marker_color=COLORS["primary"],
+            text=user_activity["queries"], textposition="auto",
+        ))
+        fig.update_layout(template="plotly_white", margin=dict(l=10, r=10, t=5, b=10),
+                          height=150, xaxis=dict(title=None), yaxis=dict(title=None))
+        st.plotly_chart(fig, use_container_width=True)
 
 # ======================================================================
 # ROW 4: Errors + Freshness + Feedback — summary KPI cards
@@ -479,41 +443,41 @@ except Exception:
 r4a, r4b, r4c = st.columns(3)
 
 with r4a:
-    st.markdown('<div class="section-box section-box-red">', unsafe_allow_html=True)
-    st.markdown('<div class="section-header">Errors</div>', unsafe_allow_html=True)
-    ec1, ec2 = st.columns(2)
-    err_color = COLORS["success"] if error_count == 0 else COLORS["danger"]
-    ec1.markdown(TILE.format(label="Failed Queries", value=error_count,
-                             style=f' style="color:{err_color};"'), unsafe_allow_html=True)
-    ec2.markdown(TILE.format(label="Error Types", value=error_types_count,
-                             style=""), unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown('<div class="section-header" style="border-color:#EF4444;">'
+                    'Errors</div>', unsafe_allow_html=True)
+        ec1, ec2 = st.columns(2)
+        err_color = COLORS["success"] if error_count == 0 else COLORS["danger"]
+        ec1.markdown(TILE.format(label="Failed Queries", value=error_count,
+                                 style=f' style="color:{err_color};"'), unsafe_allow_html=True)
+        ec2.markdown(TILE.format(label="Error Types", value=error_types_count,
+                                 style=""), unsafe_allow_html=True)
 
 with r4b:
-    st.markdown('<div class="section-box section-box-purple">', unsafe_allow_html=True)
-    st.markdown('<div class="section-header">Data Freshness</div>', unsafe_allow_html=True)
-    dc1, dc2, dc3 = st.columns(3)
-    dc1.markdown(TILE.format(label="Tables", value=tables_tracked,
-                             style=""), unsafe_allow_html=True)
-    dc2.markdown(TILE.format(label="Fresh (&lt;6h)", value=fresh_count,
-                             style=f' style="color:{COLORS["success"]};"'),
-                 unsafe_allow_html=True)
-    dc3.markdown(TILE.format(label="Stale (&gt;24h)", value=stale_count,
-                             style=f' style="color:{COLORS["danger"]};"'),
-                 unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown('<div class="section-header" style="border-color:#8B5CF6;">'
+                    'Data Freshness</div>', unsafe_allow_html=True)
+        dc1, dc2, dc3 = st.columns(3)
+        dc1.markdown(TILE.format(label="Tables", value=tables_tracked,
+                                 style=""), unsafe_allow_html=True)
+        dc2.markdown(TILE.format(label="Fresh (&lt;6h)", value=fresh_count,
+                                 style=f' style="color:{COLORS["success"]};"'),
+                     unsafe_allow_html=True)
+        dc3.markdown(TILE.format(label="Stale (&gt;24h)", value=stale_count,
+                                 style=f' style="color:{COLORS["danger"]};"'),
+                     unsafe_allow_html=True)
 
 with r4c:
-    st.markdown('<div class="section-box section-box-slate">', unsafe_allow_html=True)
-    st.markdown('<div class="section-header">Feedback</div>', unsafe_allow_html=True)
-    fbc1, fbc2 = st.columns(2)
-    fbc1.markdown(TILE.format(label="Total Ratings", value=feedback_count,
-                              style=""), unsafe_allow_html=True)
-    sat_display = f"{satisfaction:.0f}%" if feedback_count > 0 else "N/A"
-    sat_color = COLORS["success"] if satisfaction >= 70 else COLORS["warning"]
-    fbc2.markdown(TILE.format(label="Satisfaction", value=sat_display,
-                              style=f' style="color:{sat_color};"'), unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown('<div class="section-header" style="border-color:#64748B;">'
+                    'Feedback</div>', unsafe_allow_html=True)
+        fbc1, fbc2 = st.columns(2)
+        fbc1.markdown(TILE.format(label="Total Ratings", value=feedback_count,
+                                  style=""), unsafe_allow_html=True)
+        sat_display = f"{satisfaction:.0f}%" if feedback_count > 0 else "N/A"
+        sat_color = COLORS["success"] if satisfaction >= 70 else COLORS["warning"]
+        fbc2.markdown(TILE.format(label="Satisfaction", value=sat_display,
+                                  style=f' style="color:{sat_color};"'), unsafe_allow_html=True)
 
 # ======================================================================
 # ROW 5: Action Items — auto-generated from data
