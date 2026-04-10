@@ -13,12 +13,10 @@ dist/
 !.claude-plugin/plugin.json
 !.claude-plugin/marketplace.json
 !hooks/hooks.json
+!.mcp.json
 
 # Version file (not JSON but caught by *.json — explicitly allow)
 !.current-version
-
-# Project MCP config (contains user credentials path)
-.mcp.json
 
 # Dev artifacts
 .pytest_cache/

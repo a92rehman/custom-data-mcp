@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "taleemabad-data": {
+      "command": "uv",
+      "args": [
+        "run", "--directory", "${CLAUDE_PLUGIN_ROOT}",
+        "python", "-m", "taleemabad_data_mcp", "serve"
+      ],
+      "env": {
+        "BIGQUERY_PROJECT": "niete-bq-prod",
+        "BIGQUERY_DATASETS": "RUMI_DB,TaleemHub_DB,tbproddb,odk,mcp_audit",
+        "GOOGLE_APPLICATION_CREDENTIALS": "./niete-bq-prod-48ae5260d1ea.json",
+        "TALEEMABAD_USER": "${TALEEMABAD_USER}"
+      }
+    }
+  }
+}
