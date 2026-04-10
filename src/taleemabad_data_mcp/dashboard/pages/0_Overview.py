@@ -319,8 +319,28 @@ with col_right:
     st.plotly_chart(fig, use_container_width=True)
 
 # ======================================================================
-# ROW 3: Feedback + Cost + Top Users (equal 3 columns)
+# ROW 3: Feedback + Cost + Top Users — KPI tiles in cards
 # ======================================================================
+rated_pct = feedback_count / total_queries * 100 if total_queries else 0
+total_bytes = cost_df["cost_bytes"].sum() if not cost_df.empty else 0
+avg_cost = cost_df["cost_usd"].mean() if not cost_df.empty else 0
+queries_per_user = total_queries / active_users if active_users else 0
+top_user_series = real_queries["user_name"].value_counts()
+top_user_name = top_user_series.index[0] if len(top_user_series) > 0 else "—"
+top_user_count = int(top_user_series.iloc[0]) if len(top_user_series) > 0 else 0
+
+row3_kpis = [
+    ("Thumbs Up", f"{up_count}", "#22C55E"),
+    ("Thumbs Down", f"{down_count}", "#EF4444"),
+    ("Rated", f"{rated_pct:.0f}%", None),
+    ("Total Cost", f"${total_cost:.2f}", None),
+    ("Data Scanned", f"{total_bytes / (1024 ** 3):.1f} GB", None),
+    ("Avg/Query", f"${avg_cost:.4f}", None),
+    ("Users", f"{active_users}", None),
+    ("Avg Queries", f"{queries_per_user:.0f}", None),
+    ("Top User", f"{top_user_name}", None),
+]
+
 r3a, r3b, r3c = st.columns(3)
 
 with r3a:
@@ -329,242 +349,154 @@ with r3a:
         unsafe_allow_html=True,
     )
     fc1, fc2, fc3 = st.columns(3)
-    fc1.markdown(
-        f'<div class="mini-stat"><div class="value" style="color:#22C55E;">'
-        f"{up_count}</div><div class='label'>Thumbs Up</div></div>",
-        unsafe_allow_html=True,
-    )
-    fc2.markdown(
-        f'<div class="mini-stat"><div class="value" style="color:#EF4444;">'
-        f"{down_count}</div><div class='label'>Thumbs Down</div></div>",
-        unsafe_allow_html=True,
-    )
-    rated_pct = feedback_count / total_queries * 100 if total_queries else 0
-    fc3.markdown(
-        f'<div class="mini-stat"><div class="value">'
-        f"{rated_pct:.0f}%</div><div class='label'>Rated</div></div>",
-        unsafe_allow_html=True,
-    )
-    if not fb.empty:
-        fb_domain = fb.groupby("domain")["rating"].apply(
-            lambda x: (x == "up").sum() / len(x) * 100
-        ).reset_index(name="sat_pct")
-        fb_domain = fb_domain.sort_values("sat_pct", ascending=True)
-        d_colors = [
-            DOMAIN_COLORS.get(d, "#94A3B8") for d in fb_domain["domain"]
-        ]
-        fig = go.Figure(go.Bar(
-            x=fb_domain["sat_pct"], y=fb_domain["domain"],
-            orientation="h", marker_color=d_colors,
-            text=[f"{v:.0f}%" for v in fb_domain["sat_pct"]],
-            textposition="auto",
-        ))
-        fig.update_layout(
-            template="plotly_white",
-            margin=dict(l=10, r=10, t=5, b=10),
-            height=160, xaxis=dict(title=None, range=[0, 100]),
-            yaxis=dict(title=None),
+    for col, (label, value, color) in zip(
+        [fc1, fc2, fc3], row3_kpis[:3], strict=True,
+    ):
+        color_style = f' style="color:{color};"' if color else ""
+        col.markdown(
+            f'<div class="kpi-card" style="min-height:70px;text-align:center;">'
+            f'<div class="kpi-label">{label}</div>'
+            f'<div class="kpi-value"{color_style}>{value}</div>'
+            f"</div>",
+            unsafe_allow_html=True,
         )
-        st.plotly_chart(fig, use_container_width=True)
 
 with r3b:
     st.markdown(
-        '<div class="section-header">Cost by Domain</div>',
+        '<div class="section-header">Cost Summary</div>',
         unsafe_allow_html=True,
     )
-    total_bytes = cost_df["cost_bytes"].sum() if not cost_df.empty else 0
-    avg_cost = cost_df["cost_usd"].mean() if not cost_df.empty else 0
     cc1, cc2, cc3 = st.columns(3)
-    cc1.markdown(
-        f'<div class="mini-stat"><div class="value">'
-        f"${total_cost:.2f}</div><div class='label'>Total</div></div>",
-        unsafe_allow_html=True,
-    )
-    cc2.markdown(
-        f'<div class="mini-stat"><div class="value">'
-        f"{total_bytes / (1024 ** 3):.1f} GB</div>"
-        f"<div class='label'>Scanned</div></div>",
-        unsafe_allow_html=True,
-    )
-    cc3.markdown(
-        f'<div class="mini-stat"><div class="value">'
-        f"${avg_cost:.4f}</div><div class='label'>Avg/Query</div></div>",
-        unsafe_allow_html=True,
-    )
-    if not cost_df.empty:
-        cost_by_domain = (
-            cost_df.groupby("domain")["cost_usd"]
-            .sum().reset_index().sort_values("cost_usd", ascending=True)
+    for col, (label, value, color) in zip(
+        [cc1, cc2, cc3], row3_kpis[3:6], strict=True,
+    ):
+        col.markdown(
+            f'<div class="kpi-card" style="min-height:70px;text-align:center;">'
+            f'<div class="kpi-label">{label}</div>'
+            f'<div class="kpi-value">{value}</div>'
+            f"</div>",
+            unsafe_allow_html=True,
         )
-        d_colors = [
-            DOMAIN_COLORS.get(d, "#94A3B8")
-            for d in cost_by_domain["domain"]
-        ]
-        fig = go.Figure(go.Bar(
-            x=cost_by_domain["cost_usd"],
-            y=cost_by_domain["domain"],
-            orientation="h", marker_color=d_colors,
-            text=[f"${v:.3f}" for v in cost_by_domain["cost_usd"]],
-            textposition="auto",
-        ))
-        fig.update_layout(
-            template="plotly_white",
-            margin=dict(l=10, r=10, t=5, b=10),
-            height=160, xaxis=dict(title=None),
-            yaxis=dict(title=None),
-        )
-        st.plotly_chart(fig, use_container_width=True)
 
 with r3c:
     st.markdown(
-        '<div class="section-header">Most Active Users</div>',
+        '<div class="section-header">Active Users</div>',
         unsafe_allow_html=True,
     )
-    queries_per_user = total_queries / active_users if active_users else 0
-    top_user = real_queries["user_name"].value_counts()
-    top_count = int(top_user.iloc[0]) if len(top_user) > 0 else 0
     uc1, uc2, uc3 = st.columns(3)
-    uc1.markdown(
-        f'<div class="mini-stat"><div class="value">'
-        f"{active_users}</div><div class='label'>Users</div></div>",
-        unsafe_allow_html=True,
-    )
-    uc2.markdown(
-        f'<div class="mini-stat"><div class="value">'
-        f"{queries_per_user:.0f}</div>"
-        f"<div class='label'>Avg Queries</div></div>",
-        unsafe_allow_html=True,
-    )
-    uc3.markdown(
-        f'<div class="mini-stat"><div class="value">'
-        f"{top_count}</div>"
-        f"<div class='label'>Top User</div></div>",
-        unsafe_allow_html=True,
-    )
-    user_activity = (
-        real_queries.groupby("user_name")
-        .size().reset_index(name="queries")
-        .sort_values("queries", ascending=True).tail(7)
-    )
-    fig = go.Figure(go.Bar(
-        x=user_activity["queries"],
-        y=user_activity["user_name"],
-        orientation="h",
-        marker_color=COLORS["primary"],
-        text=user_activity["queries"],
-        textposition="auto",
-    ))
-    fig.update_layout(
-        template="plotly_white",
-        margin=dict(l=10, r=10, t=5, b=10),
-        height=160, xaxis=dict(title=None),
-        yaxis=dict(title=None),
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    for col, (label, value, color) in zip(
+        [uc1, uc2, uc3], row3_kpis[6:9], strict=True,
+    ):
+        col.markdown(
+            f'<div class="kpi-card" style="min-height:70px;text-align:center;">'
+            f'<div class="kpi-label">{label}</div>'
+            f'<div class="kpi-value">{value}</div>'
+            f"</div>",
+            unsafe_allow_html=True,
+        )
 
 # ======================================================================
-# ROW 4: Errors + Freshness + Recent Feedback (equal 3 columns)
+# ROW 4: Errors + Freshness + Feedback — summary KPI cards only
 # ======================================================================
+error_count = len(errors)
+error_types_count = errors["error_type"].nunique() if not errors.empty else 0
+
+try:
+    freshness = get_table_freshness()
+    if not freshness.empty:
+        from datetime import UTC, datetime
+        now = datetime.now(UTC)
+        freshness["hours_ago"] = freshness["last_modified"].apply(
+            lambda ts: (now - ts.replace(tzinfo=UTC)).total_seconds() / 3600
+            if pd.notna(ts) else None
+        )
+        fresh_count = int((freshness["hours_ago"] < 6).sum())
+        stale_count = int((freshness["hours_ago"] >= 24).sum())
+        tables_tracked = len(freshness)
+    else:
+        fresh_count, stale_count, tables_tracked = 0, 0, 0
+except Exception:
+    fresh_count, stale_count, tables_tracked = 0, 0, 0
+
 r4a, r4b, r4c = st.columns(3)
 
 with r4a:
     st.markdown(
-        '<div class="section-header">Error Summary</div>',
+        '<div class="section-header">Errors</div>',
         unsafe_allow_html=True,
     )
-    if not errors.empty:
-        err_types = (
-            errors.groupby("error_type")
-            .size().reset_index(name="count")
-            .sort_values("count", ascending=False)
-        )
-        for _, row in err_types.iterrows():
-            st.markdown(
-                f"<div style='display:flex;justify-content:space-between;"
-                f"padding:5px 0;border-bottom:1px solid #F1F5F9;'>"
-                f"<span style='color:#64748B;'>{row['error_type']}</span>"
-                f"<span style='font-weight:600;color:#EF4444;'>"
-                f"{row['count']}</span></div>",
-                unsafe_allow_html=True,
-            )
-    else:
-        st.success("No errors in this period")
+    ec1, ec2 = st.columns(2)
+    err_color = COLORS["success"] if error_count == 0 else COLORS["danger"]
+    ec1.markdown(
+        f'<div class="kpi-card" style="min-height:70px;text-align:center;">'
+        f'<div class="kpi-label">Failed Queries</div>'
+        f'<div class="kpi-value" style="color:{err_color};">{error_count}</div>'
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+    ec2.markdown(
+        f'<div class="kpi-card" style="min-height:70px;text-align:center;">'
+        f'<div class="kpi-label">Error Types</div>'
+        f'<div class="kpi-value">{error_types_count}</div>'
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+    if error_count > 0:
+        st.caption("See Errors tab for details")
 
 with r4b:
     st.markdown(
         '<div class="section-header">Data Freshness</div>',
         unsafe_allow_html=True,
     )
-    try:
-        freshness = get_table_freshness()
-        if not freshness.empty:
-            from datetime import UTC, datetime
-            now = datetime.now(UTC)
-            for _, row in freshness.iterrows():
-                if pd.notna(row["last_modified"]):
-                    hours = (
-                        now - row["last_modified"].replace(tzinfo=UTC)
-                    ).total_seconds() / 3600
-                    if hours < 6:
-                        dot = (
-                            '<span style="color:#22C55E;">&#9679;</span>'
-                        )
-                    elif hours < 24:
-                        dot = (
-                            '<span style="color:#EAB308;">&#9679;</span>'
-                        )
-                    else:
-                        dot = (
-                            '<span style="color:#EF4444;">&#9679;</span>'
-                        )
-                    st.markdown(
-                        f"<div style='display:flex;"
-                        f"justify-content:space-between;"
-                        f"padding:4px 0;border-bottom:1px solid #F1F5F9;"
-                        f"font-size:0.85rem;'>"
-                        f"<span>{dot} {row['table_name']}</span>"
-                        f"<span style='color:#64748B;'>"
-                        f"{hours:.0f}h ago</span></div>",
-                        unsafe_allow_html=True,
-                    )
-        else:
-            st.info("No freshness data")
-    except Exception:
-        st.warning("Could not load freshness data")
+    dc1, dc2, dc3 = st.columns(3)
+    dc1.markdown(
+        f'<div class="kpi-card" style="min-height:70px;text-align:center;">'
+        f'<div class="kpi-label">Tables</div>'
+        f'<div class="kpi-value">{tables_tracked}</div>'
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+    dc2.markdown(
+        f'<div class="kpi-card" style="min-height:70px;text-align:center;">'
+        f'<div class="kpi-label">Fresh (&lt;6h)</div>'
+        f'<div class="kpi-value" style="color:{COLORS["success"]};">'
+        f"{fresh_count}</div></div>",
+        unsafe_allow_html=True,
+    )
+    dc3.markdown(
+        f'<div class="kpi-card" style="min-height:70px;text-align:center;">'
+        f'<div class="kpi-label">Stale (&gt;24h)</div>'
+        f'<div class="kpi-value" style="color:{COLORS["danger"]};">'
+        f"{stale_count}</div></div>",
+        unsafe_allow_html=True,
+    )
+    st.caption("See Freshness tab for details")
 
 with r4c:
     st.markdown(
-        '<div class="section-header">Recent Feedback</div>',
+        '<div class="section-header">Feedback</div>',
         unsafe_allow_html=True,
     )
-    if not fb.empty:
-        recent = fb.head(6)
-        for _, row in recent.iterrows():
-            icon = (
-                '<span style="color:#22C55E;">&#9650;</span>'
-                if row["rating"] == "up"
-                else '<span style="color:#EF4444;">&#9660;</span>'
-            )
-            q = str(row.get("query_text", ""))[:45]
-            comment = (
-                str(row.get("comment", ""))
-                if pd.notna(row.get("comment")) else ""
-            )
-            comment_html = (
-                "<br/><em style='color:#64748B;font-size:0.8rem;'>"
-                + comment + "</em>"
-                if comment else ""
-            )
-            st.markdown(
-                f"<div style='padding:4px 0;"
-                f"border-bottom:1px solid #F1F5F9;"
-                f"font-size:0.85rem;'>"
-                f"{icon} <strong>{row['user_name']}</strong>: {q}"
-                f"{comment_html}</div>",
-                unsafe_allow_html=True,
-            )
-    else:
-        st.info("No feedback yet")
+    fbc1, fbc2 = st.columns(2)
+    fbc1.markdown(
+        f'<div class="kpi-card" style="min-height:70px;text-align:center;">'
+        f'<div class="kpi-label">Total Ratings</div>'
+        f'<div class="kpi-value">{feedback_count}</div>'
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+    sat_display = f"{satisfaction:.0f}%" if feedback_count > 0 else "N/A"
+    sat_color = COLORS["success"] if satisfaction >= 70 else COLORS["warning"]
+    fbc2.markdown(
+        f'<div class="kpi-card" style="min-height:70px;text-align:center;">'
+        f'<div class="kpi-label">Satisfaction</div>'
+        f'<div class="kpi-value" style="color:{sat_color};">'
+        f"{sat_display}</div></div>",
+        unsafe_allow_html=True,
+    )
+    if feedback_count == 0:
+        st.caption("No feedback yet — see Feedback tab")
 
 # -- Footer --
 st.markdown("---")
