@@ -59,6 +59,7 @@ def bump_version(minor: bool = False) -> None:
     pyproject_file = repo_root / "pyproject.toml"
     src_rules_dir = Path(__file__).parent / "rules"
     plugin_rules_dir = repo_root / "rules"
+    claude_rules_dir = repo_root / ".claude" / "rules"
 
     # Read current version
     init_text = init_file.read_text(encoding="utf-8")
@@ -85,18 +86,32 @@ def bump_version(minor: bool = False) -> None:
         )
         pyproject_file.write_text(new_pyproject, encoding="utf-8")
 
-    # Sync rules/ at repo root from src rules (for plugin agents to read)
-    if src_rules_dir.exists():
+    # Determine the rules source: .claude/rules/ (dev working copy) if it exists,
+    # otherwise src/rules/ (package source). Developers edit .claude/rules/ directly
+    # since Claude Code loads it as session context. Bump syncs it everywhere.
+    if claude_rules_dir.exists() and claude_rules_dir.is_dir():
+        rules_source = claude_rules_dir
+    else:
+        rules_source = src_rules_dir
+
+    # Sync rules to all locations from the source
+    if rules_source.exists():
+        # → src/taleemabad_data_mcp/rules/ (ships with Python package)
+        if rules_source != src_rules_dir:
+            if src_rules_dir.exists():
+                shutil.rmtree(src_rules_dir)
+            shutil.copytree(rules_source, src_rules_dir)
+
+        # → rules/ at repo root (plugin agents read from here)
         if plugin_rules_dir.exists():
             shutil.rmtree(plugin_rules_dir)
-        shutil.copytree(src_rules_dir, plugin_rules_dir)
+        shutil.copytree(rules_source, plugin_rules_dir)
 
-    # Sync .claude/rules/ for dev convenience (gitignored)
-    claude_rules_dir = repo_root / ".claude" / "rules"
-    if claude_rules_dir.parent.exists() and src_rules_dir.exists():
-        if claude_rules_dir.exists():
-            shutil.rmtree(claude_rules_dir)
-        shutil.copytree(src_rules_dir, claude_rules_dir)
+        # → .claude/rules/ (dev working copy, gitignored)
+        if rules_source != claude_rules_dir and claude_rules_dir.parent.exists():
+            if claude_rules_dir.exists():
+                shutil.rmtree(claude_rules_dir)
+            shutil.copytree(rules_source, claude_rules_dir)
 
     # Update plugin manifest version
     plugin_json = repo_root / ".claude-plugin" / "plugin.json"

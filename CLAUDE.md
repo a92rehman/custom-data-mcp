@@ -125,35 +125,40 @@ The plugin bundles the MCP server config in `.mcp.json` — it starts automatica
 
 ## Adding or Editing Governance Rules
 
-Rules are the core of this project — they define what queries are valid. Here's the workflow:
+Rules are the core of this project — they define what queries are valid.
 
 ### Where to edit
-Always edit in `src/taleemabad_data_mcp/rules/`. This is the **source of truth**.
+Always edit in `.claude/rules/` in the project directory. This is your **working copy** — Claude Code loads these as session context so you can test immediately.
 
 ### How rules propagate
 ```
-src/taleemabad_data_mcp/rules/   ← EDIT HERE (source of truth)
+.claude/rules/                   ← EDIT HERE (working copy, gitignored)
         │
         │  `python -m taleemabad_data_mcp bump`
-        ▼
-rules/                           ← Synced copy (plugin agents read from here)
-.claude/rules/                   ← Synced copy (dev convenience, gitignored)
-        │
-        │  git push + session-start hook on user machines
-        ▼
-~/.claude/rules/taleemabad/      ← User's copy (auto-loaded as Claude Code context)
+        ├──▶ src/taleemabad_data_mcp/rules/   (ships with Python package)
+        └──▶ rules/                           (plugin agents read from here)
+                │
+                │  git push + session-start hook on user machines
+                ▼
+~/.claude/rules/taleemabad/      ← User's copy (auto-synced every session)
 ```
 
 ### Steps to add a new rule
-1. Create the `.md` file in `src/taleemabad_data_mcp/rules/<region>/<domain>/`
-2. Add an entry in `src/taleemabad_data_mcp/rules/index.md` pointing to the new file
-3. Run `python -m taleemabad_data_mcp bump` — syncs to `rules/` and `.claude/rules/`
+1. Create the `.md` file in `.claude/rules/<region>/<domain>/`
+2. Add an entry in `.claude/rules/index.md` pointing to the new file
+3. Run `python -m taleemabad_data_mcp bump` — syncs to `src/rules/` and `rules/`
 4. Commit and push — users get it automatically on next session start
 
 ### Who reads rules
-- **Agents** (`data-analyst.md`, `data-admin.md`) read from `${CLAUDE_PLUGIN_ROOT}/rules/`
-- **Claude Code system context** reads from `~/.claude/rules/taleemabad/` (auto-loaded every session)
-- Both copies are kept in sync by the bump command + session-start hook
+- **You (developer)** — edit `.claude/rules/` directly, loaded as Claude Code context
+- **Plugin agents** (`data-analyst.md`, `data-admin.md`) — read from `${CLAUDE_PLUGIN_ROOT}/rules/`
+- **End users** — `~/.claude/rules/taleemabad/` auto-synced by session-start hook
+- All copies are kept in sync by the bump command + session-start hook
+
+### Important
+- `.claude/rules/` is gitignored — the committed version is `src/taleemabad_data_mcp/rules/`
+- `bump` detects which exists and uses `.claude/rules/` as source if present, otherwise `src/rules/`
+- Never edit `rules/` at repo root directly — it's overwritten by bump
 
 ## Code Conventions
 - Type hints on all function signatures
