@@ -21,51 +21,75 @@ from taleemabad_data_mcp.engine.feedback_logger import FeedbackLogger
 
 logger = structlog.get_logger()
 
+CREDENTIALS_MISSING_MSG = (
+    "BigQuery credentials not found. "
+    "Copy 'niete-bq-prod-48ae5260d1ea.json' to this project directory."
+)
+
 
 @dataclass
 class AppContext:
     config: ServerConfig
-    bq_client: bigquery.Client
-    audit_logger: AuditLogger
-    cost_estimator: CostEstimator
-    feedback_logger: FeedbackLogger
+    bq_client: bigquery.Client | None
+    audit_logger: AuditLogger | None
+    cost_estimator: CostEstimator | None
+    feedback_logger: FeedbackLogger | None
+
+
+def _require_bq(app: "AppContext") -> str | None:
+    """Return an error message if BigQuery is not available, else None."""
+    if app.bq_client is None:
+        return CREDENTIALS_MISSING_MSG
+    return None
 
 
 @asynccontextmanager
 async def app_lifespan(server: FastMCP):
-    """Initialize server-wide resources."""
+    """Initialize server-wide resources. Gracefully degrades if credentials missing."""
     config = ServerConfig()
 
-    if config.google_application_credentials:
-        bq_client = bigquery.Client.from_service_account_json(
-            config.google_application_credentials,
+    bq_client = None
+    audit_logger = None
+    cost_estimator = None
+    feedback_logger = None
+
+    try:
+        if config.google_application_credentials:
+            bq_client = bigquery.Client.from_service_account_json(
+                config.google_application_credentials,
+                project=config.bigquery_project,
+            )
+        else:
+            bq_client = bigquery.Client(project=config.bigquery_project)
+
+        audit_logger = AuditLogger(
+            bq_client=bq_client,
             project=config.bigquery_project,
+            audit_dataset=config.audit_dataset,
+            audit_table=config.audit_table,
+            user_name=config.taleemabad_user,
+            hostname=config.taleemabad_hostname,
         )
-    else:
-        bq_client = bigquery.Client(project=config.bigquery_project)
+        cost_estimator = CostEstimator(bq_client, max_bytes=config.bigquery_max_bytes)
+        feedback_logger = FeedbackLogger(
+            bq_client=bq_client,
+            project=config.bigquery_project,
+            audit_dataset=config.audit_dataset,
+            feedback_table="query_feedback",
+            user_name=config.taleemabad_user,
+        )
 
-    audit_logger = AuditLogger(
-        bq_client=bq_client,
-        project=config.bigquery_project,
-        audit_dataset=config.audit_dataset,
-        audit_table=config.audit_table,
-        user_name=config.taleemabad_user,
-        hostname=config.taleemabad_hostname,
-    )
-    cost_estimator = CostEstimator(bq_client, max_bytes=config.bigquery_max_bytes)
-    feedback_logger = FeedbackLogger(
-        bq_client=bq_client,
-        project=config.bigquery_project,
-        audit_dataset=config.audit_dataset,
-        feedback_table="query_feedback",
-        user_name=config.taleemabad_user,
-    )
-
-    logger.info(
-        "server_started",
-        project=config.bigquery_project,
-        datasets=config.bigquery_datasets,
-    )
+        logger.info(
+            "server_started",
+            project=config.bigquery_project,
+            datasets=config.bigquery_datasets,
+        )
+    except Exception as e:
+        logger.warning(
+            "server_started_degraded",
+            error=str(e),
+            hint="Copy credentials file to project directory",
+        )
 
     try:
         yield AppContext(
@@ -76,7 +100,8 @@ async def app_lifespan(server: FastMCP):
             feedback_logger=feedback_logger,
         )
     finally:
-        bq_client.close()
+        if bq_client:
+            bq_client.close()
 
 
 mcp = FastMCP(
@@ -106,6 +131,9 @@ async def execute_query(
     """
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
+    err = _require_bq(app)
+    if err:
+        return err
     audit = app.audit_logger
 
     if dry_run:
@@ -174,6 +202,9 @@ async def list_datasets() -> str:
     """
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
+    err = _require_bq(app)
+    if err:
+        return err
 
     result = []
     for dataset_id in app.config.bigquery_datasets:
@@ -201,6 +232,9 @@ async def check_table_freshness(dataset: str, table: str) -> str:
     """
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
+    err = _require_bq(app)
+    if err:
+        return err
 
     if dataset not in app.config.bigquery_datasets:
         return f"Dataset '{dataset}' is not in the allowed list: {app.config.bigquery_datasets}"
@@ -272,6 +306,9 @@ async def get_table_schema(dataset: str, table: str) -> str:
     """
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
+    err = _require_bq(app)
+    if err:
+        return err
 
     if dataset not in app.config.bigquery_datasets:
         return f"Dataset '{dataset}' is not in the allowed list: {app.config.bigquery_datasets}"
@@ -315,6 +352,9 @@ async def submit_feedback(
 
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
+    err = _require_bq(app)
+    if err:
+        return err
 
     entry = app.feedback_logger.log(
         event_id=event_id,
