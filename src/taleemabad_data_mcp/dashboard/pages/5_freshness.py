@@ -23,37 +23,35 @@ st.caption(
     "Stale tables mean users might see outdated numbers."
 )
 
-# Table-to-domain mapping for context
+# Table-to-domain mapping for context (known tables get descriptions)
 TABLE_INFO = {
-    "user_school_profiles": {
-        "domain": "Teachers",
-        "desc": "One row per teacher with school assignments",
-    },
-    "events_partitioned": {
-        "domain": "Lesson Plans",
-        "desc": "All app events (LP starts, completions, training)",
-    },
-    "coaching_observation": {
-        "domain": "Observations",
-        "desc": "Classroom observation records (FICO scores)",
-    },
-    "teacher_training_level": {
-        "domain": "Training",
-        "desc": "Training level definitions and ordering",
-    },
-    "teacher_training_assessment": {
-        "domain": "Training",
-        "desc": "Assessment scores and pass/fail results",
-    },
-    "lp_info_all_types": {
-        "domain": "Lesson Plans",
-        "desc": "Pre-computed LP data per teacher per day",
-    },
-    "FDE_Schools": {
-        "domain": "Teachers",
-        "desc": "ICT/Islamabad school reference table",
-    },
+    "user_school_profiles": {"domain": "Teachers", "desc": "One row per teacher with school assignments"},
+    "events_partitioned": {"domain": "Lesson Plans", "desc": "All app events (LP starts, completions, training)"},
+    "analytics_events": {"domain": "Events", "desc": "Canonical partitioned event table (70M+ rows)"},
+    "coaching_observation": {"domain": "Observations", "desc": "Classroom observation records (FICO scores)"},
+    "coaching_observationanswer": {"domain": "Observations", "desc": "Individual answers per observation question"},
+    "coaching_observationquestion": {"domain": "Observations", "desc": "Question metadata (source: AI vs human)"},
+    "coaching_questionoption": {"domain": "Observations", "desc": "Answer options with score_type"},
+    "coaching_teachervisit": {"domain": "Observations", "desc": "Links observation to teacher + grade_subject"},
+    "teacher_training_level": {"domain": "Training", "desc": "Training level definitions and ordering"},
+    "teacher_training_assessment": {"domain": "Training", "desc": "Assessment scores and pass/fail results"},
+    "lp_info_all_types": {"domain": "Lesson Plans", "desc": "Pre-computed LP data per teacher per day"},
+    "FDE_Schools": {"domain": "Teachers", "desc": "ICT/Islamabad school reference table"},
+    "users_user": {"domain": "Teachers", "desc": "Base user table"},
+    "users_teacherprofile": {"domain": "Teachers", "desc": "Teacher profile with levels and school"},
+    "schools_school": {"domain": "Teachers", "desc": "School details (name, EMIS)"},
+    "Fico_Observations": {"domain": "Observations", "desc": "Pre-processed observation summaries"},
+    # RWP tables
+    "lesson_plans": {"domain": "LP (RWP)", "desc": "Rumi AI-generated lesson plans"},
+    "coaching_sessions": {"domain": "Coaching (RWP)", "desc": "Rumi AI coaching sessions"},
+    "coaching_quality_metrics": {"domain": "Coaching (RWP)", "desc": "AI coaching quality metrics"},
+    "reading_assessments": {"domain": "Students (RWP)", "desc": "Rumi reading assessment results"},
+    "mentoring_visits": {"domain": "Coaching (RWP)", "desc": "TaleemHub human mentoring visits"},
+    "users": {"domain": "Users (RWP)", "desc": "User records (Rumi or TaleemHub)"},
+    "aser_assessments": {"domain": "Students (RWP)", "desc": "ASER assessment sessions"},
+    "aser_assessment_results": {"domain": "Students (RWP)", "desc": "ASER rubric item scores"},
 }
+_DEFAULT_INFO = {"domain": "Other", "desc": "Queried by users"}
 
 try:
     df = get_table_freshness()
@@ -104,7 +102,7 @@ df_sorted = df.sort_values("hours_ago", ascending=True)
 for _, row in df_sorted.iterrows():
     tname = row["table_name"]
     hours = row["hours_ago"]
-    info = TABLE_INFO.get(tname, {"domain": "Other", "desc": ""})
+    info = TABLE_INFO.get(tname, _DEFAULT_INFO)
 
     if pd.isna(hours):
         color = "#CBD5E1"
