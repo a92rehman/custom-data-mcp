@@ -20,6 +20,13 @@ from taleemabad_data_mcp.dashboard.data.queries import (
     get_feedback,
     get_table_freshness,
 )
+from taleemabad_data_mcp.dashboard.data.projects import (
+    load_projects,
+    get_dataset_stats,
+    get_governance_coverage,
+    count_rule_files,
+    format_rows,
+)
 
 # -- Design system --
 COLORS = {
@@ -249,6 +256,117 @@ for col, (label, value) in zip(cols, kpi_data, strict=True):
             _kpi_html(label, value, KPI_HELP[label]),
             unsafe_allow_html=True,
         )
+
+st.markdown("")
+
+# ======================================================================
+# PROJECT STATUS: Dataset coverage table
+# ======================================================================
+_projects = load_projects()
+_active_projects = [p for p in _projects if p.get("status") == "active"]
+_inactive_projects = [p for p in _projects if p.get("status") != "active"]
+
+_datasets_to_query = [
+    p["dataset"] for p in _projects
+    if p.get("dataset") and p.get("status") in ("active", "system")
+]
+_ds_stats = get_dataset_stats(_datasets_to_query) if _datasets_to_query else {}
+_gov_map = get_governance_coverage()
+
+# Count governed tables per dataset
+_governed_per_ds: dict[str, int] = {}
+for (_ds, _tbl), _meta in _gov_map.items():
+    _governed_per_ds[_ds] = _governed_per_ds.get(_ds, 0) + 1
+
+st.markdown(
+    '<div class="section-header">Project Status</div>',
+    unsafe_allow_html=True,
+)
+st.markdown(
+    f'<p style="color:#64748B;font-size:0.82rem;margin-bottom:0.4rem;">'
+    f'{len(_active_projects)} active / {len(_inactive_projects)} inactive</p>',
+    unsafe_allow_html=True,
+)
+
+_STATUS_BADGE = {
+    "active": '<span style="background:#DCFCE7;color:#166534;border-radius:4px;padding:2px 7px;font-size:0.75rem;font-weight:600;">Active</span>',
+    "inactive": '<span style="background:#F1F5F9;color:#64748B;border-radius:4px;padding:2px 7px;font-size:0.75rem;font-weight:600;">Inactive</span>',
+    "system": '<span style="background:#DBEAFE;color:#1D4ED8;border-radius:4px;padding:2px 7px;font-size:0.75rem;font-weight:600;">System</span>',
+}
+
+_TH = 'style="text-align:left;font-size:0.78rem;font-weight:600;color:#64748B;padding:6px 8px;border-bottom:2px solid #E2E8F0;"'
+_TD = 'style="font-size:0.85rem;padding:6px 8px;border-bottom:1px solid #F1F5F9;vertical-align:middle;"'
+
+_rows_html = ""
+for _p in _projects:
+    _name = _p.get("name", "—")
+    _ds = _p.get("dataset") or "—"
+    _status = _p.get("status", "inactive")
+    _badge = _STATUS_BADGE.get(_status, _STATUS_BADGE["inactive"])
+    _region = _p.get("region")
+
+    # Tables and Rows from BQ stats
+    if _p.get("dataset") and _ds_stats.get(_p["dataset"]):
+        _stat = _ds_stats[_p["dataset"]]
+        _tables_val = str(_stat["table_count"])
+        _rows_val = format_rows(_stat["total_rows"])
+    else:
+        _tables_val = "—"
+        _rows_val = "—"
+
+    # Coverage cell
+    _gov_count = _governed_per_ds.get(_p.get("dataset", ""), 0)
+    _rule_count = count_rule_files(_region) if _region else 0
+    if _status == "inactive":
+        _coverage_html = '<span style="color:#94A3B8;">—</span>'
+    elif _p.get("dataset") and not _p.get("migrated", True) is False and _p.get("status") == "active" and _tables_val == "—":
+        _coverage_html = '<span style="background:#FEF9C3;color:#854D0E;border-radius:4px;padding:2px 7px;font-size:0.75rem;">Not migrated</span>'
+    elif _gov_count == 0 and _status == "active":
+        if not _p.get("dataset"):
+            _coverage_html = '<span style="background:#FEF3C7;color:#92400E;border-radius:4px;padding:2px 7px;font-size:0.75rem;">Not migrated</span>'
+        else:
+            _coverage_html = '<span style="background:#FEF9C3;color:#854D0E;border-radius:4px;padding:2px 7px;font-size:0.75rem;">No rules</span>'
+    elif _gov_count > 0:
+        _pct = min(100, int(_gov_count / max(int(_tables_val) if _tables_val != "—" else _gov_count, 1) * 100))
+        _bar_color = "#22C55E" if _pct >= 60 else ("#EAB308" if _pct >= 20 else "#EF4444")
+        _coverage_html = (
+            f'<div style="display:flex;align-items:center;gap:6px;">'
+            f'<div style="flex:1;background:#F1F5F9;border-radius:4px;height:8px;min-width:60px;">'
+            f'<div style="width:{_pct}%;background:{_bar_color};border-radius:4px;height:8px;"></div></div>'
+            f'<span style="font-size:0.78rem;color:#64748B;white-space:nowrap;">{_gov_count} tables</span>'
+            f'</div>'
+        )
+    else:
+        _coverage_html = '<span style="color:#94A3B8;">—</span>'
+
+    _rows_html += (
+        f"<tr>"
+        f"<td {_TD}><strong>{_name}</strong>"
+        + (f'<br/><span style="color:#94A3B8;font-size:0.75rem;">{_p.get("description","")}</span>' if _p.get("description") else "")
+        + f"</td>"
+        f"<td {_TD}><code style='font-size:0.78rem;'>{_ds}</code></td>"
+        f"<td {_TD}>{_badge}</td>"
+        f"<td {_TD} style='text-align:right;'>{_tables_val}</td>"
+        f"<td {_TD} style='text-align:right;'>{_rows_val}</td>"
+        f"<td {_TD}>{_coverage_html}</td>"
+        f"</tr>"
+    )
+
+st.markdown(
+    f'<div style="overflow-x:auto;">'
+    f'<table style="width:100%;border-collapse:collapse;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">'
+    f"<thead><tr>"
+    f"<th {_TH}>Project</th>"
+    f"<th {_TH}>Dataset</th>"
+    f"<th {_TH}>Status</th>"
+    f"<th {_TH} style='text-align:right;'>Tables</th>"
+    f"<th {_TH} style='text-align:right;'>Rows</th>"
+    f"<th {_TH}>Coverage</th>"
+    f"</tr></thead>"
+    f"<tbody>{_rows_html}</tbody>"
+    f"</table></div>",
+    unsafe_allow_html=True,
+)
 
 st.markdown("")
 
@@ -552,6 +670,31 @@ if error_rate > 10:
         "detail": "More than 1 in 10 queries are failing — review query patterns and rule coverage",
         "priority": "high",
     })
+
+# Check for active projects with dataset but no governed tables
+for _ap in _active_projects:
+    _ap_ds = _ap.get("dataset")
+    if _ap_ds and _governed_per_ds.get(_ap_ds, 0) == 0:
+        actions.append({
+            "icon": "&#128196;",  # page with curl
+            "color": COLORS["warning"],
+            "title": f"No governance rules for {_ap.get('name', _ap_ds)}",
+            "detail": f"Dataset <strong>{_ap_ds}</strong> has tables but 0 governed rules — "
+                      "add rule files under <code>.claude/rules/</code> to enable governed queries",
+            "priority": "medium",
+        })
+
+# Check for active projects with no dataset (not yet migrated)
+for _ap in _active_projects:
+    if not _ap.get("dataset"):
+        actions.append({
+            "icon": "&#128274;",  # lock
+            "color": COLORS["secondary"],
+            "title": f"{_ap.get('name', 'Unknown project')} — data not migrated",
+            "detail": "This project has no BigQuery dataset yet. "
+                      "Data migration is needed before governed queries are possible.",
+            "priority": "low",
+        })
 
 # All clear
 if not actions:
