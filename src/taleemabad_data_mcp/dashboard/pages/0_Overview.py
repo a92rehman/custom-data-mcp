@@ -493,3 +493,82 @@ st.markdown(
     f'box-shadow:0 1px 3px rgba(0,0,0,0.04);margin-bottom:20px;">{table_html}</div>',
     unsafe_allow_html=True,
 )
+
+# ======================================================================
+# ROW 6 — RUMI Regional Deployment Dashboard
+# ======================================================================
+st.markdown('<div style="height:24px;"></div>', unsafe_allow_html=True)
+section_header("RUMI Regional Deployment (Multi-Region Platform)")
+
+# RUMI deployment data across 5 Pakistani regions
+rumi_regions = [
+    {"region": "Punjab", "users": 1400, "lesson_plans": 1453, "coaching": 116, "assessments": 101, "pct": 70},
+    {"region": "Sindh", "users": 555, "lesson_plans": 1499, "coaching": 39, "assessments": 24, "pct": 28},
+    {"region": "Federal (Islamabad)", "users": 32, "lesson_plans": 99, "coaching": 3, "assessments": 6, "pct": 2},
+    {"region": "Balochistan", "users": 8, "lesson_plans": 11, "coaching": 0, "assessments": 0, "pct": 0},
+    {"region": "KPK", "users": 3, "lesson_plans": 2, "coaching": 0, "assessments": 0, "pct": 0},
+]
+
+rumi_total = sum(r["users"] for r in rumi_regions)
+rumi_lp_total = sum(r["lesson_plans"] for r in rumi_regions)
+rumi_coaching_total = sum(r["coaching"] for r in rumi_regions)
+rumi_assess_total = sum(r["assessments"] for r in rumi_regions)
+
+# Build RUMI regions table
+rumi_html = '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-top:4px;">'
+rumi_html += '<thead style="background:#F8FAFC;border-bottom:2px solid #E2E8F0;">'
+rumi_html += '<tr style="height:40px;">'
+rumi_html += '<th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;">Region</th>'
+rumi_html += '<th style="padding:12px 14px;text-align:center;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:100px;">Users</th>'
+rumi_html += '<th style="padding:12px 14px;text-align:center;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:120px;">Lesson Plans</th>'
+rumi_html += '<th style="padding:12px 14px;text-align:center;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:100px;">Coaching</th>'
+rumi_html += '<th style="padding:12px 14px;text-align:center;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:120px;">Assessments</th>'
+rumi_html += '<th style="padding:12px 14px;text-align:center;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:80px;">Share</th>'
+rumi_html += '</tr></thead><tbody>'
+
+for i, r in enumerate(rumi_regions):
+    bg = "#FFFFFF" if i % 2 == 0 else "#F8FAFC"
+    pct_color = "#10B981" if r["pct"] >= 25 else ("#F59E0B" if r["pct"] >= 5 else "#94A3B8")
+    rumi_html += f'<tr style="background:{bg};border-bottom:1px solid #E2E8F0;height:48px;">'
+    rumi_html += f'<td style="padding:12px 14px;font-weight:600;color:#0F172A;">{r["region"]}</td>'
+    rumi_html += f'<td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{r["users"]}</td>'
+    rumi_html += f'<td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{r["lesson_plans"]}</td>'
+    rumi_html += f'<td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{r["coaching"]}</td>'
+    rumi_html += f'<td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{r["assessments"]}</td>'
+    rumi_html += f'<td style="padding:12px 14px;text-align:center;"><span style="background:{pct_color};color:white;padding:3px 8px;border-radius:6px;font-size:0.75rem;font-weight:700;">{r["pct"]}%</span></td>'
+    rumi_html += '</tr>'
+
+rumi_html += '</tbody></table>'
+
+# Summary cards for RUMI
+rumi_summary = f'''
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px;margin-bottom:20px;">
+    <div style="background:#EFF6FF;border:1px solid #DBEAFE;border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-size:0.75rem;color:#0C4A6E;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Total Users</div>
+        <div style="font-size:1.8rem;font-weight:800;color:#0369A1;">{rumi_total:,}</div>
+        <div style="font-size:0.7rem;color:#0C4A6E;margin-top:4px;">Across 5 regions</div>
+    </div>
+    <div style="background:#F0FDF4;border:1px solid #DCFCE7;border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-size:0.75rem;color:#14532D;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Lesson Plans</div>
+        <div style="font-size:1.8rem;font-weight:800;color:#15803D;">{rumi_lp_total:,}</div>
+        <div style="font-size:0.7rem;color:#14532D;margin-top:4px;">AI-generated</div>
+    </div>
+    <div style="background:#F3E8FF;border:1px solid #E9D5FF;border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-size:0.75rem;color:#581C87;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Coaching Sessions</div>
+        <div style="font-size:1.8rem;font-weight:800;color:#7E22CE;">{rumi_coaching_total}</div>
+        <div style="font-size:0.7rem;color:#581C87;margin-top:4px;">Audio-based AI</div>
+    </div>
+    <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-size:0.75rem;color:#7F1D1D;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Assessments</div>
+        <div style="font-size:1.8rem;font-weight:800;color:#DC2626;">{rumi_assess_total}</div>
+        <div style="font-size:0.7rem;color:#7F1D1D;margin-top:4px;">Reading fluency</div>
+    </div>
+</div>
+'''
+
+st.markdown(
+    f'<div style="background:white;border:1px solid #E2E8F0;border-radius:14px;padding:24px;'
+    f'box-shadow:0 1px 3px rgba(0,0,0,0.04);margin-bottom:20px;">'
+    f'{rumi_summary}{rumi_html}</div>',
+    unsafe_allow_html=True,
+)
