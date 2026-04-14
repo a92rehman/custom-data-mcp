@@ -10,6 +10,8 @@ class AuditLogEntry(BaseModel):
     event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     user_name: str = "unknown"
+    user_email: str | None = None
+    user_domain: str | None = None
     hostname: str = ""
     session_id: str | None = None
     query_text: str

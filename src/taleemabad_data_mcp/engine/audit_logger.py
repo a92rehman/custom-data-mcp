@@ -30,12 +30,14 @@ class AuditLogger:
         audit_table: str = "activity_log",
         user_name: str = "unknown",
         hostname: str = "",
+        remote_mode: bool = False,
     ) -> None:
         self._bq_client = bq_client
         self._table_id = f"{project}.{audit_dataset}.{audit_table}" if project else ""
         self._user_name = user_name
         self._hostname = hostname
         self._table_exists: bool | None = None
+        self._remote_mode = remote_mode
 
     def log(
         self,
@@ -52,11 +54,27 @@ class AuditLogger:
         error_type: str | None = None,
         error_message: str | None = None,
         domain: str = "other",
+        user_email: str | None = None,
     ) -> AuditLogEntry:
-        """Create an audit log entry and persist it."""
+        """Create an audit log entry and persist it.
+
+        Args:
+            user_email: Per-request email from HTTP header (remote mode).
+                        Overrides the default user_name when provided.
+        """
+        # Derive user fields from email if provided (remote mode)
+        if user_email:
+            user_name = user_email.split("@")[0]
+            user_domain = user_email.split("@")[1] if "@" in user_email else None
+        else:
+            user_name = self._user_name
+            user_domain = None
+
         entry = AuditLogEntry(
             query_text=query_text,
-            user_name=self._user_name,
+            user_name=user_name,
+            user_email=user_email,
+            user_domain=user_domain,
             hostname=self._hostname,
             session_id=session_id,
             matched_metric=matched_metric,
@@ -72,8 +90,9 @@ class AuditLogger:
             domain=domain,
         )
 
-        # Always write to local file (fast, reliable)
-        self._write_local(entry)
+        # Write to local file only in local mode (Railway filesystem is ephemeral)
+        if not self._remote_mode:
+            self._write_local(entry)
 
         # Try BigQuery write (best-effort, never block)
         if self._bq_client and self._table_id:
@@ -83,6 +102,7 @@ class AuditLogger:
             "audit_log_entry",
             event_id=entry.event_id,
             user_name=entry.user_name,
+            user_email=entry.user_email,
             query_text=entry.query_text[:100],
             error_type=entry.error_type,
         )
@@ -132,6 +152,8 @@ class AuditLogger:
                 bigquery.SchemaField("event_id", "STRING", mode="REQUIRED"),
                 bigquery.SchemaField("timestamp", "TIMESTAMP", mode="REQUIRED"),
                 bigquery.SchemaField("user_name", "STRING"),
+                bigquery.SchemaField("user_email", "STRING"),
+                bigquery.SchemaField("user_domain", "STRING"),
                 bigquery.SchemaField("hostname", "STRING"),
                 bigquery.SchemaField("session_id", "STRING"),
                 bigquery.SchemaField("query_text", "STRING"),
@@ -154,17 +176,21 @@ class AuditLogger:
             )
             self._bq_client.create_table(table, exists_ok=True)
 
-            # Migrate existing tables: add domain column if missing
+            # Migrate existing tables: add missing columns
             try:
                 table_ref = self._bq_client.get_table(self._table_id)
                 existing_fields = {f.name for f in table_ref.schema}
-                if "domain" not in existing_fields:
-                    new_schema = list(table_ref.schema) + [
-                        bigquery.SchemaField("domain", "STRING"),
-                    ]
-                    table_ref.schema = new_schema
+                new_fields = []
+                for col_name in ("domain", "user_email", "user_domain"):
+                    if col_name not in existing_fields:
+                        new_fields.append(bigquery.SchemaField(col_name, "STRING"))
+                if new_fields:
+                    table_ref.schema = list(table_ref.schema) + new_fields
                     self._bq_client.update_table(table_ref, ["schema"])
-                    logger.info("audit_table_migrated", added_column="domain")
+                    logger.info(
+                        "audit_table_migrated",
+                        added_columns=[f.name for f in new_fields],
+                    )
             except Exception as e:
                 logger.warning("audit_table_migration_skipped", error=str(e))
 

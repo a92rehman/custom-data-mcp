@@ -500,13 +500,14 @@ st.markdown(
 st.markdown('<div style="height:24px;"></div>', unsafe_allow_html=True)
 section_header("RUMI Regional Deployment (Multi-Region Platform)")
 
-# RUMI deployment data across 5 Pakistani regions
+# RUMI deployment data across 5 Pakistani regions + unclassified
 rumi_regions = [
     {"region": "Punjab", "users": 1400, "lesson_plans": 1453, "coaching": 116, "assessments": 101, "pct": 70},
     {"region": "Sindh", "users": 555, "lesson_plans": 1499, "coaching": 39, "assessments": 24, "pct": 28},
     {"region": "Federal (Islamabad)", "users": 32, "lesson_plans": 99, "coaching": 3, "assessments": 6, "pct": 2},
     {"region": "Balochistan", "users": 8, "lesson_plans": 11, "coaching": 0, "assessments": 0, "pct": 0},
     {"region": "KPK", "users": 3, "lesson_plans": 2, "coaching": 0, "assessments": 0, "pct": 0},
+    {"region": "Unclassified (NULL)", "users": 1321, "lesson_plans": 891, "coaching": 22, "assessments": 58, "pct": 66, "unclassified": True},
 ]
 
 rumi_total = sum(r["users"] for r in rumi_regions)
@@ -527,10 +528,20 @@ rumi_html += '<th style="padding:12px 14px;text-align:center;font-weight:700;col
 rumi_html += '</tr></thead><tbody>'
 
 for i, r in enumerate(rumi_regions):
-    bg = "#FFFFFF" if i % 2 == 0 else "#F8FAFC"
-    pct_color = "#10B981" if r["pct"] >= 25 else ("#F59E0B" if r["pct"] >= 5 else "#94A3B8")
+    # Special styling for unclassified (NULL) region
+    if r.get("unclassified"):
+        bg = "#FEE2E2"  # Light red background
+        region_label = f'⚠️ {r["region"]}'
+        text_color = "#991B1B"  # Dark red text
+        pct_color = "#EF4444"  # Bold red badge
+    else:
+        bg = "#FFFFFF" if i % 2 == 0 else "#F8FAFC"
+        region_label = r["region"]
+        text_color = "#0F172A"  # Standard dark text
+        pct_color = "#10B981" if r["pct"] >= 25 else ("#F59E0B" if r["pct"] >= 5 else "#94A3B8")
+
     rumi_html += f'<tr style="background:{bg};border-bottom:1px solid #E2E8F0;height:48px;">'
-    rumi_html += f'<td style="padding:12px 14px;font-weight:600;color:#0F172A;">{r["region"]}</td>'
+    rumi_html += f'<td style="padding:12px 14px;font-weight:600;color:{text_color};">{region_label}</td>'
     rumi_html += f'<td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{r["users"]}</td>'
     rumi_html += f'<td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{r["lesson_plans"]}</td>'
     rumi_html += f'<td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{r["coaching"]}</td>'

@@ -2,9 +2,14 @@
 
 Claude Code reads governance rules from .claude/rules/ and uses these tools
 to execute validated queries, estimate costs, and log interactions.
+
+Supports two modes:
+- **Local (stdio):** Used by Claude Code plugin, reads user from env file.
+- **Remote (streamable-http):** Deployed on Railway, reads user from HTTP headers.
 """
 
 import json
+import os
 import re as _re
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -39,6 +44,13 @@ _SAFE_IDENTIFIER_RE = _re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 _ENV_FILE = Path.home() / ".claude" / "taleemabad-data-mcp.env"
 
+ALLOWED_EMAIL_DOMAINS = {"taleemabad.com", "niete.edu.pk", "niete.pk"}
+
+
+def _is_remote_mode() -> bool:
+    """Check if running in remote mode (Railway deployment)."""
+    return os.environ.get("TALEEMABAD_REMOTE_MODE", "").lower() in ("1", "true", "yes")
+
 
 def _read_user_from_env_file() -> str | None:
     """Read TALEEMABAD_USER from saved env file.
@@ -60,6 +72,48 @@ def _read_user_from_env_file() -> str | None:
     return None
 
 
+def _get_request_user_email() -> str | None:
+    """Extract user email from HTTP request headers (remote mode only).
+
+    Returns None if not in HTTP context (e.g., stdio transport).
+    """
+    try:
+        from fastmcp.server.dependencies import get_http_headers
+        headers = get_http_headers(include={"x-taleemabad-user"})
+        return headers.get("x-taleemabad-user")
+    except (ImportError, RuntimeError):
+        return None
+
+
+def _validate_email_domain(email: str) -> bool:
+    """Validate that email belongs to an allowed domain."""
+    if not email or "@" not in email:
+        return False
+    domain = email.split("@")[1].lower()
+    return domain in ALLOWED_EMAIL_DOMAINS
+
+
+def _validate_bearer_token() -> bool:
+    """Validate the Authorization bearer token from HTTP headers.
+
+    Returns True if token matches the server's TALEEMABAD_API_TOKEN,
+    or if no token is configured (open access).
+    """
+    expected_token = os.environ.get("TALEEMABAD_API_TOKEN", "")
+    if not expected_token:
+        return True  # No token configured = open access
+
+    try:
+        from fastmcp.server.dependencies import get_http_headers
+        headers = get_http_headers(include={"authorization"})
+        auth = headers.get("authorization", "")
+        if auth.startswith("Bearer "):
+            return auth[7:] == expected_token
+        return False
+    except (ImportError, RuntimeError):
+        return True  # Not in HTTP context (stdio) = no auth needed
+
+
 @dataclass
 class AppContext:
     config: ServerConfig
@@ -67,6 +121,7 @@ class AppContext:
     audit_logger: AuditLogger | None
     cost_estimator: CostEstimator | None
     feedback_logger: FeedbackLogger | None
+    remote_mode: bool = False
 
 
 def _require_bq(app: "AppContext") -> str | None:
@@ -76,13 +131,38 @@ def _require_bq(app: "AppContext") -> str | None:
     return None
 
 
+def _require_auth(app: "AppContext") -> str | None:
+    """Validate auth in remote mode. Returns error message or None."""
+    if not app.remote_mode:
+        return None
+
+    if not _validate_bearer_token():
+        return "Unauthorized: invalid or missing API token. Contact your admin for the team token."
+
+    email = _get_request_user_email()
+    if not email:
+        return "Setup required: run /taleemabad-setup to configure your email."
+    if not _validate_email_domain(email):
+        return f"Unauthorized domain in email '{email}'. Allowed: @taleemabad.com, @niete.edu.pk, @niete.pk"
+
+    return None
+
+
+def _get_audit_email(app: "AppContext") -> str | None:
+    """Get user email for audit logging. Returns email in remote mode, None in local."""
+    if app.remote_mode:
+        return _get_request_user_email()
+    return None
+
+
 @asynccontextmanager
 async def app_lifespan(server: FastMCP):
     """Initialize server-wide resources. Gracefully degrades if credentials missing."""
     config = ServerConfig()
+    remote_mode = _is_remote_mode()
 
     # Override user name from env file if config has unexpanded var or default
-    if config.taleemabad_user in ("unknown", "", "${TALEEMABAD_USER}"):
+    if not remote_mode and config.taleemabad_user in ("unknown", "", "${TALEEMABAD_USER}"):
         env_user = _read_user_from_env_file()
         if env_user:
             config.taleemabad_user = env_user
@@ -109,6 +189,7 @@ async def app_lifespan(server: FastMCP):
             audit_table=config.audit_table,
             user_name=config.taleemabad_user,
             hostname=config.taleemabad_hostname,
+            remote_mode=remote_mode,
         )
         cost_estimator = CostEstimator(bq_client, max_bytes=config.bigquery_max_bytes)
         feedback_logger = FeedbackLogger(
@@ -123,6 +204,7 @@ async def app_lifespan(server: FastMCP):
             "server_started",
             project=config.bigquery_project,
             datasets=config.bigquery_datasets,
+            remote_mode=remote_mode,
         )
     except Exception as e:
         logger.warning(
@@ -138,6 +220,7 @@ async def app_lifespan(server: FastMCP):
             audit_logger=audit_logger,
             cost_estimator=cost_estimator,
             feedback_logger=feedback_logger,
+            remote_mode=remote_mode,
         )
     finally:
         if bq_client:
@@ -148,6 +231,18 @@ mcp = FastMCP(
     f"Taleemabad Data Navigator v{__version__}",
     lifespan=app_lifespan,
 )
+
+
+# --- Health check endpoint (used by Railway for service monitoring) ---
+
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> JSONResponse:
+    """Health check for Railway monitoring."""
+    return JSONResponse({"status": "ok", "version": __version__})
 
 
 @mcp.tool()
@@ -171,10 +266,14 @@ async def execute_query(
     """
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
+    auth_err = _require_auth(app)
+    if auth_err:
+        return auth_err
     err = _require_bq(app)
     if err:
         return err
     audit = app.audit_logger
+    user_email = _get_audit_email(app)
 
     if dry_run:
         estimate = app.cost_estimator.estimate(sql)
@@ -184,6 +283,7 @@ async def execute_query(
             result_cached=False,
             error_type="dry_run",
             domain=classify_domain([], sql),
+            user_email=user_email,
         )
         return (
             f"Estimated bytes: {estimate.bytes_processed:,}\n"
@@ -216,6 +316,7 @@ async def execute_query(
             cost_bytes=bytes_billed,
             cost_usd=cost_usd,
             domain=domain,
+            user_email=user_email,
         )
 
         if not rows:
@@ -230,6 +331,7 @@ async def execute_query(
             error_type=type(e).__name__,
             error_message=str(e),
             domain=classify_domain([], sql),
+            user_email=user_email,
         )
         return f"Query failed: {type(e).__name__}: {e}"
 
@@ -242,6 +344,9 @@ async def list_datasets() -> str:
     """
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
+    auth_err = _require_auth(app)
+    if auth_err:
+        return auth_err
     err = _require_bq(app)
     if err:
         return err
@@ -272,6 +377,9 @@ async def check_table_freshness(dataset: str, table: str) -> str:
     """
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
+    auth_err = _require_auth(app)
+    if auth_err:
+        return auth_err
     err = _require_bq(app)
     if err:
         return err
@@ -346,6 +454,9 @@ async def get_table_schema(dataset: str, table: str) -> str:
     """
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
+    auth_err = _require_auth(app)
+    if auth_err:
+        return auth_err
     err = _require_bq(app)
     if err:
         return err
@@ -392,6 +503,9 @@ async def submit_feedback(
 
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
+    auth_err = _require_auth(app)
+    if auth_err:
+        return auth_err
     err = _require_bq(app)
     if err:
         return err
@@ -443,6 +557,9 @@ async def preview_table(
     """
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
+    auth_err = _require_auth(app)
+    if auth_err:
+        return auth_err
     err = _require_bq(app)
     if err:
         return err
@@ -506,8 +623,8 @@ async def save_query_results(
 ) -> str:
     """Execute a governed query and save results to a file.
 
-    Files are saved to the output_dir (defaults to current working directory
-    of the Claude Code session, NOT the plugin directory).
+    In local mode, files are saved to output_dir. In remote mode, file content
+    is returned as a string (Railway's filesystem is ephemeral).
 
     Args:
         sql: The governed SQL query to execute.
@@ -517,6 +634,9 @@ async def save_query_results(
     """
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
+    auth_err = _require_auth(app)
+    if auth_err:
+        return auth_err
     err = _require_bq(app)
     if err:
         return err
@@ -524,10 +644,8 @@ async def save_query_results(
     if format not in ("csv", "json"):
         return f"Invalid format '{format}'. Must be 'csv' or 'json'."
 
-    from pathlib import Path
-    out_path = Path(output_dir)
-    if not out_path.is_dir():
-        return f"Output directory '{output_dir}' does not exist."
+    user_email = _get_audit_email(app)
+    user_display = user_email or app.config.taleemabad_user
 
     try:
         job_config = bigquery.QueryJobConfig(
@@ -544,15 +662,13 @@ async def save_query_results(
         timestamp = datetime.now(UTC).strftime("%Y-%m-%d_%H%M")
         tables = list({ref.table_id for ref in query_job.referenced_tables})
         domain = classify_domain(tables, sql)
-        filename = f"taleemabad_export_{timestamp}_{domain}.{format}"
-        filepath = out_path / filename
 
         if format == "csv":
             import csv
             import io
 
             output = io.StringIO()
-            output.write(f"# Exported by: {app.config.taleemabad_user}\n")
+            output.write(f"# Exported by: {user_display}\n")
             output.write(f"# Timestamp: {timestamp}\n")
             output.write(f"# Domain: {domain}\n")
             output.write(f"# Rows: {len(rows)}\n")
@@ -562,20 +678,18 @@ async def save_query_results(
             for row in rows:
                 writer.writerow({k: str(v) for k, v in row.items()})
 
-            filepath.write_text(output.getvalue(), encoding="utf-8")
+            file_content = output.getvalue()
         else:
             export_data = {
                 "metadata": {
-                    "exported_by": app.config.taleemabad_user,
+                    "exported_by": user_display,
                     "timestamp": timestamp,
                     "domain": domain,
                     "row_count": len(rows),
                 },
                 "data": rows,
             }
-            filepath.write_text(
-                json.dumps(export_data, indent=2, default=str), encoding="utf-8"
-            )
+            file_content = json.dumps(export_data, indent=2, default=str)
 
         bytes_billed = query_job.total_bytes_billed or 0
         cost_usd = bytes_billed / 1_099_511_627_776 * 6.25 if bytes_billed else 0.0
@@ -589,8 +703,27 @@ async def save_query_results(
                 cost_bytes=bytes_billed,
                 cost_usd=cost_usd,
                 domain=f"EXPORT_{domain}",
+                user_email=user_email,
             )
 
+        # In remote mode, return content directly (can't write to server filesystem)
+        if app.remote_mode:
+            filename = f"taleemabad_export_{timestamp}_{domain}.{format}"
+            return (
+                f"FILE_CONTENT:{filename}\n"
+                f"---\n"
+                f"{file_content}"
+            )
+
+        # Local mode: write to disk
+        from pathlib import Path
+        out_path = Path(output_dir)
+        if not out_path.is_dir():
+            return f"Output directory '{output_dir}' does not exist."
+
+        filename = f"taleemabad_export_{timestamp}_{domain}.{format}"
+        filepath = out_path / filename
+        filepath.write_text(file_content, encoding="utf-8")
         return f"Saved {len(rows)} rows to {filepath} ({format.upper()})"
 
     except Exception as e:
@@ -613,6 +746,9 @@ async def describe_data(
     """
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
+    auth_err = _require_auth(app)
+    if auth_err:
+        return auth_err
     err = _require_bq(app)
     if err:
         return err

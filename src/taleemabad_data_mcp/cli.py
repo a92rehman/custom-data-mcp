@@ -158,14 +158,37 @@ def bump_cmd(minor: bool) -> None:
         sys.exit(1)
 
 
-@main.command()
-@click.option("--user", required=True, help="Your name (for activity tracking).")
-def setup(user: str) -> None:
-    """Save your name and sync governance rules.
+ALLOWED_EMAIL_DOMAINS = {"taleemabad.com", "niete.edu.pk", "niete.pk"}
 
-    The MCP server is configured automatically by the plugin.
-    This command only needs to be run once to set your name for audit logs.
+
+def _validate_email(email: str) -> str | None:
+    """Validate email domain. Returns error message or None."""
+    if not email or "@" not in email:
+        return "Invalid email format."
+    domain = email.split("@")[1].lower()
+    if domain not in ALLOWED_EMAIL_DOMAINS:
+        return (
+            f"Domain '@{domain}' is not allowed. "
+            "Use your work email: @taleemabad.com, @niete.edu.pk, or @niete.pk"
+        )
+    return None
+
+
+@main.command()
+@click.option("--email", required=True, help="Your work email (for audit tracking).")
+@click.option("--token", required=True, help="Team API token (from admin).")
+def setup(email: str, token: str) -> None:
+    """Save your email and team token, then sync governance rules.
+
+    The MCP server runs remotely — no local Python or credentials needed.
+    This command only needs to be run once.
     """
+    # Validate email domain
+    err = _validate_email(email)
+    if err:
+        click.echo(f"Error: {err}", err=True)
+        sys.exit(1)
+
     # 1. Copy rules to ~/.claude/rules/taleemabad/
     src_rules = _bundled_rules_dir()
     dest_rules = _rules_dest()
@@ -180,10 +203,10 @@ def setup(user: str) -> None:
     shutil.copytree(src_rules, dest_rules)
     click.echo(f"Rules installed to {dest_rules}")
 
-    # 2. Save user config
+    # 2. Save user config (email + token)
     env_content = (
-        f"TALEEMABAD_USER={user}\n"
-        f"GOOGLE_APPLICATION_CREDENTIALS={CREDENTIALS_FILENAME}\n"
+        f"TALEEMABAD_USER={email}\n"
+        f"TALEEMABAD_API_TOKEN={token}\n"
     )
     env_path = _env_path()
     env_path.parent.mkdir(parents=True, exist_ok=True)
@@ -219,9 +242,16 @@ def setup(user: str) -> None:
         except (json.JSONDecodeError, KeyError):
             pass
 
+    # Remove old credentials file references
+    old_creds = cwd / CREDENTIALS_FILENAME
+    if old_creds.exists():
+        click.echo(f"\nNote: Credentials file '{CREDENTIALS_FILENAME}' found locally.")
+        click.echo("It is no longer needed — the MCP server runs remotely.")
+        click.echo("You can safely delete it.")
+
     click.echo()
     click.echo("Setup complete! Restart Claude Code to connect.")
-    click.echo(f"Make sure '{CREDENTIALS_FILENAME}' is in your project directory.")
+    click.echo("No credentials file needed — the MCP server runs remotely.")
 
 
 @main.command()
@@ -255,6 +285,25 @@ def serve() -> None:
     from taleemabad_data_mcp.server import mcp
 
     mcp.run()
+
+
+@main.command(name="serve-remote")
+@click.option("--port", default=None, type=int, help="Port to listen on (default: $PORT or 8000).")
+def serve_remote(port: int | None) -> None:
+    """Run the MCP server with HTTP transport for Railway deployment."""
+    import os
+
+    os.environ["TALEEMABAD_REMOTE_MODE"] = "true"
+
+    from taleemabad_data_mcp.server import mcp
+
+    listen_port = port or int(os.environ.get("PORT", "8000"))
+    click.echo(f"Starting MCP server (streamable-http) on port {listen_port}...")
+    mcp.run(
+        transport="streamable-http",
+        host="0.0.0.0",
+        port=listen_port,
+    )
 
 
 @main.command()
