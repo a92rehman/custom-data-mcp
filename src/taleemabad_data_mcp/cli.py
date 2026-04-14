@@ -304,6 +304,11 @@ def serve_remote(port: int | None) -> None:
     mcp.settings.host = "0.0.0.0"
     mcp.settings.port = listen_port
 
+    # Disable DNS rebinding protection for remote deployment
+    # Railway handles TLS termination and routing; our auth middleware validates requests
+    if mcp.settings.transport_security:
+        mcp.settings.transport_security.enable_dns_rebinding_protection = False
+
     click.echo(f"Starting MCP server (streamable-http) on port {listen_port}...")
     mcp.run(transport="streamable-http")
 
