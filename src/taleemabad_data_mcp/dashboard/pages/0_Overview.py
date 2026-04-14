@@ -409,3 +409,97 @@ st.markdown(
     f'</div>',
     unsafe_allow_html=True,
 )
+
+# ======================================================================
+# ROW 5 — Project Status Table
+# ======================================================================
+st.markdown('<div style="height:24px;"></div>', unsafe_allow_html=True)
+section_header(f"Project Status ({len(_active)} active / {len(_projects) - len(_active)} inactive)")
+
+# Build project status table
+project_rows = []
+for p in _projects:
+    ds = p.get("dataset", "—")
+    status = p.get("status", "unknown")
+    desc = p.get("description", "")
+
+    # Get dataset stats
+    ds_stats = _ds_stats.get(ds, {})
+    table_count = ds_stats.get("table_count", "—")
+    row_count = ds_stats.get("row_count", "—")
+
+    # Format row count
+    if row_count != "—":
+        if row_count >= 1_000_000:
+            row_count = f"{row_count / 1_000_000:.1f}M"
+        elif row_count >= 1_000:
+            row_count = f"{row_count / 1_000:.1f}K"
+
+    # Get governance coverage
+    gov_count = _gov_per_ds.get(ds, 0)
+    coverage = f"{gov_count} tables" if gov_count > 0 else ("No rules" if status in ("active", "system") else "—")
+    coverage_badge = (
+        f'<span style="background:#10B981;color:white;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;">{coverage}</span>'
+        if gov_count > 0
+        else f'<span style="background:#FEF3C7;color:#92400E;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;">{coverage}</span>'
+        if status in ("active", "system")
+        else f'<span style="color:#94A3B8;font-size:0.75rem;">—</span>'
+    )
+
+    # Status badge
+    status_color = "#10B981" if status == "active" else ("#6366F1" if status == "system" else "#94A3B8")
+    status_text = status.upper()
+
+    project_rows.append({
+        "name": p.get("name", "?"),
+        "description": desc,
+        "dataset": ds,
+        "status": f'<span style="background:{status_color};color:white;padding:3px 10px;border-radius:8px;font-size:0.75rem;font-weight:600;">{status_text}</span>',
+        "tables": table_count,
+        "rows": row_count,
+        "coverage": coverage_badge,
+    })
+
+# Render table HTML
+table_html = """
+<table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-top:4px;">
+    <thead style="background:#F8FAFC;border-bottom:2px solid #E2E8F0;">
+        <tr style="height:40px;">
+            <th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;">Project</th>
+            <th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:180px;">Dataset</th>
+            <th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:100px;">Status</th>
+            <th style="padding:12px 14px;text-align:center;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:70px;">Tables</th>
+            <th style="padding:12px 14px;text-align:center;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:80px;">Rows</th>
+            <th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;">Coverage</th>
+        </tr>
+    </thead>
+    <tbody>
+"""
+
+for i, row in enumerate(project_rows):
+    bg = "#FFFFFF" if i % 2 == 0 else "#F8FAFC"
+    table_html += f"""
+        <tr style="background:{bg};border-bottom:1px solid #E2E8F0;height:48px;">
+            <td style="padding:12px 14px;">
+                <div style="font-weight:600;color:#0F172A;margin-bottom:2px;">{row['name']}</div>
+                <div style="font-size:0.8rem;color:#64748B;">{row['description']}</div>
+            </td>
+            <td style="padding:12px 14px;font-family:monospace;color:#3B82F6;font-weight:600;">{row['dataset']}</td>
+            <td style="padding:12px 14px;">{row['status']}</td>
+            <td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{row['tables']}</td>
+            <td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{row['rows']}</td>
+            <td style="padding:12px 14px;">{row['coverage']}</td>
+        </tr>
+"""
+
+table_html += """
+    </tbody>
+</table>
+"""
+
+st.markdown(
+    f'<div style="background:white;border:1px solid #E2E8F0;border-radius:14px;padding:24px;'
+    f'box-shadow:0 1px 3px rgba(0,0,0,0.04);margin-bottom:20px;">'
+    f'{table_html}</div>',
+    unsafe_allow_html=True,
+)
