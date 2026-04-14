@@ -132,17 +132,17 @@ def _require_bq(app: "AppContext") -> str | None:
 
 
 def _require_auth(app: "AppContext") -> str | None:
-    """Validate auth in remote mode. Returns error message or None."""
+    """Validate auth in remote mode. Returns error message or None.
+
+    Currently permissive: allows all requests. Email header is optional
+    and used only for audit logging when present.
+    """
     if not app.remote_mode:
         return None
 
-    if not _validate_bearer_token():
-        return "Unauthorized: invalid or missing API token. Contact your admin for the team token."
-
+    # Email header is optional — used for audit enrichment only
     email = _get_request_user_email()
-    if not email:
-        return "Setup required: run /taleemabad-setup to configure your email."
-    if not _validate_email_domain(email):
+    if email and not _validate_email_domain(email):
         return f"Unauthorized domain in email '{email}'. Allowed: @taleemabad.com, @niete.edu.pk, @niete.pk"
 
     return None
