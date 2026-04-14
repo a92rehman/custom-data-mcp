@@ -241,16 +241,8 @@ def setup(email: str, token: str) -> None:
         except (json.JSONDecodeError, KeyError):
             pass
 
-    # Remove old credentials file references
-    old_creds = cwd / CREDENTIALS_FILENAME
-    if old_creds.exists():
-        click.echo(f"\nNote: Credentials file '{CREDENTIALS_FILENAME}' found locally.")
-        click.echo("It is no longer needed — the MCP server runs remotely.")
-        click.echo("You can safely delete it.")
-
     click.echo()
     click.echo("Setup complete! Restart Claude Code to connect.")
-    click.echo("No credentials file needed — the MCP server runs remotely.")
 
 
 @main.command()
