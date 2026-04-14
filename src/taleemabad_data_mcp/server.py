@@ -29,8 +29,9 @@ from taleemabad_data_mcp.engine.feedback_logger import FeedbackLogger
 logger = structlog.get_logger()
 
 CREDENTIALS_MISSING_MSG = (
-    "BigQuery credentials not found. "
-    "Copy 'niete-bq-prod-48ae5260d1ea.json' to this project directory."
+    "BigQuery connection unavailable. "
+    "The MCP server could not connect to BigQuery. "
+    "If this persists, contact the data team."
 )
 
 BANNED_TABLES = {"analytics_analyticsevent"}
