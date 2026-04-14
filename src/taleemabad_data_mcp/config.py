@@ -39,7 +39,7 @@ class ServerConfig(BaseSettings):
     """Configuration loaded from environment variables or .env file."""
 
     bigquery_project: str
-    bigquery_datasets: list[str]
+    bigquery_datasets: list[str] = []
     google_application_credentials: str | None = None
     bigquery_max_bytes: int = 1_073_741_824  # 1 GB
     cache_ttl_seconds: int = 3600

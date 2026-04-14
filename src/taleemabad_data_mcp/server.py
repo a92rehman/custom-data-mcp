@@ -338,9 +338,10 @@ async def execute_query(
 
 @mcp.tool()
 async def list_datasets() -> str:
-    """List all allowed BigQuery datasets and their tables.
+    """List all BigQuery datasets accessible to the service account and their tables.
 
-    Returns the datasets configured in BIGQUERY_DATASETS and their tables.
+    Auto-discovers all datasets in the project. If BIGQUERY_DATASETS is configured,
+    those are listed first as "configured" datasets, followed by any others found.
     """
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
@@ -351,15 +352,27 @@ async def list_datasets() -> str:
     if err:
         return err
 
+    # Auto-discover all datasets in the project
+    try:
+        all_datasets = [ds.dataset_id for ds in app.bq_client.list_datasets()]
+    except Exception as e:
+        return f"Error listing datasets: {e}"
+
+    # Configured datasets first, then any newly discovered ones
+    configured = set(app.config.bigquery_datasets)
+    ordered = [d for d in all_datasets if d in configured]
+    ordered += [d for d in all_datasets if d not in configured]
+
     result = []
-    for dataset_id in app.config.bigquery_datasets:
+    for dataset_id in ordered:
+        tag = " [configured]" if dataset_id in configured else " [discovered]"
         try:
             tables = list(app.bq_client.list_tables(dataset_id))
-            result.append(f"\n{dataset_id} ({len(tables)} tables):")
+            result.append(f"\n{dataset_id}{tag} ({len(tables)} tables):")
             for t in tables:
                 result.append(f"  {t.table_type}: {t.table_id}")
         except Exception as e:
-            result.append(f"\n{dataset_id}: ERROR: {e}")
+            result.append(f"\n{dataset_id}{tag}: ERROR: {e}")
 
     return "\n".join(result)
 
