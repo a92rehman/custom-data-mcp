@@ -7,6 +7,8 @@ See [VISION.md](docs/VISION.md) for why and what. See [README.md](README.md) for
 ## Architecture
 - **Governance logic lives in `.claude/rules/`** — Claude Code reads rules, understands business logic, generates queries
 - **MCP server is a thin execution layer** — runs queries, estimates costs, logs audits
+- **Two server modes:** stdio (local Claude Code plugin) or streamable-http (remote Railway deployment)
+- **Remote deployment:** MCP server runs on Railway, plugin connects via URL — no local Python/credentials needed
 - **No YAML engine** — no metric parsing at runtime. Claude reads the rules directly.
 
 ## Tech Stack
@@ -31,45 +33,47 @@ uv run ruff format src/ tests/            # Format
 
 ## CLI Commands
 ```bash
-python -m taleemabad_data_mcp setup      # Save name + sync rules (--user required)
-python -m taleemabad_data_mcp version    # Show installed version
-python -m taleemabad_data_mcp serve      # Run MCP server (used by Claude Code automatically)
-python -m taleemabad_data_mcp dashboard  # Launch Streamlit dashboard (needs [dashboard] extra)
-python -m taleemabad_data_mcp uninstall  # Remove rules + user config
-python -m taleemabad_data_mcp bump       # Patch version bump (bump --minor for minor)
+python -m taleemabad_data_mcp setup --email <email> --token <token>  # Save credentials + sync rules
+python -m taleemabad_data_mcp version       # Show installed version
+python -m taleemabad_data_mcp serve         # Run MCP server (stdio, used by Claude Code locally)
+python -m taleemabad_data_mcp serve-remote  # Run MCP server (HTTP, for Railway deployment)
+python -m taleemabad_data_mcp dashboard     # Launch Streamlit dashboard (needs [dashboard] extra)
+python -m taleemabad_data_mcp uninstall     # Remove rules + user config
+python -m taleemabad_data_mcp bump          # Patch version bump (bump --minor for minor)
 ```
 
 ## Project Structure
 ```
-.mcp.json                       # Plugin MCP server config (uv run --directory)
+.mcp.json                       # Plugin MCP server config (remote URL)
 .claude-plugin/
   plugin.json                   # Plugin manifest (agents, commands)
   marketplace.json              # Marketplace listing
 src/taleemabad_data_mcp/        # Python MCP server package
   __init__.py                   # Package version (__version__)
   __main__.py                   # Entry point (routes to CLI)
-  cli.py                        # CLI: setup, bump, serve, dashboard, uninstall
+  cli.py                        # CLI: setup, bump, serve, serve-remote, dashboard, uninstall
   server.py                     # FastMCP instance, 9 MCP tools
   config.py                     # Configuration management (env vars)
-  rules/                        # SOURCE OF TRUTH — governance rules (20 MD files)
+  rules/                        # SOURCE OF TRUTH — governance rules (32 MD files, 3 regions)
     index.md                    # READ FIRST — routes to general rules + regions
     bigquery.md                 # Partition policy, event table hierarchy
     ict-islamabad/              # Region: ICT (org_id=1, dataset: tbproddb)
     rawalpindi/                 # Region: RWP (RUMI_DB + TaleemHub_DB)
+    moawin-akhuwat/             # Region: Moawin/Akhuwat (neondb + zavia1)
   engine/
     audit_logger.py             # BigQuery audit writes + local JSON Lines fallback
     feedback_logger.py          # Feedback writes (thumbs up/down) + local fallback
     cost_estimator.py           # BigQuery dry-run cost estimation
     domain_classifier.py        # Classify queries by domain
   models/
-    audit.py                    # AuditLogEntry with cost tracking + domain field
+    audit.py                    # AuditLogEntry with cost tracking + domain + email fields
     feedback.py                 # FeedbackEntry (rating, comment)
   dashboard/                    # Streamlit observability dashboard (deployed on Railway)
 agents/                         # Plugin agents (loaded by Claude Code plugin system)
   data-analyst.md               # Primary — reads rules, generates governed SQL
   data-admin.md                 # Diagnostics — schema, freshness, audit, troubleshooting
 commands/                       # Plugin slash commands
-  setup.md                      # /taleemabad-setup — save name + sync rules
+  setup.md                      # /taleemabad-setup — save email + sync rules
 hooks/                          # Plugin hooks (auto-update via git tags)
 rules/                          # DERIVED COPY — synced from src/ by bump command
                                 # Plugin agents read from this location
@@ -78,19 +82,20 @@ docs/
   INSTALL.md                    # Quick reference (points to README)
   VISION.md                     # Strategic vision, 15 sections
   superpowers/                  # Historical design specs and plans
-# Railway deployment (dashboard hosting)
-Procfile                        # web: bash railway_start.sh
-railway_start.sh                # Streamlit startup with GCP credentials from env
+# Railway deployment (two services from same repo)
+Procfile                        # Dashboard service: bash railway_start.sh
+railway_start.sh                # Streamlit dashboard startup
+railway_start_mcp.sh            # MCP server startup (HTTP transport)
 nixpacks.toml                   # Railway build config (Python 3.11)
 runtime.txt                     # Python version for Railway
-requirements.txt                # Railway dependencies (includes dashboard extras)
+requirements.txt                # Railway dependencies (includes dashboard + MCP extras)
 ```
 
 ## MCP Tools
 | Tool | Purpose |
 |------|---------|
 | `execute_query` | Run governed SQL against BigQuery (cost guardrails + audit + domain tagging) |
-| `list_datasets` | Browse allowed datasets and tables |
+| `list_datasets` | Auto-discover and browse all BigQuery datasets and tables |
 | `get_table_schema` | Get columns and types for a table |
 | `check_table_freshness` | Check when a table was last modified |
 | `submit_feedback` | Log optional thumbs up/down + comment on a query result |
@@ -102,12 +107,15 @@ requirements.txt                # Railway dependencies (includes dashboard extra
 ## Environment Variables
 ```
 BIGQUERY_PROJECT=niete-bq-prod             # Required
-BIGQUERY_DATASETS=RUMI_DB,TaleemHub_DB,tbproddb  # Required
-GOOGLE_APPLICATION_CREDENTIALS=<path>      # Required (service account JSON)
+BIGQUERY_DATASETS=RUMI_DB,TaleemHub_DB,tbproddb  # Optional (auto-discovers if empty)
+GOOGLE_APPLICATION_CREDENTIALS=<path>      # Local mode: path to service account JSON
+GOOGLE_CREDENTIALS_JSON=<json>             # Remote mode: full JSON content (Railway env var)
 BIGQUERY_MAX_BYTES=1073741824              # Default 1GB
 CACHE_TTL_SECONDS=3600                     # Default 1hr
 LOG_LEVEL=INFO
-TALEEMABAD_USER=<name>                     # For activity tracking
+TALEEMABAD_USER=<email>                    # Work email for audit tracking (set by setup)
+TALEEMABAD_API_TOKEN=<token>               # Team API token (optional, for auth)
+TALEEMABAD_REMOTE_MODE=true                # Enable HTTP transport (Railway only)
 AUDIT_DATASET=mcp_audit                    # Default
 AUDIT_TABLE=activity_log                   # Default
 ```
@@ -117,11 +125,10 @@ Teams install via Claude Code plugin system:
 ```bash
 claude plugin marketplace add Orenda-Project/taleemabad-data-mcp
 claude plugin install taleemabad-data@Orenda-Project
-# Copy niete-bq-prod-48ae5260d1ea.json to project directory
-# Then in Claude Code: /taleemabad-setup (one time, for audit name)
-# For new projects: just copy the credentials file — no init needed
+# Then in Claude Code: /taleemabad-setup (one time, for email)
+# No credentials file needed — the MCP server runs remotely on Railway
 ```
-The plugin bundles the MCP server config in `.mcp.json` — it starts automatically via `uv run --directory`. Setup syncs rules to `~/.claude/rules/taleemabad/` and saves user name.
+The plugin bundles `.mcp.json` pointing to the remote MCP server URL. No local Python, uv, or credentials needed. Setup syncs rules to `~/.claude/rules/taleemabad/` and saves user email.
 
 ## Adding or Editing Governance Rules
 
@@ -177,11 +184,11 @@ Always edit in `.claude/rules/` in the project directory. This is your **working
 
 ## Domain Context
 - Taleemabad is a Pakistani EdTech platform with apps for teacher training and lesson plans
-- 3 main datasets: RUMI_DB (70 tables), TaleemHub_DB (60 tables), tbproddb (466 tables)
+- 5 datasets: tbproddb (466 tables), RUMI_DB (70 tables), TaleemHub_DB (60 tables), neondb (Schoolpilot), zavia1 (Zavia)
 - **Rules are organized by region** — always determine region first
 - **ICT/Islamabad** (org_id=1): teachers, lesson plans, observations (FICO), training — complete
 - **Rawalpindi**: users, AI lesson plans, human+AI coaching, student assessments — complete
-- **Moawin**: not yet available
+- **Moawin/Akhuwat**: users, AI lesson plans, AI coaching (with lesson fidelity), student assessments — complete
 - levels = teacher level (PRIMARY, MIDDLE, SECONDARY) — stored as JSON array
 - FICO is the classroom observation framework (Sections B, C, D)
 - Theory of Change: LP Adoption → Coaching → Classroom Practice → Teacher Behavior → Student Outcomes
