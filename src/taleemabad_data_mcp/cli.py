@@ -176,9 +176,9 @@ def _validate_email(email: str) -> str | None:
 
 @main.command()
 @click.option("--email", required=True, help="Your work email (for audit tracking).")
-@click.option("--token", required=True, help="Team API token (from admin).")
+@click.option("--token", default="", help="Team API token (optional, from admin).")
 def setup(email: str, token: str) -> None:
-    """Save your email and team token, then sync governance rules.
+    """Save your email and sync governance rules.
 
     The MCP server runs remotely — no local Python or credentials needed.
     This command only needs to be run once.
@@ -203,11 +203,10 @@ def setup(email: str, token: str) -> None:
     shutil.copytree(src_rules, dest_rules)
     click.echo(f"Rules installed to {dest_rules}")
 
-    # 2. Save user config (email + token)
-    env_content = (
-        f"TALEEMABAD_USER={email}\n"
-        f"TALEEMABAD_API_TOKEN={token}\n"
-    )
+    # 2. Save user config (email + optional token)
+    env_content = f"TALEEMABAD_USER={email}\n"
+    if token:
+        env_content += f"TALEEMABAD_API_TOKEN={token}\n"
     env_path = _env_path()
     env_path.parent.mkdir(parents=True, exist_ok=True)
     env_path.write_text(env_content, encoding="utf-8")
