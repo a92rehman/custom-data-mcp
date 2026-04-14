@@ -295,15 +295,16 @@ def serve_remote(port: int | None) -> None:
 
     os.environ["TALEEMABAD_REMOTE_MODE"] = "true"
 
+    listen_port = port or int(os.environ.get("PORT", "8000"))
+
+    # FastMCP reads host/port from FASTMCP_ prefixed env vars
+    os.environ["FASTMCP_HOST"] = "0.0.0.0"
+    os.environ["FASTMCP_PORT"] = str(listen_port)
+
     from taleemabad_data_mcp.server import mcp
 
-    listen_port = port or int(os.environ.get("PORT", "8000"))
     click.echo(f"Starting MCP server (streamable-http) on port {listen_port}...")
-    mcp.run(
-        transport="streamable-http",
-        host="0.0.0.0",
-        port=listen_port,
-    )
+    mcp.run(transport="streamable-http")
 
 
 @main.command()
