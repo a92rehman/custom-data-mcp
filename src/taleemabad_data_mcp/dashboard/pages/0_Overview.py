@@ -461,45 +461,35 @@ for p in _projects:
     })
 
 # Render table HTML
-table_html = """
-<table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-top:4px;">
-    <thead style="background:#F8FAFC;border-bottom:2px solid #E2E8F0;">
-        <tr style="height:40px;">
-            <th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;">Project</th>
-            <th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:180px;">Dataset</th>
-            <th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:100px;">Status</th>
-            <th style="padding:12px 14px;text-align:center;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:70px;">Tables</th>
-            <th style="padding:12px 14px;text-align:center;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:80px;">Rows</th>
-            <th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;">Coverage</th>
-        </tr>
-    </thead>
-    <tbody>
-"""
+table_html = '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-top:4px;">'
+table_html += '<thead style="background:#F8FAFC;border-bottom:2px solid #E2E8F0;">'
+table_html += '<tr style="height:40px;">'
+table_html += '<th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;">Project</th>'
+table_html += '<th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:180px;">Dataset</th>'
+table_html += '<th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:100px;">Status</th>'
+table_html += '<th style="padding:12px 14px;text-align:center;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:70px;">Tables</th>'
+table_html += '<th style="padding:12px 14px;text-align:center;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:80px;">Rows</th>'
+table_html += '<th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;">Coverage</th>'
+table_html += '</tr></thead><tbody>'
 
 for i, row in enumerate(project_rows):
     bg = "#FFFFFF" if i % 2 == 0 else "#F8FAFC"
-    table_html += f"""
-        <tr style="background:{bg};border-bottom:1px solid #E2E8F0;height:48px;">
-            <td style="padding:12px 14px;">
-                <div style="font-weight:600;color:#0F172A;margin-bottom:2px;">{row['name']}</div>
-                <div style="font-size:0.8rem;color:#64748B;">{row['description']}</div>
-            </td>
-            <td style="padding:12px 14px;font-family:monospace;color:#3B82F6;font-weight:600;">{row['dataset']}</td>
-            <td style="padding:12px 14px;">{row['status']}</td>
-            <td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{row['tables']}</td>
-            <td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{row['rows']}</td>
-            <td style="padding:12px 14px;">{row['coverage']}</td>
-        </tr>
-"""
+    table_html += f'<tr style="background:{bg};border-bottom:1px solid #E2E8F0;height:48px;">'
+    table_html += '<td style="padding:12px 14px;">'
+    table_html += f'<div style="font-weight:600;color:#0F172A;margin-bottom:2px;">{row["name"]}</div>'
+    table_html += f'<div style="font-size:0.8rem;color:#64748B;">{row["description"]}</div>'
+    table_html += '</td>'
+    table_html += f'<td style="padding:12px 14px;font-family:monospace;color:#3B82F6;font-weight:600;">{row["dataset"]}</td>'
+    table_html += f'<td style="padding:12px 14px;">{row["status"]}</td>'
+    table_html += f'<td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{row["tables"]}</td>'
+    table_html += f'<td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{row["rows"]}</td>'
+    table_html += f'<td style="padding:12px 14px;">{row["coverage"]}</td>'
+    table_html += '</tr>'
 
-table_html += """
-    </tbody>
-</table>
-"""
+table_html += '</tbody></table>'
 
 st.markdown(
     f'<div style="background:white;border:1px solid #E2E8F0;border-radius:14px;padding:24px;'
-    f'box-shadow:0 1px 3px rgba(0,0,0,0.04);margin-bottom:20px;">'
-    f'{table_html}</div>',
+    f'box-shadow:0 1px 3px rgba(0,0,0,0.04);margin-bottom:20px;">{table_html}</div>',
     unsafe_allow_html=True,
 )
