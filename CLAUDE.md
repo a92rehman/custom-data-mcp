@@ -33,7 +33,7 @@ uv run ruff format src/ tests/            # Format
 
 ## CLI Commands
 ```bash
-python -m taleemabad_data_mcp setup --email <email> --token <token>  # Save credentials + sync rules
+python -m taleemabad_data_mcp setup --email <email>  # Save email + sync rules
 python -m taleemabad_data_mcp version       # Show installed version
 python -m taleemabad_data_mcp serve         # Run MCP server (stdio, used by Claude Code locally)
 python -m taleemabad_data_mcp serve-remote  # Run MCP server (HTTP, for Railway deployment)
@@ -114,7 +114,6 @@ BIGQUERY_MAX_BYTES=1073741824              # Default 1GB
 CACHE_TTL_SECONDS=3600                     # Default 1hr
 LOG_LEVEL=INFO
 TALEEMABAD_USER=<email>                    # Work email for audit tracking (set by setup)
-TALEEMABAD_API_TOKEN=<token>               # Team API token (optional, for auth)
 TALEEMABAD_REMOTE_MODE=true                # Enable HTTP transport (Railway only)
 AUDIT_DATASET=mcp_audit                    # Default
 AUDIT_TABLE=activity_log                   # Default
