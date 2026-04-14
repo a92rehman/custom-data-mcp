@@ -9,9 +9,9 @@ See [VISION.md](docs/VISION.md) for why this exists and where it's going.
 Before installing, make sure you have:
 
 1. **Claude Code** — [Install here](https://docs.anthropic.com/en/docs/claude-code/overview)
-2. **GCP Service Account Key** — ask the data team for `niete-bq-prod-48ae5260d1ea.json`
+2. **Work email** — must be `@taleemabad.com`, `@niete.edu.pk`, or `@niete.pk`
 
-> **Note:** You do NOT need to install Python, Node.js, or uv yourself. The plugin handles everything automatically.
+> **Note:** You do NOT need Python, Node.js, uv, or any credentials file. The MCP server runs remotely — just install the plugin and go.
 
 ## Install (All Platforms)
 
@@ -27,27 +27,23 @@ claude plugin install taleemabad-data@Orenda-Project
 ```
 
 The first command registers the Orenda-Project repository as a plugin source.
-The second installs the plugin (agents, slash commands, governance rules, AND the MCP server).
+The second installs the plugin (agents, slash commands, and governance rules).
 
-### Step 2: Copy Credentials
+### Step 2: Run Setup (One Time)
 
-Copy `niete-bq-prod-48ae5260d1ea.json` (from the data team) into your project directory.
-
-### Step 3: Run Setup (One Time)
-
-Open Claude Code in your project directory and type:
+Open Claude Code in any project directory and type:
 
 ```
 /taleemabad-setup
 ```
 
-The setup will ask for your **name** (for audit logs) and sync governance rules. That's it.
+The setup will ask for your **work email** (for audit logs) and sync governance rules. That's it.
 
-### Step 4: Restart Claude Code
+### Step 3: Restart Claude Code
 
 Close and reopen Claude Code (or press `Ctrl+R`).
 
-### Step 5: Verify
+### Step 4: Verify
 
 Type `/mcp` in Claude Code. You should see:
 
@@ -59,12 +55,7 @@ Then try: *"How many active PRIMARY teachers are in ICT/Islamabad?"*
 
 ## Add to Another Project
 
-After setup, adding the MCP to a new project is one step:
-
-1. Copy `niete-bq-prod-48ae5260d1ea.json` to the new project directory
-2. Done — the plugin provides the MCP config automatically
-
-No `/taleemabad-init` needed. No `.mcp.json` generation. Just copy the credentials file.
+After setup, the MCP works in **every project automatically** — no extra steps needed. The plugin connects to the remote server; no per-project credentials required.
 
 ## Update
 
@@ -88,7 +79,7 @@ claude plugin marketplace remove Orenda-Project
 | Tool | Purpose |
 |------|---------|
 | `execute_query` | Run a governed SQL query against BigQuery (cost guardrails + audit) |
-| `list_datasets` | Browse allowed BigQuery datasets and their tables |
+| `list_datasets` | Browse all BigQuery datasets and their tables (auto-discovered) |
 | `get_table_schema` | Get columns and types for a specific table |
 | `check_table_freshness` | Check when a table was last modified |
 | `submit_feedback` | Submit thumbs up/down feedback on a query result |
@@ -103,7 +94,7 @@ claude plugin marketplace remove Orenda-Project
 |--------|--------|----------|
 | ICT/Islamabad | Complete | `tbproddb` |
 | Rawalpindi | Complete | `RUMI_DB` + `TaleemHub_DB` |
-| Moawin | Not yet available | — |
+| Moawin/Akhuwat | Complete | `neondb` + `zavia1` |
 
 ## Example Queries
 
@@ -114,6 +105,25 @@ claude plugin marketplace remove Orenda-Project
 > "How many teachers passed Level 1 training?"
 
 > "Show me reading assessment results for Rawalpindi."
+
+## Architecture
+
+```
+User's Machine                              Railway
+┌──────────────────────────┐     HTTPS     ┌──────────────────────┐
+│ Claude Code               │─────────────>│ MCP Server           │
+│  ├─ Plugin                │              │  ├─ FastMCP (HTTP)    │
+│  │   ├─ agents/           │              │  ├─ BigQuery client   │
+│  │   ├─ rules/            │              │  ├─ Audit logger      │
+│  │   ├─ commands/         │              │  ├─ Cost estimator    │
+│  │   └─ .mcp.json (URL)  │              │  └─ Feedback logger   │
+│  └─ ~/.claude/ (email)    │              └──────────────────────┘
+└──────────────────────────┘
+```
+
+- **Plugin** runs locally: agents, governance rules, slash commands
+- **MCP server** runs on Railway: BigQuery access, audit logging, cost guardrails
+- **No local dependencies** needed — no Python, no credentials file
 
 ## Troubleshooting
 
@@ -127,18 +137,25 @@ claude plugin install taleemabad-data@Orenda-Project
 ### /taleemabad-setup not recognized
 Restart Claude Code after installing the plugin. The slash command is provided by the plugin.
 
-### MCP shows "credentials not found"
-Copy `niete-bq-prod-48ae5260d1ea.json` to your project directory. The MCP server starts automatically but needs this file to connect to BigQuery.
+### MCP shows "Setup required"
+Run `/taleemabad-setup` and enter your work email.
 
-### MCP shows "failed" in /mcp
-- Check that `uv` is accessible: run `uv version` in your terminal
-- If `uv` is not found, Claude Code ships it at `~/.claude/uv`
+### MCP shows "Unauthorized domain"
+You must use a work email ending with `@taleemabad.com`, `@niete.edu.pk`, or `@niete.pk`.
+
+### MCP shows "failed" or "disconnected" in /mcp
+- Check your internet connection
+- The remote server may be restarting — wait a minute and try again
+- Run `/mcp` to see the connection status
 
 ### "Git access required" error during setup
 The repository is private. Ask IT to add your GitHub account to the [Orenda-Project](https://github.com/Orenda-Project) organization.
 
-### Old `.mcp.json` from previous version
-If you used a previous version (v0.11.0 or earlier), delete the `.mcp.json` file from your project directories. The plugin now provides this automatically.
+### Upgrading from v0.14 or earlier
+Previous versions required a credentials file and local Python. These are no longer needed:
+- Delete `niete-bq-prod-48ae5260d1ea.json` from your project directories
+- Delete any old `.mcp.json` files from project directories
+- Run `/taleemabad-setup` again to enter your email (replaces the old name-based setup)
 
 ## Observability Dashboard
 
@@ -149,7 +166,7 @@ pip install "taleemabad-data-mcp[dashboard]"
 python -m taleemabad_data_mcp dashboard
 ```
 
-Pages: Overview, Query Analytics, Feedback, Cost, Errors, Data Freshness.
+Pages: Overview, Query Analytics, Feedback, Cost, Errors, Data Freshness, Governance.
 
 ## Developer Setup
 
