@@ -37,7 +37,9 @@ Tell the user:
 ```
 Setup complete!
 
-Restart Claude Code (close and reopen, or Ctrl+R).
+Close your terminal AND Claude Code completely, then reopen both.
+This is needed so the TALEEMABAD_USER environment variable takes effect.
+
 Then run /mcp to verify:
   - taleemabad-data · connected
 ```

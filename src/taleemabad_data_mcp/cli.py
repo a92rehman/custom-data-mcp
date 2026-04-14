@@ -202,14 +202,46 @@ def setup(email: str) -> None:
     shutil.copytree(src_rules, dest_rules)
     click.echo(f"Rules installed to {dest_rules}")
 
-    # 2. Save user config
+    # 2. Save user config to env file
     env_content = f"TALEEMABAD_USER={email}\n"
     env_path = _env_path()
     env_path.parent.mkdir(parents=True, exist_ok=True)
     env_path.write_text(env_content, encoding="utf-8")
     click.echo(f"User config saved to {env_path}")
 
-    # 3. Cleanup old artifacts from previous versions
+    # 3. Set TALEEMABAD_USER as persistent system environment variable
+    # so Claude Code can expand ${TALEEMABAD_USER} in .mcp.json headers
+    import platform
+    if platform.system() == "Windows":
+        import subprocess as sp
+        sp.run(["setx", "TALEEMABAD_USER", email], check=False, capture_output=True)
+        click.echo(f"Set TALEEMABAD_USER system variable to {email}")
+    else:
+        # Add to shell profile for macOS/Linux
+        shell_rc = Path.home() / ".zshrc"
+        if not shell_rc.exists():
+            shell_rc = Path.home() / ".bashrc"
+        export_line = f'export TALEEMABAD_USER="{email}"'
+        try:
+            existing = shell_rc.read_text(encoding="utf-8") if shell_rc.exists() else ""
+            if "TALEEMABAD_USER" not in existing:
+                with shell_rc.open("a", encoding="utf-8") as f:
+                    f.write(f"\n# Taleemabad Data MCP\n{export_line}\n")
+                click.echo(f"Added TALEEMABAD_USER to {shell_rc}")
+            else:
+                # Update existing line
+                import re
+                updated = re.sub(
+                    r'export TALEEMABAD_USER="[^"]*"',
+                    export_line,
+                    existing,
+                )
+                shell_rc.write_text(updated, encoding="utf-8")
+                click.echo(f"Updated TALEEMABAD_USER in {shell_rc}")
+        except Exception:
+            click.echo(f"Note: Set TALEEMABAD_USER manually: {export_line}")
+
+    # 4. Cleanup old artifacts from previous versions
     old_venv = _claude_dir() / "taleemabad-venv"
     if old_venv.exists():
         click.echo(f"\nNote: Old venv found at {old_venv}")
