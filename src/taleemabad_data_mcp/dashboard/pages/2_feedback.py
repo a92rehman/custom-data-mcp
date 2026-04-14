@@ -21,21 +21,18 @@ from taleemabad_data_mcp.dashboard.components.styles import (
     CHART_H_SM,
     COLORS,
     inject_page_css,
+    page_header,
+    section_header,
 )
 from taleemabad_data_mcp.dashboard.data.queries import get_activity_log, get_feedback
 
 inject_page_css()
 
-st.header("Expectation vs Reality")
-st.caption(
-    "Are MCP answers meeting user expectations? "
-    "Feedback is voluntary — users rate only when they choose to."
-)
+page_header("Expectation vs Reality", "Are MCP answers meeting user expectations? Feedback is voluntary.")
 
 filters = render_filters()
 inject_auto_refresh(get_refresh_seconds())
 clear_cache_if_needed(get_refresh_seconds())
-st.markdown("---")
 fb = get_feedback(days=filters["days"])
 activity = get_activity_log(**filters)
 
@@ -68,53 +65,52 @@ st.markdown("")
 col1, col2 = st.columns([3, 2])
 
 with col1:
-    st.markdown(
-        '<div class="section-header">Feedback Over Time</div>',
-        unsafe_allow_html=True,
-    )
+    section_header("Feedback Over Time", "green")
     fb["date"] = pd.to_datetime(fb["timestamp"]).dt.date
     fb_daily = fb.groupby(["date", "rating"]).size().reset_index(name="Count")
     fig = go.Figure()
-    for rating, color in [("up", COLORS["success"]), ("down", COLORS["danger"])]:
+    for rating, color in [("up", "#10B981"), ("down", "#EF4444")]:
         subset = fb_daily[fb_daily["rating"] == rating]
         if not subset.empty:
             fig.add_trace(go.Bar(
                 x=subset["date"], y=subset["Count"],
                 name=f"Thumbs {rating.title()}", marker_color=color,
+                marker_cornerradius=3,
             ))
     fig.update_layout(
         template="plotly_white", barmode="group",
         margin=dict(l=10, r=10, t=10, b=10), height=CHART_H,
         legend=dict(orientation="h", yanchor="top", y=1.1, x=0),
         xaxis=dict(title=None), yaxis=dict(title=None),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, system-ui, sans-serif"),
     )
     st.plotly_chart(fig, use_container_width=True)
 
 with col2:
-    st.markdown(
-        '<div class="section-header">Satisfaction Score</div>',
-        unsafe_allow_html=True,
-    )
+    section_header("Satisfaction Score", "orange")
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=sat_pct,
         number=dict(suffix="%", font=dict(size=36, color=COLORS["text"])),
         gauge=dict(
             axis=dict(range=[0, 100], tickfont=dict(size=10)),
-            bar=dict(color=COLORS["primary"]),
+            bar=dict(color="#3B82F6"),
             steps=[
                 dict(range=[0, 50], color="#FEE2E2"),
                 dict(range=[50, 75], color="#FEF3C7"),
-                dict(range=[75, 100], color="#DCFCE7"),
+                dict(range=[75, 100], color="#D1FAE5"),
             ],
             threshold=dict(
-                line=dict(color=COLORS["danger"], width=2),
+                line=dict(color="#EF4444", width=2),
                 thickness=0.75, value=70,
             ),
         ),
     ))
     fig.update_layout(
         margin=dict(l=20, r=20, t=20, b=10), height=CHART_H,
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, system-ui, sans-serif"),
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -122,10 +118,7 @@ with col2:
 col3, col4 = st.columns(2)
 
 with col3:
-    st.markdown(
-        '<div class="section-header">Satisfaction by Domain</div>',
-        unsafe_allow_html=True,
-    )
+    section_header("Satisfaction by Domain", "purple")
     if "domain" in fb.columns:
         domain_fb = fb.groupby("domain").agg(
             up=("rating", lambda x: (x == "up").sum()),
@@ -139,6 +132,7 @@ with col3:
         fig = go.Figure(go.Bar(
             x=domain_fb["sat_pct"], y=domain_fb["domain"],
             orientation="h", marker_color=d_colors,
+            marker_cornerradius=3,
             text=[
                 f"{v:.0f}% ({t})" for v, t
                 in zip(domain_fb["sat_pct"], domain_fb["total"], strict=True)
@@ -150,14 +144,13 @@ with col3:
             margin=dict(l=10, r=10, t=10, b=10), height=CHART_H_SM,
             xaxis=dict(title=None, range=[0, 100]),
             yaxis=dict(title=None),
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(family="Inter, system-ui, sans-serif"),
         )
         st.plotly_chart(fig, use_container_width=True)
 
 with col4:
-    st.markdown(
-        '<div class="section-header">Satisfaction by User</div>',
-        unsafe_allow_html=True,
-    )
+    section_header("Satisfaction by User")
     user_fb = fb.groupby("user_name").agg(
         up=("rating", lambda x: (x == "up").sum()),
         total=("rating", "count"),
@@ -167,6 +160,7 @@ with col4:
     fig = go.Figure(go.Bar(
         x=user_fb["sat_pct"], y=user_fb["user_name"],
         orientation="h", marker_color=COLORS["primary"],
+        marker_cornerradius=3,
         text=[
             f"{v:.0f}% ({t})" for v, t
             in zip(user_fb["sat_pct"], user_fb["total"], strict=True)
@@ -178,19 +172,19 @@ with col4:
         margin=dict(l=10, r=10, t=10, b=10), height=CHART_H_SM,
         xaxis=dict(title=None, range=[0, 100]),
         yaxis=dict(title=None),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, system-ui, sans-serif"),
     )
     st.plotly_chart(fig, use_container_width=True)
 
 # -- Comments --
-st.markdown(
-    '<div class="section-header">User Comments</div>',
-    unsafe_allow_html=True,
-)
+section_header("User Comments", "teal")
 comments = fb[fb["comment"].notna() & (fb["comment"] != "")]
 if not comments.empty:
     for _, row in comments.head(20).iterrows():
+        accent = "#10B981" if row["rating"] == "up" else "#EF4444"
         icon = (
-            '<span style="color:#22C55E;">&#9650;</span>'
+            '<span style="color:#10B981;">&#9650;</span>'
             if row["rating"] == "up"
             else '<span style="color:#EF4444;">&#9660;</span>'
         )
@@ -198,8 +192,9 @@ if not comments.empty:
         q = str(row.get("query_text", ""))[:60]
         st.markdown(
             f"<div style='padding:8px 12px;margin-bottom:6px;"
-            f"background:white;border:1px solid #E2E8F0;"
-            f"border-radius:8px;font-size:0.88rem;'>"
+            f"background:#FAFAFA;border:1px solid #E2E8F0;"
+            f"border-left:3px solid {accent};"
+            f"border-radius:10px;font-size:0.88rem;'>"
             f"{icon} <strong>{row['user_name']}</strong>"
             f" <span style='color:#94A3B8;'>{ts}</span><br/>"
             f"<span style='color:#64748B;'>{q}</span><br/>"

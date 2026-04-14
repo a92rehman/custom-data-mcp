@@ -21,18 +21,18 @@ from taleemabad_data_mcp.dashboard.components.styles import (
     CHART_H_SM,
     COLORS,
     inject_page_css,
+    page_header,
+    section_header,
 )
 from taleemabad_data_mcp.dashboard.data.queries import get_activity_log
 
 inject_page_css()
 
-st.header("Errors & Governance Gaps")
-st.caption("Failed queries, missing rules, and patterns to fix")
+page_header("Errors & Governance Gaps", "Failed queries, missing rules, and patterns to fix")
 
 filters = render_filters()
 inject_auto_refresh(get_refresh_seconds())
 clear_cache_if_needed(get_refresh_seconds())
-st.markdown("---")
 df = get_activity_log(**filters)
 
 if df.empty:
@@ -68,39 +68,35 @@ if errors.empty:
 errors["date"] = pd.to_datetime(errors["timestamp"]).dt.date
 
 # -- Row 1: Error trend + Error type distribution --
-col1, col2 = st.columns([3, 2])
+col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown(
-        '<div class="section-header">Errors Over Time</div>',
-        unsafe_allow_html=True,
-    )
+    section_header("Errors Over Time", "red")
     daily_err = errors.groupby("date").size().reset_index(name="Errors")
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=daily_err["date"], y=daily_err["Errors"],
         mode="lines+markers", fill="tozeroy",
-        line=dict(color=COLORS["danger"], width=2),
-        fillcolor="rgba(239,68,68,0.1)",
+        line=dict(color="#EF4444", width=2),
+        fillcolor="rgba(239,68,68,0.08)",
         marker=dict(size=5),
     ))
     fig.update_layout(
         template="plotly_white",
         margin=dict(l=10, r=10, t=10, b=10), height=CHART_H,
         xaxis=dict(title=None), yaxis=dict(title=None),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, system-ui, sans-serif"),
     )
     st.plotly_chart(fig, use_container_width=True)
 
 with col2:
-    st.markdown(
-        '<div class="section-header">Error Type Breakdown</div>',
-        unsafe_allow_html=True,
-    )
+    section_header("Error Type Breakdown", "orange")
     type_counts = (
         errors.groupby("error_type").size()
         .reset_index(name="Count").sort_values("Count", ascending=False)
     )
-    color_list = [COLORS["danger"], COLORS["accent"], COLORS["warning"]]
+    color_list = [COLORS["danger"], COLORS["accent"], COLORS["warning"], COLORS["pink"]]
     fig = go.Figure(go.Pie(
         labels=type_counts["error_type"],
         values=type_counts["Count"],
@@ -117,6 +113,8 @@ with col2:
         template="plotly_white",
         margin=dict(l=10, r=10, t=10, b=10), height=CHART_H,
         showlegend=False,
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, system-ui, sans-serif"),
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -124,10 +122,7 @@ with col2:
 col3, col4 = st.columns(2)
 
 with col3:
-    st.markdown(
-        '<div class="section-header">Errors by Domain</div>',
-        unsafe_allow_html=True,
-    )
+    section_header("Errors by Domain", "purple")
     by_domain = (
         errors.groupby("domain").size()
         .reset_index(name="Count").sort_values("Count", ascending=True)
@@ -139,40 +134,40 @@ with col3:
         x=by_domain["Count"], y=by_domain["domain"],
         orientation="h", marker_color=d_colors,
         text=by_domain["Count"], textposition="auto",
+        marker_cornerradius=3,
     ))
     fig.update_layout(
         template="plotly_white",
         margin=dict(l=10, r=10, t=10, b=10), height=CHART_H_SM,
         xaxis=dict(title=None), yaxis=dict(title=None),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, system-ui, sans-serif"),
     )
     st.plotly_chart(fig, use_container_width=True)
 
 with col4:
-    st.markdown(
-        '<div class="section-header">Errors by User</div>',
-        unsafe_allow_html=True,
-    )
+    section_header("Errors by User", "pink")
     by_user = (
         errors.groupby("user_name").size()
         .reset_index(name="Count").sort_values("Count", ascending=True)
     )
     fig = go.Figure(go.Bar(
         x=by_user["Count"], y=by_user["user_name"],
-        orientation="h", marker_color=COLORS["danger"],
+        orientation="h", marker_color=COLORS["pink"],
         text=by_user["Count"], textposition="auto",
+        marker_cornerradius=3,
     ))
     fig.update_layout(
         template="plotly_white",
         margin=dict(l=10, r=10, t=10, b=10), height=CHART_H_SM,
         xaxis=dict(title=None), yaxis=dict(title=None),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, system-ui, sans-serif"),
     )
     st.plotly_chart(fig, use_container_width=True)
 
 # -- Governance gaps --
-st.markdown(
-    '<div class="section-header">Governance Gaps</div>',
-    unsafe_allow_html=True,
-)
+section_header("Governance Gaps", "amber")
 gaps = errors[
     (errors["error_type"] == "NoMatchingMetric")
     | (
@@ -197,10 +192,7 @@ else:
     )
 
 # -- Full error log --
-st.markdown(
-    '<div class="section-header">Error Details</div>',
-    unsafe_allow_html=True,
-)
+section_header("Error Details", "red")
 st.dataframe(
     errors[
         ["timestamp", "user_name", "error_type", "domain",

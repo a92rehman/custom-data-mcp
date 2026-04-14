@@ -15,45 +15,14 @@ from taleemabad_data_mcp.dashboard.data.projects import (
     load_projects,
     format_rows,
 )
+from taleemabad_data_mcp.dashboard.components.styles import (
+    COLORS, inject_page_css, page_header, section_header,
+)
 
-# -- Custom CSS --
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700&display=swap');
-    .stApp { font-family: 'Fira Sans', system-ui, sans-serif; }
-    .block-container { padding-top: 1.2rem; padding-bottom: 0.5rem; }
-
-    .kpi-card {
-        background: white; border: 1px solid #E2E8F0; border-radius: 12px;
-        padding: 16px 18px; text-align: center; min-height: 80px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-    .kpi-card .kpi-label { font-weight: 500; color: #64748B; font-size: 0.82rem; }
-    .kpi-card .kpi-value { font-size: 1.55rem; font-weight: 700; color: #1E293B; margin: 4px 0 0; }
-
-    .section-header {
-        font-size: 0.95rem; font-weight: 600; color: #1E293B;
-        margin: 0.6rem 0 0.3rem; border-bottom: 2px solid #3B82F6;
-        padding-bottom: 0.2rem;
-    }
-
-    .summary-bar {
-        background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px;
-        padding: 8px 14px; font-size: 0.85rem; color: #475569;
-        margin-bottom: 0.5rem;
-    }
-    .summary-bar .governed { color: #16A34A; font-weight: 600; }
-    .summary-bar .ungoverned { color: #DC2626; font-weight: 600; }
-</style>
-""", unsafe_allow_html=True)
+inject_page_css()
 
 # -- Header --
-st.title("Governance Coverage")
-st.caption(
-    "Which BigQuery tables are covered by governed query rules? "
-    "Governed tables have explicit query definitions in .claude/rules/ — "
-    "ungoverned tables have no rule file and should not be queried ad-hoc."
-)
+page_header("Governance Coverage", "Which BigQuery tables are covered by governed query rules?")
 
 # -- Load data --
 projects = load_projects()
@@ -109,38 +78,52 @@ governed_count = int(tables_df["governed"].sum())
 ungoverned_count = total - governed_count
 coverage_pct = round(governed_count / total * 100, 1) if total > 0 else 0.0
 
-st.markdown('<p class="section-header">Summary</p>', unsafe_allow_html=True)
+section_header("Summary", "purple")
 c1, c2, c3, c4 = st.columns(4)
+
+_card_base = (
+    "position:relative;background:white;border:1px solid #E2E8F0;border-radius:14px;"
+    "padding:16px 18px;text-align:center;min-height:80px;"
+    "box-shadow:0 1px 4px rgba(0,0,0,0.04);"
+)
+_accent = (
+    "position:absolute;top:0;left:0;right:0;height:4px;"
+    "border-radius:14px 14px 0 0;background:{gradient};"
+)
 
 with c1:
     st.markdown(
-        f'<div class="kpi-card">'
-        f'<div class="kpi-label">Total Tables</div>'
-        f'<div class="kpi-value">{total}</div>'
+        f'<div style="{_card_base}">'
+        f'<div style="{_accent.format(gradient="linear-gradient(135deg,#3B82F6,#6366F1)")}"></div>'
+        f'<div style="font-weight:500;color:#64748B;font-size:0.82rem;">Total Tables</div>'
+        f'<div style="font-size:1.55rem;font-weight:700;color:#1E293B;margin:4px 0 0;">{total}</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
 with c2:
     st.markdown(
-        f'<div class="kpi-card">'
-        f'<div class="kpi-label">Governed</div>'
-        f'<div class="kpi-value" style="color:#16A34A">{governed_count}</div>'
+        f'<div style="{_card_base}">'
+        f'<div style="{_accent.format(gradient="linear-gradient(135deg,#10B981,#14B8A6)")}"></div>'
+        f'<div style="font-weight:500;color:#64748B;font-size:0.82rem;">Governed</div>'
+        f'<div style="font-size:1.55rem;font-weight:700;color:#065F46;margin:4px 0 0;">{governed_count}</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
 with c3:
     st.markdown(
-        f'<div class="kpi-card">'
-        f'<div class="kpi-label">Ungoverned</div>'
-        f'<div class="kpi-value" style="color:#DC2626">{ungoverned_count}</div>'
+        f'<div style="{_card_base}">'
+        f'<div style="{_accent.format(gradient="linear-gradient(135deg,#EF4444,#EC4899)")}"></div>'
+        f'<div style="font-weight:500;color:#64748B;font-size:0.82rem;">Ungoverned</div>'
+        f'<div style="font-size:1.55rem;font-weight:700;color:#991B1B;margin:4px 0 0;">{ungoverned_count}</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
 with c4:
     st.markdown(
-        f'<div class="kpi-card">'
-        f'<div class="kpi-label">Coverage</div>'
-        f'<div class="kpi-value">{coverage_pct}%</div>'
+        f'<div style="{_card_base}">'
+        f'<div style="{_accent.format(gradient="linear-gradient(135deg,#8B5CF6,#6366F1)")}"></div>'
+        f'<div style="font-weight:500;color:#64748B;font-size:0.82rem;">Coverage</div>'
+        f'<div style="font-size:1.55rem;font-weight:700;color:#1E293B;margin:4px 0 0;">{coverage_pct}%</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -148,7 +131,7 @@ with c4:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # -- Filters --
-st.markdown('<p class="section-header">Filters</p>', unsafe_allow_html=True)
+section_header("Filters")
 f1, f2 = st.columns(2)
 
 with f1:
@@ -176,16 +159,17 @@ n_ungov_shown = n_shown - n_gov_shown
 
 # -- Summary bar --
 st.markdown(
-    f'<div class="summary-bar">'
-    f'Showing <strong>{n_shown}</strong> tables — '
-    f'<span class="governed">{n_gov_shown} governed</span> / '
-    f'<span class="ungoverned">{n_ungov_shown} ungoverned</span>'
+    f'<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;'
+    f'padding:8px 14px;font-size:0.85rem;color:#475569;margin-bottom:0.5rem;">'
+    f'Showing <strong>{n_shown}</strong> tables &mdash; '
+    f'<span style="color:#065F46;font-weight:600;">{n_gov_shown} governed</span> / '
+    f'<span style="color:#991B1B;font-weight:600;">{n_ungov_shown} ungoverned</span>'
     f'</div>',
     unsafe_allow_html=True,
 )
 
 # -- Data table --
-st.markdown('<p class="section-header">Table Details</p>', unsafe_allow_html=True)
+section_header("Table Details", "teal")
 
 display_df = filtered[["dataset", "table_name", "row_count", "governed", "rule_file", "domain"]].copy()
 display_df["row_count"] = display_df["row_count"].apply(

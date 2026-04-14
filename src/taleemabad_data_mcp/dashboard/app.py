@@ -12,7 +12,7 @@ st.set_page_config(
     page_title="Taleemabad MCP Observatory",
     page_icon="T",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 
@@ -44,13 +44,13 @@ if not check_password():
 pages_dir = Path(__file__).parent / "pages"
 
 pg = st.navigation([
-    st.Page(pages_dir / "0_Overview.py", title="Overview", default=True),
-    st.Page(pages_dir / "1_Query_Analytics.py", title="Query Analytics"),
-    st.Page(pages_dir / "2_feedback.py", title="Feedback"),
-    st.Page(pages_dir / "3_cost.py", title="Cost"),
-    st.Page(pages_dir / "4_errors.py", title="Errors"),
-    st.Page(pages_dir / "5_freshness.py", title="Freshness"),
-    st.Page(pages_dir / "6_Governance.py", title="Governance"),
+    st.Page(pages_dir / "0_Overview.py", title="Overview", icon=":material/dashboard:", default=True),
+    st.Page(pages_dir / "1_Query_Analytics.py", title="Query Analytics", icon=":material/query_stats:"),
+    st.Page(pages_dir / "2_feedback.py", title="Feedback", icon=":material/thumbs_up_down:"),
+    st.Page(pages_dir / "3_cost.py", title="Cost", icon=":material/attach_money:"),
+    st.Page(pages_dir / "4_errors.py", title="Errors", icon=":material/error:"),
+    st.Page(pages_dir / "5_freshness.py", title="Freshness", icon=":material/update:"),
+    st.Page(pages_dir / "6_Governance.py", title="Governance", icon=":material/shield:"),
 ])
 
 pg.run()

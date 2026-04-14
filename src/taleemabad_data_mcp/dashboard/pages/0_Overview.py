@@ -1,4 +1,8 @@
-"""Executive overview — the full story at a glance."""
+"""Executive overview — ring charts, KPI cards with badges, domain bars.
+
+All layout rows use pure HTML CSS Grid for perfect symmetry.
+Navigation uses hidden Streamlit buttons at the page bottom.
+"""
 
 import sys as _sys
 from pathlib import Path as _Path
@@ -6,6 +10,7 @@ _src = str(_Path(__file__).parent.parent.parent.parent)
 if _src not in _sys.path:
     _sys.path.insert(0, _src)
 
+import math
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -15,6 +20,15 @@ from taleemabad_data_mcp.dashboard.components.auto_refresh import (
     inject_auto_refresh,
 )
 from taleemabad_data_mcp.dashboard.components.filters import get_refresh_seconds, render_filters
+from taleemabad_data_mcp.dashboard.components.styles import (
+    CHART_H,
+    COLORS,
+    DOMAIN_COLORS,
+    GRADIENTS,
+    inject_page_css,
+    page_header,
+    section_header,
+)
 from taleemabad_data_mcp.dashboard.data.queries import (
     get_activity_log,
     get_feedback,
@@ -24,712 +38,374 @@ from taleemabad_data_mcp.dashboard.data.projects import (
     load_projects,
     get_dataset_stats,
     get_governance_coverage,
-    count_rule_files,
-    format_rows,
 )
 
-# -- Design system --
-COLORS = {
-    "primary": "#3B82F6",
-    "secondary": "#60A5FA",
-    "accent": "#F97316",
-    "success": "#22C55E",
-    "warning": "#EAB308",
-    "danger": "#EF4444",
-}
+inject_page_css()
 
-DOMAIN_COLORS = {
-    "teachers": "#3B82F6",
-    "lesson_plans": "#22C55E",
-    "observations": "#F97316",
-    "training": "#8B5CF6",
-    "other": "#94A3B8",
-}
-
-CHART_H = 260
-
-# -- Custom CSS --
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700&display=swap');
-    .stApp { font-family: 'Fira Sans', system-ui, sans-serif; }
-    .block-container { padding-top: 1.2rem; padding-bottom: 0.5rem; }
+    /* ── KPI Row ── */
+    .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 20px; }
+    .kc {
+        background: white; border: 1px solid #E2E8F0; border-radius: 14px;
+        padding: 18px 20px; position: relative; overflow: visible;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.25s;
+        min-height: 130px;
+    }
+    .kc:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translateY(-2px); border-color: #93C5FD; }
+    .kc::after { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:14px 14px 0 0; }
+    .kc.c-blue::after { background: linear-gradient(90deg, #3B82F6, transparent); }
+    .kc.c-purple::after { background: linear-gradient(90deg, #8B5CF6, transparent); }
+    .kc.c-pink::after { background: linear-gradient(90deg, #EC4899, transparent); }
+    .kc.c-green::after { background: linear-gradient(90deg, #10B981, transparent); }
+    .kc.c-red::after { background: linear-gradient(90deg, #EF4444, transparent); }
+    .kc .kc-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+    .kc .kc-label { font-size:0.68rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:1.2px; }
+    .kc .kc-badge { font-size:0.65rem; font-weight:700; padding:3px 10px; border-radius:100px; }
+    .kc .kc-badge.up { background:#D1FAE5; color:#065F46; }
+    .kc .kc-badge.down { background:#FEE2E2; color:#991B1B; }
+    .kc .kc-corner { font-size:0.7rem; font-weight:600; color:#475569; background:#F1F5F9; padding:3px 8px; border-radius:6px; }
+    .kc .kc-val { font-size:1.9rem; font-weight:800; color:#0F172A; letter-spacing:-1px; }
+    .kc .kc-sub { font-size:0.75rem; color:#94A3B8; margin-top:3px; }
+    .kc .kc-bar { width:100%; height:5px; background:#F1F5F9; border-radius:100px; overflow:hidden; margin-top:10px; }
+    .kc .kc-bar-fill { height:100%; border-radius:100px; }
 
-    /* KPI card with click-to-reveal info */
-    .kpi-card {
-        background: white; border: 1px solid #E2E8F0; border-radius: 12px;
-        padding: 16px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-        position: relative; min-height: 88px;
+    /* ── Score Row ── */
+    .score-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+    .sc {
+        background: white; border: 1px solid #E2E8F0; border-radius: 14px;
+        padding: 24px; text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.25s;
     }
-    .kpi-card .kpi-label { font-weight: 500; color: #64748B; font-size: 0.82rem; }
-    .kpi-card .kpi-value {
-        font-size: 1.55rem; font-weight: 700; color: #1E293B; margin: 4px 0 0;
-    }
-    .kpi-card details { position: absolute; top: 8px; right: 10px; }
-    .kpi-card details summary {
-        width: 20px; height: 20px; border-radius: 50%;
-        background: #F1F5F9; border: 1px solid #CBD5E1;
-        color: #64748B; font-size: 11px; font-weight: 700;
-        display: flex; align-items: center; justify-content: center;
-        cursor: pointer; transition: all 0.2s;
-        list-style: none; text-align: center; line-height: 20px;
-    }
-    .kpi-card details summary::-webkit-details-marker { display: none; }
-    .kpi-card details summary:hover {
-        background: #3B82F6; color: white; border-color: #3B82F6;
-    }
-    .kpi-card details[open] summary {
-        background: #3B82F6; color: white; border-color: #3B82F6;
-    }
-    .kpi-card details .kpi-detail {
-        position: absolute; top: 28px; right: 0;
-        width: 280px; padding: 12px 14px; background: #1E293B;
-        color: #F1F5F9; font-size: 0.78rem; font-weight: 400;
-        border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-        z-index: 200; line-height: 1.5;
-    }
-    .kpi-card details .kpi-detail::before {
-        content: ''; position: absolute; top: -6px; right: 8px;
-        border-left: 6px solid transparent; border-right: 6px solid transparent;
-        border-bottom: 6px solid #1E293B;
-    }
-    .kpi-card details .kpi-detail strong { color: #60A5FA; }
+    .sc:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translateY(-2px); border-color: #93C5FD; }
+    .sc h3 { font-size:0.72rem; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:1.2px; margin-bottom:18px; }
+    .ring-wrap { position:relative; width:140px; height:140px; margin:0 auto 16px; }
+    .ring-wrap svg { width:100%; height:100%; }
+    .ring-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:1.6rem; font-weight:800; color:#0F172A; letter-spacing:-1px; }
+    .status-pill { display:inline-flex; align-items:center; gap:6px; padding:5px 14px; border-radius:100px; font-size:0.75rem; font-weight:600; }
+    .status-pill.good { background:#D1FAE5; color:#065F46; }
+    .status-pill.warn { background:#FEF3C7; color:#92400E; }
+    .status-pill.bad { background:#FEE2E2; color:#991B1B; }
 
-    .section-header {
-        font-size: 0.95rem; font-weight: 600; color: #1E293B;
-        margin: 0.6rem 0 0.3rem 0; padding-bottom: 0.25rem;
-        border-bottom: 2px solid #3B82F6;
+    /* ── Charts ── */
+    .chart-box {
+        background: white; border: 1px solid #E2E8F0; border-radius: 14px;
+        padding: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
-    .mini-stat { text-align: center; padding: 6px 0; }
-    .mini-stat .value { font-size: 1.3rem; font-weight: 700; color: #1E293B; }
-    .mini-stat .label { font-size: 0.75rem; color: #64748B; }
+    .chart-box h3 { font-size:0.9rem; font-weight:700; color:#0F172A; margin-bottom:16px; }
+    .dom-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid #F8FAFC; }
+    .dom-row:last-child { border-bottom:none; }
+    .dom-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700; color:white; flex-shrink:0; }
+    .dom-info { flex:1; }
+    .dom-name { font-size:0.82rem; font-weight:600; color:#0F172A; margin-bottom:5px; }
+    .dom-bar-bg { width:100%; height:5px; background:#F1F5F9; border-radius:100px; overflow:hidden; }
+    .dom-bar-fill { height:100%; border-radius:100px; }
+    .dom-pct { font-size:0.82rem; font-weight:700; min-width:50px; text-align:right; }
 
-    /* Section containers — use Streamlit's native container border styling.
-       We mark containers with data-section-color via a hidden div, then
-       style the parent container. Since we can't do that easily, we use
-       Streamlit's st.container(border=True) and override its style. */
+    /* ── Bottom Row ── */
+    .bottom-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .bot-card {
+        background: white; border: 1px solid #E2E8F0; border-radius: 14px;
+        padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        transition: all 0.25s; min-height: 220px;
+    }
+    .bot-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translateY(-2px); border-color: #93C5FD; }
+    .bot-card h3 { font-size:0.88rem; font-weight:700; color:#0F172A; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid #F1F5F9; }
+    .err-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid #F8FAFC; font-size:0.82rem; }
+    .err-row:last-child { border-bottom:none; }
+    .err-left { display:flex; align-items:center; gap:8px; color:#475569; }
+    .err-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .cost-big { font-size:2.2rem; font-weight:800; letter-spacing:-1.5px; margin-bottom:2px; }
+    .cost-label { font-size:0.78rem; color:#64748B; margin-bottom:14px; }
+    .cost-row { display:flex; justify-content:space-between; font-size:0.82rem; padding:5px 0; }
+    .act-item {
+        display:flex; gap:10px; align-items:flex-start;
+        padding:10px 12px; border-left:3px solid; border-radius:0 8px 8px 0;
+        margin-bottom:6px; font-size:0.8rem; color:#475569; line-height:1.4;
+    }
+    .act-badge { font-size:0.6rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; text-transform:uppercase; letter-spacing:0.5px; }
+
 </style>
 """, unsafe_allow_html=True)
 
-# -- Header + filters --
-st.markdown(
-    '<h2 style="margin-bottom:0;color:#1E293B;">Taleemabad MCP Observatory</h2>'
-    '<p style="color:#64748B;margin-top:0;margin-bottom:0.8rem;">'
-    "Governed data layer — adoption, quality, cost at a glance</p>",
-    unsafe_allow_html=True,
-)
-
+page_header("Taleemabad MCP Observatory", "Governed data layer — adoption, quality, cost at a glance")
 filters = render_filters()
 inject_auto_refresh(get_refresh_seconds())
 clear_cache_if_needed(get_refresh_seconds())
-st.markdown("---")
-
 df = get_activity_log(**filters)
 fb = get_feedback(days=filters["days"])
 
 if df.empty:
-    st.info(
-        "No activity data found. Use the MCP tools in Claude Code to generate data."
-    )
+    st.info("No activity data found. Use the MCP tools in Claude Code to generate data.")
     st.stop()
 
-# -- Derived metrics --
-real_queries = df[df["error_type"] != "dry_run"]
-errors = real_queries[real_queries["error_type"].notna()]
-successful = real_queries[real_queries["error_type"].isna()]
+# ── Metrics ──
+real = df[df["error_type"] != "dry_run"]
+errs = real[real["error_type"].notna()]
 cost_df = df[df["cost_usd"].notna() & (df["cost_usd"] > 0)]
-
-total_queries = len(real_queries)
-active_users = df["user_name"].nunique()
+total_q = len(real)
+n_users = df["user_name"].nunique()
 total_cost = cost_df["cost_usd"].sum() if not cost_df.empty else 0
-error_rate = len(errors) / total_queries * 100 if total_queries > 0 else 0
-success_rate = len(successful) / total_queries * 100 if total_queries > 0 else 0
+err_count = len(errs)
+err_rate = err_count / total_q * 100 if total_q > 0 else 0
+success_rate = len(real[real["error_type"].isna()]) / total_q * 100 if total_q > 0 else 0
+up = int((fb["rating"] == "up").sum()) if not fb.empty else 0
+down = int((fb["rating"] == "down").sum()) if not fb.empty else 0
+fb_total = len(fb) if not fb.empty else 0
+sat = up / fb_total * 100 if fb_total > 0 else 0
+confidence = success_rate * 0.7 + sat * 0.3 if fb_total > 0 else success_rate
 
-if not fb.empty:
-    up_count = int((fb["rating"] == "up").sum())
-    down_count = int((fb["rating"] == "down").sum())
-    satisfaction = up_count / len(fb) * 100 if len(fb) > 0 else 0
-    feedback_count = len(fb)
-else:
-    up_count, down_count, satisfaction, feedback_count = 0, 0, 0, 0
-
-# Confidence = 70% success rate + 30% satisfaction
-confidence = (
-    success_rate * 0.7 + satisfaction * 0.3
-    if feedback_count > 0 else success_rate
-)
-
-# ======================================================================
-# ROW 1: KPI cards with click-to-reveal (!) info
-# ======================================================================
-KPI_HELP = {
-    "Active Users": (
-        "How many people are actually using this system. "
-        "We count each person who asked at least one question "
-        "in the selected time period. "
-        "<br/><br/><strong>Why it matters:</strong> "
-        "More active users means the team is adopting the governed data layer "
-        "instead of writing their own queries."
-    ),
-    "Total Queries": (
-        "The total number of questions people asked the system. "
-        "This only counts real questions — not cost estimates (dry runs). "
-        "It includes both questions that got answers and ones that failed."
-        "<br/><br/><strong>Why it matters:</strong> "
-        "Growing query volume means the system is becoming the go-to source "
-        "for data questions."
-    ),
-    "Confidence": (
-        "How much we can trust the system to give correct answers. "
-        "This is a combined score made of two parts:"
-        "<br/><br/><strong>70%</strong> comes from the "
-        "<strong>success rate</strong> — "
-        "how often queries run without errors."
-        "<br/><strong>30%</strong> comes from "
-        "<strong>user satisfaction</strong> — "
-        "how often people give a thumbs up to the answers they receive."
-        "<br/><br/><strong>How to read it:</strong> "
-        "90%+ is excellent. 70-90% is good. Below 70% needs attention. "
-        "If confidence is low, check the Errors page to see what is failing."
-    ),
-    "Satisfaction": (
-        "When someone gets an answer, they can optionally give it a "
-        "thumbs up or thumbs down. This number shows the percentage "
-        "of thumbs up out of all ratings received."
-        "<br/><br/><strong>How it works:</strong> "
-        "Feedback is completely voluntary — no one is forced to rate. "
-        "So this reflects genuine user sentiment, not forced surveys."
-        "<br/><br/><strong>N/A</strong> means nobody has given feedback yet."
-        "<br/><strong>Why it matters:</strong> "
-        "Even if queries succeed technically, satisfaction tells us if "
-        "the answers actually matched what people expected."
-    ),
-    "Error Rate": (
-        "The percentage of questions that failed to get an answer. "
-        "Failures happen when a query has a syntax problem, "
-        "the user does not have permission, or the requested table "
-        "does not exist."
-        "<br/><br/><strong>How to read it:</strong> "
-        "Below 5% is healthy. Above 10% needs investigation. "
-        "Check the Errors page to see which types of errors are happening "
-        "and which questions are failing."
-    ),
-    "Total Cost": (
-        "How much money was spent on BigQuery to answer all these questions. "
-        "BigQuery charges based on how much data each query scans."
-        "<br/><br/><strong>How it is calculated:</strong> "
-        "Google charges $6.25 for every terabyte (TB) of data scanned. "
-        "We track the exact bytes each query uses and convert to dollars."
-        "<br/><br/><strong>Why it matters:</strong> "
-        "This helps ensure the system stays cost-efficient. "
-        "Check the Cost page to see who is running expensive queries."
-    ),
-}
-
-kpi_data = [
-    ("Active Users", str(active_users)),
-    ("Total Queries", f"{total_queries:,}"),
-    ("Confidence", f"{confidence:.0f}%"),
-    ("Satisfaction", f"{satisfaction:.0f}%" if feedback_count else "N/A"),
-    ("Error Rate", f"{error_rate:.1f}%"),
-    ("Total Cost", f"${total_cost:.2f}"),
-]
-
-
-def _kpi_html(label: str, value: str, info: str) -> str:
-    """KPI card HTML with click-to-reveal info button."""
-    return (
-        f'<div class="kpi-card">'
-        f"<details><summary>!</summary>"
-        f'<div class="kpi-detail">{info}</div>'
-        f"</details>"
-        f'<div class="kpi-label">{label}</div>'
-        f'<div class="kpi-value">{value}</div>'
-        f"</div>"
-    )
-
-
-cols = st.columns(6)
-for col, (label, value) in zip(cols, kpi_data, strict=True):
-    with col:
-        st.markdown(
-            _kpi_html(label, value, KPI_HELP[label]),
-            unsafe_allow_html=True,
-        )
-
-st.markdown("")
-
-# ======================================================================
-# PROJECT STATUS: Dataset coverage table
-# ======================================================================
 _projects = load_projects()
-_active_projects = [p for p in _projects if p.get("status") == "active"]
-_inactive_projects = [p for p in _projects if p.get("status") != "active"]
-
-_datasets_to_query = [
-    p["dataset"] for p in _projects
-    if p.get("dataset") and p.get("status") in ("active", "system")
-]
-_ds_stats = get_dataset_stats(_datasets_to_query) if _datasets_to_query else {}
+_active = [p for p in _projects if p.get("status") == "active"]
 _gov_map = get_governance_coverage()
-
-# Count governed tables per dataset
-_governed_per_ds: dict[str, int] = {}
-for (_ds, _tbl), _meta in _gov_map.items():
-    _governed_per_ds[_ds] = _governed_per_ds.get(_ds, 0) + 1
-
-st.markdown(
-    '<div class="section-header">Project Status</div>',
-    unsafe_allow_html=True,
-)
-st.markdown(
-    f'<p style="color:#64748B;font-size:0.82rem;margin-bottom:0.4rem;">'
-    f'{len(_active_projects)} active / {len(_inactive_projects)} inactive</p>',
-    unsafe_allow_html=True,
-)
-
-_STATUS_BADGE = {
-    "active": '<span style="background:#DCFCE7;color:#166534;border-radius:4px;padding:2px 7px;font-size:0.75rem;font-weight:600;">Active</span>',
-    "inactive": '<span style="background:#F1F5F9;color:#64748B;border-radius:4px;padding:2px 7px;font-size:0.75rem;font-weight:600;">Inactive</span>',
-    "system": '<span style="background:#DBEAFE;color:#1D4ED8;border-radius:4px;padding:2px 7px;font-size:0.75rem;font-weight:600;">System</span>',
-}
-
-_TH = 'style="text-align:left;font-size:0.78rem;font-weight:600;color:#64748B;padding:6px 8px;border-bottom:2px solid #E2E8F0;"'
-_TD = 'style="font-size:0.85rem;padding:6px 8px;border-bottom:1px solid #F1F5F9;vertical-align:middle;"'
-
-_rows_html = ""
-for _p in _projects:
-    _name = _p.get("name", "—")
-    _ds = _p.get("dataset") or "—"
-    _status = _p.get("status", "inactive")
-    _badge = _STATUS_BADGE.get(_status, _STATUS_BADGE["inactive"])
-    _region = _p.get("region")
-
-    # Tables and Rows from BQ stats
-    if _p.get("dataset") and _ds_stats.get(_p["dataset"]):
-        _stat = _ds_stats[_p["dataset"]]
-        _tables_val = str(_stat["table_count"])
-        _rows_val = format_rows(_stat["total_rows"])
-    else:
-        _tables_val = "—"
-        _rows_val = "—"
-
-    # Coverage cell
-    _gov_count = _governed_per_ds.get(_p.get("dataset", ""), 0)
-    _rule_count = count_rule_files(_region) if _region else 0
-    if _status == "inactive":
-        _coverage_html = '<span style="color:#94A3B8;">—</span>'
-    elif _p.get("dataset") and not _p.get("migrated", True) is False and _p.get("status") == "active" and _tables_val == "—":
-        _coverage_html = '<span style="background:#FEF9C3;color:#854D0E;border-radius:4px;padding:2px 7px;font-size:0.75rem;">Not migrated</span>'
-    elif _gov_count == 0 and _status == "active":
-        if not _p.get("dataset"):
-            _coverage_html = '<span style="background:#FEF3C7;color:#92400E;border-radius:4px;padding:2px 7px;font-size:0.75rem;">Not migrated</span>'
-        else:
-            _coverage_html = '<span style="background:#FEF9C3;color:#854D0E;border-radius:4px;padding:2px 7px;font-size:0.75rem;">No rules</span>'
-    elif _gov_count > 0:
-        _pct = min(100, int(_gov_count / max(int(_tables_val) if _tables_val != "—" else _gov_count, 1) * 100))
-        _bar_color = "#22C55E" if _pct >= 60 else ("#EAB308" if _pct >= 20 else "#EF4444")
-        _coverage_html = (
-            f'<div style="display:flex;align-items:center;gap:6px;">'
-            f'<div style="flex:1;background:#F1F5F9;border-radius:4px;height:8px;min-width:60px;">'
-            f'<div style="width:{_pct}%;background:{_bar_color};border-radius:4px;height:8px;"></div></div>'
-            f'<span style="font-size:0.78rem;color:#64748B;white-space:nowrap;">{_gov_count} tables</span>'
-            f'</div>'
-        )
-    else:
-        _coverage_html = '<span style="color:#94A3B8;">—</span>'
-
-    _rows_html += (
-        f"<tr>"
-        f"<td {_TD}><strong>{_name}</strong>"
-        + (f'<br/><span style="color:#94A3B8;font-size:0.75rem;">{_p.get("description","")}</span>' if _p.get("description") else "")
-        + f"</td>"
-        f"<td {_TD}><code style='font-size:0.78rem;'>{_ds}</code></td>"
-        f"<td {_TD}>{_badge}</td>"
-        f"<td {_TD} style='text-align:right;'>{_tables_val}</td>"
-        f"<td {_TD} style='text-align:right;'>{_rows_val}</td>"
-        f"<td {_TD}>{_coverage_html}</td>"
-        f"</tr>"
-    )
-
-st.markdown(
-    f'<div style="overflow-x:auto;">'
-    f'<table style="width:100%;border-collapse:collapse;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">'
-    f"<thead><tr>"
-    f"<th {_TH}>Project</th>"
-    f"<th {_TH}>Dataset</th>"
-    f"<th {_TH}>Status</th>"
-    f"<th {_TH} style='text-align:right;'>Tables</th>"
-    f"<th {_TH} style='text-align:right;'>Rows</th>"
-    f"<th {_TH}>Coverage</th>"
-    f"</tr></thead>"
-    f"<tbody>{_rows_html}</tbody>"
-    f"</table></div>",
-    unsafe_allow_html=True,
-)
-
-st.markdown("")
-
-# ======================================================================
-# ROW 2: Activity trend + Domain breakdown (3:2)
-# ======================================================================
-col_left, col_right = st.columns([3, 2])
-
-with col_left:
-    st.markdown(
-        '<div class="section-header">Activity Trend</div>',
-        unsafe_allow_html=True,
-    )
-    df["date"] = pd.to_datetime(df["timestamp"]).dt.date
-    daily = df.groupby("date").agg(
-        queries=("event_id", "count"),
-        users=("user_name", "nunique"),
-    ).reset_index()
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=daily["date"], y=daily["queries"],
-        name="Queries", mode="lines+markers",
-        line=dict(color=COLORS["primary"], width=2),
-        marker=dict(size=4),
-    ))
-    fig.add_trace(go.Bar(
-        x=daily["date"], y=daily["users"],
-        name="Unique Users", yaxis="y2",
-        marker_color=COLORS["secondary"], opacity=0.35,
-    ))
-    fig.update_layout(
-        template="plotly_white",
-        margin=dict(l=10, r=10, t=10, b=10),
-        height=CHART_H,
-        legend=dict(orientation="h", yanchor="top", y=1.12, x=0),
-        yaxis=dict(title=None, showgrid=True, gridcolor="#F1F5F9"),
-        yaxis2=dict(
-            title=None, overlaying="y", side="right", showgrid=False,
-        ),
-        xaxis=dict(title=None),
-        hovermode="x unified",
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-with col_right:
-    st.markdown(
-        '<div class="section-header">Queries by Domain</div>',
-        unsafe_allow_html=True,
-    )
-    domain_counts = (
-        df.groupby("domain").size().reset_index(name="count")
-        .sort_values("count", ascending=False)
-    )
-    colors = [
-        DOMAIN_COLORS.get(d, "#94A3B8") for d in domain_counts["domain"]
-    ]
-    fig = go.Figure(go.Pie(
-        labels=domain_counts["domain"],
-        values=domain_counts["count"],
-        hole=0.55,
-        marker=dict(colors=colors),
-        textinfo="label+percent",
-        textposition="outside",
-        textfont_size=11,
-    ))
-    fig.update_layout(
-        template="plotly_white",
-        margin=dict(l=10, r=10, t=10, b=10),
-        height=CHART_H,
-        showlegend=False,
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-# ======================================================================
-# ROW 3: Feedback + Cost + Top Users — KPI tiles + bar charts
-# ======================================================================
-rated_pct = feedback_count / total_queries * 100 if total_queries else 0
-total_bytes = cost_df["cost_bytes"].sum() if not cost_df.empty else 0
-avg_cost = cost_df["cost_usd"].mean() if not cost_df.empty else 0
-queries_per_user = total_queries / active_users if active_users else 0
-top_user_series = real_queries["user_name"].value_counts()
-top_user_name = top_user_series.index[0] if len(top_user_series) > 0 else "—"
-
-TILE = (
-    '<div class="kpi-card" style="min-height:70px;text-align:center;">'
-    '<div class="kpi-label">{label}</div>'
-    '<div class="kpi-value"{style}>{value}</div></div>'
-)
-
-r3a, r3b, r3c = st.columns(3)
-
-with r3a:
-    with st.container(border=True):
-        st.markdown('<div class="section-header" style="border-color:#22C55E;">'
-                    'Feedback Snapshot</div>', unsafe_allow_html=True)
-        fc1, fc2, fc3 = st.columns(3)
-        fc1.markdown(TILE.format(label="Thumbs Up", value=up_count,
-                                 style=' style="color:#22C55E;"'), unsafe_allow_html=True)
-        fc2.markdown(TILE.format(label="Thumbs Down", value=down_count,
-                                 style=' style="color:#EF4444;"'), unsafe_allow_html=True)
-        fc3.markdown(TILE.format(label="Rated", value=f"{rated_pct:.0f}%",
-                                 style=""), unsafe_allow_html=True)
-        if not fb.empty:
-            fb_domain = fb.groupby("domain")["rating"].apply(
-                lambda x: (x == "up").sum() / len(x) * 100
-            ).reset_index(name="sat_pct").sort_values("sat_pct", ascending=True)
-            fig = go.Figure(go.Bar(
-                x=fb_domain["sat_pct"], y=fb_domain["domain"], orientation="h",
-                marker_color=[DOMAIN_COLORS.get(d, "#94A3B8") for d in fb_domain["domain"]],
-                text=[f"{v:.0f}%" for v in fb_domain["sat_pct"]], textposition="auto",
-            ))
-            fig.update_layout(template="plotly_white", margin=dict(l=10, r=10, t=5, b=10),
-                              height=150, xaxis=dict(title=None, range=[0, 100]),
-                              yaxis=dict(title=None))
-            st.plotly_chart(fig, use_container_width=True)
-
-with r3b:
-    with st.container(border=True):
-        st.markdown('<div class="section-header" style="border-color:#F97316;">'
-                    'Cost by Domain</div>', unsafe_allow_html=True)
-        cc1, cc2, cc3 = st.columns(3)
-        cc1.markdown(TILE.format(label="Total Cost", value=f"${total_cost:.2f}",
-                                 style=""), unsafe_allow_html=True)
-        cc2.markdown(TILE.format(label="Data Scanned",
-                                 value=f"{total_bytes / (1024 ** 3):.1f} GB",
-                                 style=""), unsafe_allow_html=True)
-        cc3.markdown(TILE.format(label="Avg/Query", value=f"${avg_cost:.4f}",
-                                 style=""), unsafe_allow_html=True)
-        if not cost_df.empty:
-            cost_by_domain = (
-                cost_df.groupby("domain")["cost_usd"]
-                .sum().reset_index().sort_values("cost_usd", ascending=True)
-            )
-            fig = go.Figure(go.Bar(
-                x=cost_by_domain["cost_usd"], y=cost_by_domain["domain"], orientation="h",
-                marker_color=[DOMAIN_COLORS.get(d, "#94A3B8") for d in cost_by_domain["domain"]],
-                text=[f"${v:.3f}" for v in cost_by_domain["cost_usd"]], textposition="auto",
-            ))
-            fig.update_layout(template="plotly_white", margin=dict(l=10, r=10, t=5, b=10),
-                              height=150, xaxis=dict(title=None), yaxis=dict(title=None))
-            st.plotly_chart(fig, use_container_width=True)
-
-with r3c:
-    with st.container(border=True):
-        st.markdown('<div class="section-header" style="border-color:#3B82F6;">'
-                    'Most Active Users</div>', unsafe_allow_html=True)
-        uc1, uc2, uc3 = st.columns(3)
-        uc1.markdown(TILE.format(label="Users", value=active_users,
-                                 style=""), unsafe_allow_html=True)
-        uc2.markdown(TILE.format(label="Avg Queries", value=f"{queries_per_user:.0f}",
-                                 style=""), unsafe_allow_html=True)
-        uc3.markdown(TILE.format(label="Top User", value=top_user_name,
-                                 style=""), unsafe_allow_html=True)
-        user_activity = (
-            real_queries.groupby("user_name")
-            .size().reset_index(name="queries")
-            .sort_values("queries", ascending=True).tail(7)
-        )
-        fig = go.Figure(go.Bar(
-            x=user_activity["queries"], y=user_activity["user_name"], orientation="h",
-            marker_color=COLORS["primary"],
-            text=user_activity["queries"], textposition="auto",
-        ))
-        fig.update_layout(template="plotly_white", margin=dict(l=10, r=10, t=5, b=10),
-                          height=150, xaxis=dict(title=None), yaxis=dict(title=None))
-        st.plotly_chart(fig, use_container_width=True)
-
-# ======================================================================
-# ROW 4: Errors + Freshness + Feedback — summary KPI cards
-# ======================================================================
-error_count = len(errors)
-error_types_count = errors["error_type"].nunique() if not errors.empty else 0
+_gov_per_ds: dict[str, int] = {}
+for (_ds, _), _ in _gov_map.items():
+    _gov_per_ds[_ds] = _gov_per_ds.get(_ds, 0) + 1
+governed = sum(_gov_per_ds.values())
+_ds_to_q = [p["dataset"] for p in _projects if p.get("dataset") and p.get("status") in ("active", "system")]
+_ds_stats = get_dataset_stats(_ds_to_q) if _ds_to_q else {}
+total_tables_all = sum(s["table_count"] for s in _ds_stats.values())
 
 try:
-    freshness = get_table_freshness()
-    if not freshness.empty:
+    fresh_df = get_table_freshness()
+    if not fresh_df.empty:
         from datetime import UTC, datetime
-        now = datetime.now(UTC)
-        freshness["hours_ago"] = freshness["last_modified"].apply(
-            lambda ts: (now - ts.replace(tzinfo=UTC)).total_seconds() / 3600
-            if pd.notna(ts) else None
-        )
-        fresh_count = int((freshness["hours_ago"] < 6).sum())
-        stale_count = int((freshness["hours_ago"] >= 24).sum())
-        tables_tracked = len(freshness)
+        _now = datetime.now(UTC)
+        fresh_df["h"] = fresh_df["last_modified"].apply(
+            lambda ts: (_now - ts.replace(tzinfo=UTC)).total_seconds() / 3600 if pd.notna(ts) else None)
+        n_fresh = int((fresh_df["h"] < 24).sum())
+        n_stale = int((fresh_df["h"] >= 72).sum())
+        n_tables = len(fresh_df)
     else:
-        fresh_count, stale_count, tables_tracked = 0, 0, 0
+        n_fresh, n_stale, n_tables = 0, 0, 0
 except Exception:
-    fresh_count, stale_count, tables_tracked = 0, 0, 0
-
-r4a, r4b, r4c = st.columns(3)
-
-with r4a:
-    with st.container(border=True):
-        st.markdown('<div class="section-header" style="border-color:#EF4444;">'
-                    'Errors</div>', unsafe_allow_html=True)
-        ec1, ec2 = st.columns(2)
-        err_color = COLORS["success"] if error_count == 0 else COLORS["danger"]
-        ec1.markdown(TILE.format(label="Failed Queries", value=error_count,
-                                 style=f' style="color:{err_color};"'), unsafe_allow_html=True)
-        ec2.markdown(TILE.format(label="Error Types", value=error_types_count,
-                                 style=""), unsafe_allow_html=True)
-
-with r4b:
-    with st.container(border=True):
-        st.markdown('<div class="section-header" style="border-color:#8B5CF6;">'
-                    'Data Freshness</div>', unsafe_allow_html=True)
-        dc1, dc2, dc3 = st.columns(3)
-        dc1.markdown(TILE.format(label="Tables", value=tables_tracked,
-                                 style=""), unsafe_allow_html=True)
-        dc2.markdown(TILE.format(label="Fresh (&lt;6h)", value=fresh_count,
-                                 style=f' style="color:{COLORS["success"]};"'),
-                     unsafe_allow_html=True)
-        dc3.markdown(TILE.format(label="Stale (&gt;24h)", value=stale_count,
-                                 style=f' style="color:{COLORS["danger"]};"'),
-                     unsafe_allow_html=True)
-
-with r4c:
-    with st.container(border=True):
-        st.markdown('<div class="section-header" style="border-color:#64748B;">'
-                    'Feedback</div>', unsafe_allow_html=True)
-        fbc1, fbc2 = st.columns(2)
-        fbc1.markdown(TILE.format(label="Total Ratings", value=feedback_count,
-                                  style=""), unsafe_allow_html=True)
-        sat_display = f"{satisfaction:.0f}%" if feedback_count > 0 else "N/A"
-        sat_color = COLORS["success"] if satisfaction >= 70 else COLORS["warning"]
-        fbc2.markdown(TILE.format(label="Satisfaction", value=sat_display,
-                                  style=f' style="color:{sat_color};"'), unsafe_allow_html=True)
+    n_fresh, n_stale, n_tables = 0, 0, 0
+    fresh_df = pd.DataFrame()
+health_pct = round((n_fresh * 100 + (n_tables - n_fresh - n_stale) * 50) / n_tables) if n_tables > 0 else 0
+gov_pct = round(governed / total_tables_all * 100, 1) if total_tables_all > 0 else 0
+proj_governed = sum(1 for p in _active if _gov_per_ds.get(p.get("dataset", ""), 0) > 0)
+proj_pct = round(proj_governed / len(_active) * 100, 1) if _active else 0
 
 # ======================================================================
-# ROW 5: Action Items — auto-generated from data
+# ROW 1 — 5 KPI cards
 # ======================================================================
-st.markdown("")
-st.markdown('<div class="section-header">Action Items</div>', unsafe_allow_html=True)
+err_badge = (
+    f'<span class="kc-badge down">+{err_rate:.1f}%</span>' if err_rate > 5
+    else f'<span class="kc-badge up">{err_rate:.1f}%</span>'
+)
 
-actions = []
+st.markdown(
+    f'<div class="kpi-row">'
 
-# Check for errors
-if error_count > 0:
-    top_err = errors["error_type"].value_counts().index[0]
-    actions.append({
-        "icon": "&#9888;",  # warning
-        "color": COLORS["danger"],
-        "title": f"{error_count} failed queries",
-        "detail": f"Most common: <strong>{top_err}</strong> — check the Errors tab",
-        "priority": "high",
-    })
+    f'<div class="kc c-blue">'
+    f'<div class="kc-head"><span class="kc-label">Active Users</span></div>'
+    f'<div class="kc-val">{n_users}</div>'
+    f'<div class="kc-sub">across {len(_active)} projects</div></div>'
 
-# Check for stale tables
-if stale_count > 0:
-    stale_names = freshness[freshness["hours_ago"] >= 24]["table_name"].tolist()[:3]
-    stale_preview = ", ".join(stale_names)
-    actions.append({
-        "icon": "&#9203;",  # clock
-        "color": COLORS["warning"],
-        "title": f"{stale_count} stale tables (>24h)",
-        "detail": f"Including: <strong>{stale_preview}</strong> — data pipeline may need attention",
-        "priority": "medium",
-    })
+    f'<div class="kc c-purple">'
+    f'<div class="kc-head"><span class="kc-label">Total Queries</span></div>'
+    f'<div class="kc-val">{total_q:,}</div>'
+    f'<div class="kc-sub">{total_q / max(n_users,1):.1f} avg per user</div></div>'
 
-# Check for misconfigured users
-bad_users = [u for u in df["user_name"].unique() if "${" in str(u) or u == "unknown"]
-if bad_users:
-    actions.append({
-        "icon": "&#128100;",  # person
-        "color": COLORS["warning"],
-        "title": f"{len(bad_users)} misconfigured user(s)",
-        "detail": f"Users logged as <strong>{', '.join(bad_users)}</strong> — "
-                  "they need to run <code>/taleemabad-setup</code> or update to v0.12.3+",
-        "priority": "medium",
-    })
+    f'<div class="kc c-pink">'
+    f'<div class="kc-head"><span class="kc-label">Governed Projects</span>'
+    f'<span class="kc-corner">{proj_governed} / {len(_active)}</span></div>'
+    f'<div class="kc-val">{proj_pct}%</div>'
+    f'<div class="kc-bar"><div class="kc-bar-fill" style="width:{proj_pct}%;background:#EC4899;"></div></div>'
+    f'<div class="kc-sub">{proj_governed} governed of {len(_active)} total</div></div>'
 
-# Check for no feedback
-if feedback_count == 0 and total_queries > 10:
-    actions.append({
-        "icon": "&#128172;",  # speech bubble
-        "color": COLORS["secondary"],
-        "title": "No user feedback yet",
-        "detail": f"{total_queries} queries but 0 ratings — "
-                  "consider encouraging team to give thumbs up/down on results",
-        "priority": "low",
-    })
+    f'<div class="kc c-green">'
+    f'<div class="kc-head"><span class="kc-label">Governed Tables</span>'
+    f'<span class="kc-corner">{governed} / {total_tables_all}</span></div>'
+    f'<div class="kc-val">{gov_pct}%</div>'
+    f'<div class="kc-bar"><div class="kc-bar-fill" style="width:{gov_pct}%;background:#10B981;"></div></div>'
+    f'<div class="kc-sub">{governed} governed of {total_tables_all} total</div></div>'
 
-# Check for low adoption (few users)
-if active_users < 3 and total_queries > 0:
-    actions.append({
-        "icon": "&#128101;",  # group
-        "color": COLORS["secondary"],
-        "title": f"Low adoption — only {active_users} user(s)",
-        "detail": "Consider onboarding more team members to the governed data layer",
-        "priority": "low",
-    })
+    f'<div class="kc c-red">'
+    f'<div class="kc-head"><span class="kc-label">Error Rate</span>{err_badge}</div>'
+    f'<div class="kc-val">{err_rate:.1f}%</div>'
+    f'<div class="kc-sub">{err_count} errors / {total_q} queries</div></div>'
 
-# Check for high error rate
-if error_rate > 10:
-    actions.append({
-        "icon": "&#9762;",  # biohazard
-        "color": COLORS["danger"],
-        "title": f"High error rate: {error_rate:.0f}%",
-        "detail": "More than 1 in 10 queries are failing — review query patterns and rule coverage",
-        "priority": "high",
-    })
+    f'</div>',
+    unsafe_allow_html=True,
+)
 
-# Check for active projects with dataset but no governed tables
-for _ap in _active_projects:
-    _ap_ds = _ap.get("dataset")
-    if _ap_ds and _governed_per_ds.get(_ap_ds, 0) == 0:
-        actions.append({
-            "icon": "&#128196;",  # page with curl
-            "color": COLORS["warning"],
-            "title": f"No governance rules for {_ap.get('name', _ap_ds)}",
-            "detail": f"Dataset <strong>{_ap_ds}</strong> has tables but 0 governed rules — "
-                      "add rule files under <code>.claude/rules/</code> to enable governed queries",
-            "priority": "medium",
-        })
+# ======================================================================
+# ROW 2 — 3 SVG ring charts (pure HTML grid)
+# ======================================================================
+def _ring(pct: float, c1: str, c2: str, rid: str) -> str:
+    r, circ = 50, 2 * math.pi * 50
+    off = circ * (1 - pct / 100)
+    return (
+        f'<svg viewBox="0 0 120 120">'
+        f'<circle cx="60" cy="60" r="{r}" fill="none" stroke="#F1F5F9" stroke-width="10"/>'
+        f'<circle cx="60" cy="60" r="{r}" fill="none" stroke="url(#{rid})" stroke-width="10" '
+        f'stroke-dasharray="{circ:.1f}" stroke-dashoffset="{off:.1f}" stroke-linecap="round" '
+        f'transform="rotate(-90 60 60)"/>'
+        f'<defs><linearGradient id="{rid}" x1="0%" y1="0%" x2="100%" y2="0%">'
+        f'<stop offset="0%" stop-color="{c1}"/><stop offset="100%" stop-color="{c2}"/>'
+        f'</linearGradient></defs></svg>'
+    )
 
-# Check for active projects with no dataset (not yet migrated)
-for _ap in _active_projects:
-    if not _ap.get("dataset"):
-        actions.append({
-            "icon": "&#128274;",  # lock
-            "color": COLORS["secondary"],
-            "title": f"{_ap.get('name', 'Unknown project')} — data not migrated",
-            "detail": "This project has no BigQuery dataset yet. "
-                      "Data migration is needed before governed queries are possible.",
-            "priority": "low",
-        })
+def _pill(pct: float, hi: float = 70, lo: float = 50) -> tuple[str, str]:
+    if pct >= hi: return "Good", "good"
+    if pct >= lo: return "Needs Attention", "warn"
+    return "Critical", "bad"
 
-# All clear
-if not actions:
+cl1, cc1 = _pill(confidence)
+cl2, cc2 = _pill(health_pct, 70, 40)
+cl3, cc3 = _pill(sat, 70, 50) if fb_total > 0 else ("No Data", "warn")
+
+st.markdown(
+    f'<div class="score-row">'
+
+    f'<div class="sc">'
+    f'<h3>SYSTEM CONFIDENCE</h3>'
+    f'<div class="ring-wrap">{_ring(confidence, "#6366F1", "#10B981", "g1")}'
+    f'<div class="ring-center">{confidence:.1f}%</div></div>'
+    f'<span class="status-pill {cc1}">&#9679; {cl1}</span></div>'
+
+    f'<div class="sc">'
+    f'<h3>PIPELINE HEALTH</h3>'
+    f'<div class="ring-wrap">{_ring(health_pct, "#14B8A6", "#F59E0B", "g2")}'
+    f'<div class="ring-center">{health_pct}%</div></div>'
+    f'<span class="status-pill {cc2}">&#9679; {cl2}</span></div>'
+
+    f'<div class="sc">'
+    f'<h3>USER SATISFACTION</h3>'
+    f'<div class="ring-wrap">{_ring(sat if fb_total else 0, "#F97316", "#EC4899", "g3")}'
+    f'<div class="ring-center">{sat:.1f}%</div></div>'
+    f'<span class="status-pill {cc3}">&#9679; {cl3}</span></div>'
+
+    f'</div>',
+    unsafe_allow_html=True,
+)
+
+# ======================================================================
+# ROW 3 — Activity Trend (plotly) + Domain bars (HTML) — use st.columns for plotly
+# ======================================================================
+df["date"] = pd.to_datetime(df["timestamp"]).dt.date
+daily = df.groupby("date").agg(queries=("event_id", "count"), users=("user_name", "nunique")).reset_index()
+
+fig = go.Figure()
+fig.add_trace(go.Scatter(
+    x=daily["date"], y=daily["queries"], name="Queries", mode="lines+markers",
+    line=dict(color=COLORS["primary"], width=2, shape="spline"), marker=dict(size=4),
+    fill="tozeroy", fillcolor="rgba(59,130,246,0.05)",
+))
+fig.add_trace(go.Bar(
+    x=daily["date"], y=daily["users"], name="Users", yaxis="y2",
+    marker_color=COLORS["purple"], opacity=0.3, marker_cornerradius=3,
+))
+fig.update_layout(
+    template="plotly_white", margin=dict(l=0, r=0, t=0, b=0), height=240,
+    legend=dict(orientation="h", yanchor="top", y=1.1, x=0, font_size=11),
+    yaxis=dict(title=None, gridcolor="#F1F5F9"),
+    yaxis2=dict(title=None, overlaying="y", side="right", showgrid=False),
+    xaxis=dict(title=None), hovermode="x unified",
+    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+    font=dict(family="Inter, system-ui, sans-serif", size=11),
+)
+
+dom = df.groupby("domain").size().reset_index(name="n").sort_values("n", ascending=False)
+dom["pct"] = (dom["n"] / dom["n"].sum() * 100).round(1)
+_DOM_ICONS = {
+    "observations": ("#F97316", "Ob"), "teachers": ("#3B82F6", "Te"),
+    "lesson_plans": ("#10B981", "LP"), "training": ("#8B5CF6", "Tr"),
+    "coaching": ("#EC4899", "Co"), "students": ("#14B8A6", "St"),
+    "events": ("#6366F1", "Ev"), "platform": ("#F59E0B", "Pl"), "other": ("#94A3B8", "Ot"),
+}
+domain_html = ""
+for _, r in dom.iterrows():
+    d = r["domain"]
+    color, abbr = _DOM_ICONS.get(d, ("#94A3B8", d[:2].title()))
+    domain_html += (
+        f'<div class="dom-row">'
+        f'<div class="dom-icon" style="background:{color};">{abbr}</div>'
+        f'<div class="dom-info"><div class="dom-name">{d.replace("_"," ").title()}</div>'
+        f'<div class="dom-bar-bg"><div class="dom-bar-fill" style="width:{max(4,r["pct"])}%;background:{color};"></div></div></div>'
+        f'<div class="dom-pct" style="color:{color};">{r["pct"]}%</div></div>'
+    )
+
+# Use 2 st.columns with matching proportions
+ch_l, ch_r = st.columns([1.6, 1], gap="medium")
+with ch_l:
+    section_header("Activity Trend")
+    st.plotly_chart(fig, use_container_width=True)
+with ch_r:
     st.markdown(
-        '<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;'
-        'padding:16px;text-align:center;color:#166534;">'
-        '&#10004; All clear — no action items right now</div>',
+        f'<div style="background:white;border:1px solid #E2E8F0;border-radius:14px;padding:22px;'
+        f'box-shadow:0 1px 3px rgba(0,0,0,0.04);margin-top:0;">'
+        f'<h3 style="font-size:0.9rem;font-weight:700;color:#0F172A;margin:0 0 12px;">Queries by Domain</h3>'
+        f'{domain_html}</div>',
         unsafe_allow_html=True,
     )
-else:
-    # Sort by priority
-    priority_order = {"high": 0, "medium": 1, "low": 2}
-    actions.sort(key=lambda a: priority_order.get(a["priority"], 9))
 
-    for action in actions:
-        bg = "#FEF2F2" if action["priority"] == "high" else (
-            "#FFFBEB" if action["priority"] == "medium" else "#F8FAFC"
-        )
-        border = action["color"]
-        st.markdown(
-            f'<div style="background:{bg};border-left:4px solid {border};'
-            f'border-radius:8px;padding:12px 16px;margin-bottom:8px;'
-            f'box-shadow:0 1px 2px rgba(0,0,0,0.04);">'
-            f'<div style="font-weight:600;color:#1E293B;">'
-            f'{action["icon"]} {action["title"]}</div>'
-            f'<div style="color:#64748B;font-size:0.85rem;margin-top:4px;">'
-            f'{action["detail"]}</div></div>',
-            unsafe_allow_html=True,
-        )
+# ======================================================================
+# ROW 4 — Bottom: Errors | Cost | Actions (pure HTML grid)
+# ======================================================================
+st.markdown('<div style="height:14px;"></div>', unsafe_allow_html=True)
 
-# -- Footer --
-st.markdown("---")
+err_types_df = errs.groupby("error_type").size().reset_index(name="count").sort_values("count", ascending=False) if not errs.empty else pd.DataFrame()
+err_colors_list = ["#EF4444", "#F59E0B", "#F97316", "#EC4899", "#94A3B8"]
+err_html = ""
+for i, (_, r) in enumerate(err_types_df.head(5).iterrows()):
+    c = err_colors_list[i % len(err_colors_list)]
+    err_html += f'<div class="err-row"><div class="err-left"><div class="err-dot" style="background:{c};"></div>{r["error_type"]}</div><span style="font-weight:600;color:#0F172A;">{r["count"]}</span></div>'
+if not err_html:
+    err_html = '<div style="color:#10B981;font-size:0.84rem;padding:8px 0;">No errors this period</div>'
+
+avg_cost = total_cost / total_q if total_q > 0 else 0
+avg_cost_user = total_cost / n_users if n_users > 0 else 0
+total_bytes = cost_df["cost_bytes"].sum() if not cost_df.empty else 0
+cost_color = "#10B981" if total_cost < 1 else ("#F59E0B" if total_cost < 10 else "#EF4444")
+
+acts = []
+if err_count > 0:
+    top_e = errs["error_type"].value_counts().index[0]
+    acts.append(("high", "#EF4444", "#FEE2E2", "#991B1B", f"Pipeline: {err_count} failed — top: {top_e}"))
+if n_stale > 0:
+    ns = fresh_df[fresh_df["h"] >= 72]["table_name"].tolist()[:2]
+    acts.append(("med", "#F59E0B", "#FEF3C7", "#92400E", f"{n_stale} stale tables: {', '.join(ns)}"))
+bad = [u for u in df["user_name"].unique() if "${" in str(u) or u == "unknown"]
+if bad:
+    acts.append(("med", "#F59E0B", "#FEF3C7", "#92400E", f"{len(bad)} misconfigured user(s)"))
+if fb_total == 0 and total_q > 10:
+    acts.append(("low", "#3B82F6", "#DBEAFE", "#1E40AF", "No feedback yet — encourage ratings"))
+if n_users < 3 and total_q > 0:
+    acts.append(("low", "#8B5CF6", "#EDE9FE", "#5B21B6", f"Low adoption — only {n_users} users"))
+for p in _active:
+    ds = p.get("dataset")
+    if ds and _gov_per_ds.get(ds, 0) == 0:
+        acts.append(("med", "#F59E0B", "#FEF3C7", "#92400E", f"No rules: {p.get('name', ds)}"))
+
+actions_html = ""
+for prio, color, bg, tc, text in acts:
+    actions_html += (
+        f'<div class="act-item" style="border-left-color:{color};background:{bg};">'
+        f'<span class="act-badge" style="background:{bg};color:{tc};">{prio}</span>{text}</div>'
+    )
+if not actions_html:
+    actions_html = '<div style="color:#10B981;font-size:0.84rem;">All clear — no actions needed</div>'
+
 st.markdown(
-    '<p style="text-align:center;color:#94A3B8;font-size:0.8rem;">'
-    "Use the sidebar for deep dives into Query Analytics, "
-    "Feedback, Cost, Errors, or Freshness.</p>",
+    f'<div class="bottom-row">'
+
+    f'<div class="bot-card">'
+    f'<h3>Error Breakdown</h3>{err_html}'
+    f'<div style="margin-top:10px;padding-top:8px;border-top:1px solid #F1F5F9;display:flex;justify-content:space-between;font-size:0.8rem;">'
+    f'<span style="color:#64748B;">Total errors</span><span style="font-weight:700;">{err_count} / {total_q}</span></div></div>'
+
+    f'<div class="bot-card">'
+    f'<h3>Cost Tracker</h3>'
+    f'<div class="cost-big" style="color:{cost_color};">${total_cost:.2f}</div>'
+    f'<div class="cost-label">Total spend this period</div>'
+    f'<div class="cost-row"><span style="color:#64748B;">Avg per query</span><span style="font-weight:600;">${avg_cost:.5f}</span></div>'
+    f'<div class="cost-row"><span style="color:#64748B;">Avg per user</span><span style="font-weight:600;">${avg_cost_user:.4f}</span></div>'
+    f'<div class="cost-row"><span style="color:#64748B;">Data scanned</span><span style="font-weight:600;">{total_bytes / (1024**3):.2f} GB</span></div></div>'
+
+    f'<div class="bot-card"><h3>Actions Needed</h3>{actions_html}</div>'
+
+    f'</div>',
     unsafe_allow_html=True,
 )

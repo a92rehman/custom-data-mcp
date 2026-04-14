@@ -177,3 +177,41 @@ def get_table_freshness(days: int = 30) -> pd.DataFrame:
         ).reset_index(drop=True)
 
     return pd.DataFrame(columns=["dataset", "table_name", "last_modified"])
+
+
+@st.cache_data(ttl=600)
+def get_dataset_freshness() -> pd.DataFrame:
+    """Get dataset-level freshness: earliest and latest table modification per dataset.
+
+    Returns DataFrame with columns:
+        dataset, table_count, oldest_table, oldest_modified, newest_table, newest_modified
+    """
+    client = get_bq_client()
+    cfg = get_config()
+    project = cfg["project"]
+    datasets_to_check = ["tbproddb", "RUMI_DB", "TaleemHub_DB"]
+    all_results = []
+
+    for dataset in datasets_to_check:
+        sql = f"""
+            SELECT
+                '{dataset}' AS dataset,
+                COUNT(*) AS table_count,
+                MIN(TIMESTAMP_MILLIS(last_modified_time)) AS oldest_modified,
+                MAX(TIMESTAMP_MILLIS(last_modified_time)) AS newest_modified,
+                MIN(TIMESTAMP_MILLIS(creation_time)) AS earliest_created
+            FROM `{project}.{dataset}.__TABLES__`
+        """
+        try:
+            df = client.query(sql).to_dataframe()
+            if not df.empty:
+                all_results.append(df)
+        except Exception:
+            pass
+
+    if all_results:
+        return pd.concat(all_results, ignore_index=True)
+
+    return pd.DataFrame(columns=[
+        "dataset", "table_count", "oldest_modified", "newest_modified", "earliest_created",
+    ])

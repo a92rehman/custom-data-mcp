@@ -21,18 +21,18 @@ from taleemabad_data_mcp.dashboard.components.styles import (
     CHART_H_SM,
     COLORS,
     inject_page_css,
+    page_header,
+    section_header,
 )
 from taleemabad_data_mcp.dashboard.data.queries import get_activity_log
 
 inject_page_css()
 
-st.header("Cost Tracking")
-st.caption("BigQuery spend analysis — who is querying what, and how much does it cost?")
+page_header("Cost Tracking", "BigQuery spend analysis — who is querying what, and how much does it cost?")
 
 filters = render_filters()
 inject_auto_refresh(get_refresh_seconds())
 clear_cache_if_needed(get_refresh_seconds())
-st.markdown("---")
 df = get_activity_log(**filters)
 
 if df.empty:
@@ -66,15 +66,13 @@ cost_df["date"] = pd.to_datetime(cost_df["timestamp"]).dt.date
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown(
-        '<div class="section-header">Daily Spend</div>',
-        unsafe_allow_html=True,
-    )
+    section_header("Daily Spend", "orange")
     daily = cost_df.groupby("date")["cost_usd"].sum().reset_index()
     fig = go.Figure()
     fig.add_trace(go.Bar(
         x=daily["date"], y=daily["cost_usd"],
-        marker_color=COLORS["primary"],
+        marker_color=COLORS["accent"],
+        marker_cornerradius=4,
         text=[f"${v:.3f}" for v in daily["cost_usd"]],
         textposition="outside", textfont_size=9,
     ))
@@ -82,27 +80,28 @@ with col1:
         template="plotly_white",
         margin=dict(l=10, r=10, t=10, b=10), height=CHART_H,
         xaxis=dict(title=None), yaxis=dict(title=None),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, system-ui, sans-serif"),
     )
     st.plotly_chart(fig, use_container_width=True)
 
 with col2:
-    st.markdown(
-        '<div class="section-header">Cumulative Spend</div>',
-        unsafe_allow_html=True,
-    )
+    section_header("Cumulative Spend", "amber")
     daily_sorted = daily.sort_values("date")
     daily_sorted["cumulative"] = daily_sorted["cost_usd"].cumsum()
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=daily_sorted["date"], y=daily_sorted["cumulative"],
         mode="lines+markers", fill="tozeroy",
-        line=dict(color=COLORS["accent"], width=2),
+        line=dict(color=COLORS["purple"], width=2),
         marker=dict(size=4),
     ))
     fig.update_layout(
         template="plotly_white",
         margin=dict(l=10, r=10, t=10, b=10), height=CHART_H,
         xaxis=dict(title=None), yaxis=dict(title=None),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, system-ui, sans-serif"),
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -110,10 +109,7 @@ with col2:
 col3, col4 = st.columns(2)
 
 with col3:
-    st.markdown(
-        '<div class="section-header">Cost by Domain</div>',
-        unsafe_allow_html=True,
-    )
+    section_header("Cost by Domain", "purple")
     by_domain = (
         cost_df.groupby("domain")["cost_usd"]
         .sum().reset_index().sort_values("cost_usd", ascending=True)
@@ -124,6 +120,7 @@ with col3:
     fig = go.Figure(go.Bar(
         x=by_domain["cost_usd"], y=by_domain["domain"],
         orientation="h", marker_color=d_colors,
+        marker_cornerradius=4,
         text=[f"${v:.3f}" for v in by_domain["cost_usd"]],
         textposition="auto",
     ))
@@ -131,21 +128,21 @@ with col3:
         template="plotly_white",
         margin=dict(l=10, r=10, t=10, b=10), height=CHART_H_SM,
         xaxis=dict(title=None), yaxis=dict(title=None),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, system-ui, sans-serif"),
     )
     st.plotly_chart(fig, use_container_width=True)
 
 with col4:
-    st.markdown(
-        '<div class="section-header">Cost by User</div>',
-        unsafe_allow_html=True,
-    )
+    section_header("Cost by User", "")
     by_user = (
         cost_df.groupby("user_name")["cost_usd"]
         .sum().reset_index().sort_values("cost_usd", ascending=True)
     )
     fig = go.Figure(go.Bar(
         x=by_user["cost_usd"], y=by_user["user_name"],
-        orientation="h", marker_color=COLORS["primary"],
+        orientation="h", marker_color=COLORS["teal"],
+        marker_cornerradius=4,
         text=[f"${v:.3f}" for v in by_user["cost_usd"]],
         textposition="auto",
     ))
@@ -153,14 +150,13 @@ with col4:
         template="plotly_white",
         margin=dict(l=10, r=10, t=10, b=10), height=CHART_H_SM,
         xaxis=dict(title=None), yaxis=dict(title=None),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, system-ui, sans-serif"),
     )
     st.plotly_chart(fig, use_container_width=True)
 
 # -- Most expensive queries --
-st.markdown(
-    '<div class="section-header">Most Expensive Queries</div>',
-    unsafe_allow_html=True,
-)
+section_header("Most Expensive Queries", "red")
 top = cost_df.nlargest(10, "cost_usd")
 display_cols = [
     "timestamp", "user_name", "domain", "cost_usd",
