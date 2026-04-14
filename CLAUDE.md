@@ -105,16 +105,15 @@ requirements.txt                # Railway dependencies (includes dashboard + MCP
 | `describe_data` | Descriptive statistics (mean, median, min, max, nulls, unique) on query results |
 
 ## Environment Variables
+
+These are **server-side only** (Railway deployment). Users do NOT need to set any environment variables.
+
 ```
+# Railway MCP server environment:
 BIGQUERY_PROJECT=niete-bq-prod             # Required
-BIGQUERY_DATASETS=RUMI_DB,TaleemHub_DB,tbproddb  # Optional (auto-discovers if empty)
-GOOGLE_APPLICATION_CREDENTIALS=<path>      # Local mode: path to service account JSON
-GOOGLE_CREDENTIALS_JSON=<json>             # Remote mode: full JSON content (Railway env var)
+GOOGLE_CREDENTIALS_JSON=<json>             # Full JSON content of service account key
+TALEEMABAD_REMOTE_MODE=true                # Enable HTTP transport
 BIGQUERY_MAX_BYTES=1073741824              # Default 1GB
-CACHE_TTL_SECONDS=3600                     # Default 1hr
-LOG_LEVEL=INFO
-TALEEMABAD_USER=<email>                    # Work email for audit tracking (set by setup)
-TALEEMABAD_REMOTE_MODE=true                # Enable HTTP transport (Railway only)
 AUDIT_DATASET=mcp_audit                    # Default
 AUDIT_TABLE=activity_log                   # Default
 ```
