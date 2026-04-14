@@ -12,6 +12,12 @@ User asks about:
 
 ## Mandatory Clarifications
 
+### Engagement / Usage / Retention Queries
+If the user asks about training **engagement**, **usage**, or **retention**, always ask:
+- "What specific duration? (e.g., last 7 days, last 30 days, this week, this month, this session)"
+- Never assume a time window — engagement metrics are meaningless without an explicit period
+- Clarify whether they mean: training video engagement, quiz activity, level progression, or exam generator usage
+
 ### Which Level
 Ask: "Which training level? A specific level, or all levels?"
 - Levels come from `teacher_training_level` table
@@ -80,3 +86,5 @@ Pass status comes from two sources, merged via COALESCE (q1 preferred, q2 fallba
 - The cross join ensures denominator is always total teachers, not just those who attempted
 - `max_attempt_no` counts attempts — useful for identifying difficult levels
 - `passed_date` is the date of successful completion
+
+> **Product analytics, event catalog, funnels, exam generator, and exam checker:** See `training-product-analytics.md` in this directory.

@@ -20,4 +20,17 @@
 - Always include `WHERE created >= DATE('...')` when querying `events_partitioned` (fallback only)
 - The description on `analytics_events` mentions "Prefer `taleemabad_analytics.activity_events`" — this is a cross-dataset alias; use the `tbproddb.analytics_events` path
 
+## PostgreSQL Databases — Hierarchy (Moawin / Akhuwat / Rawalpindi)
+
+| Database | Role | Type | Schema | Notes |
+|----------|------|------|--------|-------|
+| `neondb` (Schoolpilot) | **USE THIS** for user/teacher data | PostgreSQL | `public.users`, `public.teachers`, `public.student_scores`, `public.assessments` | CANONICAL. User roster, institutional attributes, student assessments. |
+| `zavia1` (Zavia) | **USE THIS** for AI coaching/LP/assessments | PostgreSQL | `public.lesson_plans`, `public.coaching_sessions`, `public.reading_assessments`, etc. | CANONICAL. AI-generated content, coaching pipeline, quality metrics. |
+
+**Rules:**
+- Every PostgreSQL query must specify database and schema explicitly: `neondb.public.users`, `zavia1.public.lesson_plans`
+- When querying small unpartitioned tables (Schoolpilot/Zavia): full scans acceptable if table < 10,000 rows
+- For large queries: check with data team on partition strategy
+- No hardcoded credentials in queries — use environment variable substitution
+
 - Design rationale: docs/VISION.md Section 10

@@ -34,6 +34,13 @@ User asks about:
 - 18 unique assessments
 - Small dataset — may be pilot/test data
 
+## Engagement / Usage / Retention Queries
+If the user asks about student data **engagement**, **usage**, or **retention**, always ask:
+- "What specific duration? (e.g., last 7 days, last 30 days, this week, this month)"
+- Never assume a time window
+
+> **Product analytics for student list, results, FLN, report cards:** See `student-product-analytics.md` in this directory.
+
 ## Conflict Details
 
 The CEO's KPI document row points to this table, but during the reconciliation meeting the transcript states: "AI student assessments are not active in Islamabad right now." This creates ambiguity:

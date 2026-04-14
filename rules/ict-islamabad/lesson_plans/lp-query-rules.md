@@ -20,6 +20,12 @@ Formula: `lp_ratio = LEAST((userGen_lp_completed + core_lp_completed) / max_clas
 
 ## Mandatory Clarifications
 
+### Engagement / Usage / Retention Queries
+If the user asks about LP **engagement**, **usage**, or **retention**, always ask:
+- "What specific duration? (e.g., last 7 days, last 30 days, this week, this month, this session)"
+- Never assume a time window — engagement metrics are meaningless without an explicit period
+- Clarify whether they mean: active teachers using LPs (usage), repeat usage over time (retention), or LP completion rate (engagement)
+
 ### Session
 Always ask: "Which academic session?"
 - Session 2024-25: `session_id = 1`
@@ -103,3 +109,6 @@ Counts teaching days per week from timetable `daysOfWeek` string:
 | Per-teacher overall rate | `user_id` | `AVG(lp_ratio)` |
 | Per-school weekly rate | `EMIS` | `AVG(lp_ratio)` |
 | Status distribution | `lp_status_category` | `COUNT(DISTINCT user_id)` |
+
+
+> **Product analytics, event catalog, funnels, and engagement metrics:** See `lp-product-analytics.md` in this directory.

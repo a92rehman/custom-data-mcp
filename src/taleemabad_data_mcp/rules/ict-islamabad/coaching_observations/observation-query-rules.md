@@ -141,6 +141,14 @@ These are **pre-processed clean tables** maintained by the data team. Use for qu
 - Section inclusion filter (B/C/D question IDs listed above) — defines which scored questions to include
 - `is_active` filters also apply in JOIN conditions on `qo`, `oqg`, `os`, `ot`
 
+## Mandatory Clarifications — Engagement / Usage / Retention Queries
+If the user asks about coaching **engagement**, **usage**, or **retention**, always ask:
+- "What specific duration? (e.g., last 7 days, last 30 days, this week, this month)"
+- Never assume a time window — engagement metrics are meaningless without an explicit period
+- Clarify whether they mean: observation submission activity, feedback generation, or digital coach usage
+
+> **Product analytics, event catalog, coaching funnels, digital coach events:** See `observation-product-analytics.md` in this directory.
+
 ## Important Notes
 
 - Each `Observation_ID` is a unique classroom visit

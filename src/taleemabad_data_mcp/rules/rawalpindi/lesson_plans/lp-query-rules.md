@@ -10,6 +10,12 @@ User asks about:
 
 ## Mandatory Clarifications
 
+### Engagement / Usage / Retention Queries
+If the user asks about LP **engagement**, **usage**, or **retention**, always ask:
+- "What specific duration? (e.g., last 7 days, last 30 days, this week, this month)"
+- Never assume a time window — engagement metrics are meaningless without an explicit period
+- Clarify whether they mean: active teachers generating LPs (usage), repeat generation over time (retention), or LP volume trend (engagement)
+
 ### Time Period
 Ask: "Which time period? Specific date range, or all-time?"
 - `created_at` (DATETIME) is the timestamp column
