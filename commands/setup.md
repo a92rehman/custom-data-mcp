@@ -17,10 +17,8 @@ Validate the domain:
 - If invalid, tell user: "Please use your work email. Allowed domains: @taleemabad.com, @niete.edu.pk, @niete.pk"
 
 ### Step 2: Save configuration
-Write the following to `~/.claude/taleemabad-data-mcp.env`:
-```
-TALEEMABAD_USER=<user_email>
-```
+
+Save email to the env file (used by local stdio server):
 
 On Windows:
 ```
@@ -32,7 +30,22 @@ On macOS/Linux:
 mkdir -p ~/.claude && echo "TALEEMABAD_USER=<user_email>" > ~/.claude/taleemabad-data-mcp.env
 ```
 
-### Step 3: Done
+### Step 3: Set system environment variable
+
+Set `TALEEMABAD_USER` as a persistent OS environment variable so Claude Code can expand `${TALEEMABAD_USER}` in MCP headers.
+
+On Windows (PowerShell — sets for the current user permanently):
+```
+[System.Environment]::SetEnvironmentVariable('TALEEMABAD_USER', '<user_email>', 'User')
+```
+
+On macOS/Linux (add to shell profile):
+```
+echo 'export TALEEMABAD_USER="<user_email>"' >> ~/.bashrc
+echo 'export TALEEMABAD_USER="<user_email>"' >> ~/.zshrc
+```
+
+### Step 4: Done
 Tell the user:
 ```
 Setup complete!
@@ -50,4 +63,5 @@ Then run /mcp to verify:
 |-------|-----|
 | "Setup required" | Run /taleemabad-setup to enter your email |
 | "Unauthorized domain" | Use your work email (@taleemabad.com, @niete.edu.pk, or @niete.pk) |
+| "${TALEEMABAD_USER}" literal in errors | The env var wasn't set. Re-run setup, then restart terminal + Claude Code |
 | MCP server not connecting | Check internet connection, run /mcp to see status |

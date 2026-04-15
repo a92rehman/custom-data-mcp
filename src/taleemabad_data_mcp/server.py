@@ -142,7 +142,10 @@ def _require_auth(app: "AppContext") -> str | None:
         return None
 
     # Email header is optional — used for audit enrichment only
+    # Treat unexpanded env var placeholders (e.g. "${TALEEMABAD_USER}") as absent
     email = _get_request_user_email()
+    if email and (email.startswith("${") or email.startswith("${")):
+        email = None
     if email and not _validate_email_domain(email):
         return f"Unauthorized domain in email '{email}'. Allowed: @taleemabad.com, @niete.edu.pk, @niete.pk"
 
@@ -152,7 +155,11 @@ def _require_auth(app: "AppContext") -> str | None:
 def _get_audit_email(app: "AppContext") -> str | None:
     """Get user email for audit logging. Returns email in remote mode, None in local."""
     if app.remote_mode:
-        return _get_request_user_email()
+        email = _get_request_user_email()
+        # Treat unexpanded env var placeholders as absent
+        if email and (email.startswith("${") or email.startswith("${")):
+            return None
+        return email
     return None
 
 
