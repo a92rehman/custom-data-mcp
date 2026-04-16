@@ -42,6 +42,12 @@ projects:
     region: "moawin-akhuwat"
     description: "Zavia AI platform — coaching, lesson plans, reading assessments for Moawin/Akhuwat"
 
+  - name: "MySchool"
+    dataset: "MySchool_db"
+    status: "active"
+    region: "myschool"
+    description: "School management system — staff (3.6K), students, attendance, infrastructure, results, timetables"
+
   - name: "MCP Audit"
     dataset: "mcp_audit"
     status: "system"

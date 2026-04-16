@@ -119,6 +119,13 @@ When: teacher training levels, course progress, quiz scores
 When: school profiles, infrastructure, geographic hierarchy, visit reports
 - `school-rules.md` — `schools`, `school_profiles` (infrastructure), `school_visit_reports`, `school_improvement_plans`
 
+## MySchool (`myschool/`)
+Dataset: `MySchool_db` (59 tables) — Django school management system | Join key: `emis_code`
+
+### myschool/
+When: MySchool platform data — staff, students, attendance, infrastructure, results, timetables, analytics
+- `myschool-rules.md` — Full schema: `school_staff` (3,613), `notes_userprofile` (3,889), `events_interactionevent` (9,656), infrastructure profiles (21), students (30, early stage), results (0, not yet populated)
+
 ## Cross-Region KPI Comparability
 
 Cross-region comparison is limited to **volume and coverage metrics**. Qualitative comparison (scores, outcomes) is NOT valid because regions use fundamentally different tools and scoring frameworks.
@@ -135,6 +142,6 @@ Cross-region comparison is limited to **volume and coverage metrics**. Qualitati
 | Attendance | Not in scope | Not in scope | Muawin_Akhuwat_db.teacher_attendances | Moawin/Akhuwat only |
 
 ## Database Context
-- **BigQuery:** Project `niete-bq-prod` — `tbproddb` (466 tables, ICT), `RUMI_DB` (70 tables, RWP AI), `TaleemHub_DB` (60 tables, RWP roster), `Muawin_Akhuwat_db` (~50 tables, Schoolpilot), `Zavia_db` (~57 tables, Zavia AI)
+- **BigQuery:** Project `niete-bq-prod` — `tbproddb` (466 tables, ICT), `RUMI_DB` (70 tables, RWP AI), `TaleemHub_DB` (60 tables, RWP roster), `Muawin_Akhuwat_db` (~50 tables, Schoolpilot), `Zavia_db` (~57 tables, Zavia AI), `MySchool_db` (59 tables, school management)
 - **PostgreSQL (Rawalpindi only):** `neondb` (Schoolpilot) and `zavia1` (Zavia) — still PostgreSQL for RWP
 - More datasets will be added after migration from other sources

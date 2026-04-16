@@ -315,7 +315,8 @@ _DOM_ICONS = {
     "coaching": ("#EC4899", "Co"), "students": ("#14B8A6", "St"),
     "events": ("#6366F1", "Ev"), "platform": ("#F59E0B", "Pl"),
     "teacher_acr": ("#059669", "ACR"), "attendance": ("#0891B2", "At"),
-    "schools": ("#7C3AED", "Sc"), "other": ("#94A3B8", "Ot"),
+    "schools": ("#7C3AED", "Sc"), "myschool": ("#0D9488", "MS"),
+    "other": ("#94A3B8", "Ot"),
 }
 domain_html = ""
 for _, r in dom.iterrows():

@@ -131,7 +131,7 @@ def get_table_freshness(days: int = 30) -> pd.DataFrame:
     table_list = ", ".join(f"'{t}'" for t in queried_tables)
 
     # Step 2: Check freshness across all configured datasets
-    datasets_to_check = ["tbproddb", "RUMI_DB", "TaleemHub_DB", "Muawin_Akhuwat_db", "Zavia_db"]
+    datasets_to_check = ["tbproddb", "RUMI_DB", "TaleemHub_DB", "Muawin_Akhuwat_db", "Zavia_db", "MySchool_db"]
     all_results = []
 
     for dataset in datasets_to_check:
@@ -189,7 +189,7 @@ def get_dataset_freshness() -> pd.DataFrame:
     client = get_bq_client()
     cfg = get_config()
     project = cfg["project"]
-    datasets_to_check = ["tbproddb", "RUMI_DB", "TaleemHub_DB", "Muawin_Akhuwat_db", "Zavia_db"]
+    datasets_to_check = ["tbproddb", "RUMI_DB", "TaleemHub_DB", "Muawin_Akhuwat_db", "Zavia_db", "MySchool_db"]
     all_results = []
 
     for dataset in datasets_to_check:

@@ -20,6 +20,7 @@ KNOWN_DATASETS: set[str] = {
     "odk",
     "Muawin_Akhuwat_db",
     "Zavia_db",
+    "MySchool_db",
     "mcp_audit",
     "rwp_proddb",
     "bl_proddb",
@@ -58,6 +59,7 @@ _DIR_TO_DOMAIN: dict[str, str] = {
     "schools": "schools",
     "platform": "platform",
     "teacher_acr": "teacher_acr",
+    "myschool": "myschool",
 }
 
 
