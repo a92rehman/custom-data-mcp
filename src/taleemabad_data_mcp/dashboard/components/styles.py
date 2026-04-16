@@ -41,6 +41,9 @@ DOMAIN_COLORS = {
     "students": "#14B8A6",      # teal
     "events": "#6366F1",        # indigo
     "platform": "#F59E0B",      # amber
+    "teacher_acr": "#059669",   # emerald-700
+    "attendance": "#0891B2",    # cyan-600
+    "schools": "#7C3AED",      # violet-600
     "other": "#94A3B8",         # slate
 }
 
