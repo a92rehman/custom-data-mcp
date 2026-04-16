@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Taleemabad Data MCP — Installation Guide</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #F8FAFC; color: #0F172A; line-height: 1.6; }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 40%, #334155 100%);
+      color: white; padding: 60px 20px 50px; text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: radial-gradient(circle at 30% 50%, rgba(59,130,246,0.15) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 30%, rgba(139,92,246,0.1) 0%, transparent 50%);
+    }
+    .hero * { position: relative; }
+    .hero-badge {
+      display: inline-block; background: rgba(59,130,246,0.2); border: 1px solid rgba(59,130,246,0.3);
+      color: #93C5FD; padding: 6px 16px; border-radius: 100px; font-size: 0.78rem;
+      font-weight: 600; letter-spacing: 0.5px; margin-bottom: 20px; text-transform: uppercase;
+    }
+    .hero h1 { font-size: 2.8rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 12px; }
+    .hero h1 span { background: linear-gradient(135deg, #60A5FA, #A78BFA); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p { font-size: 1.1rem; color: #94A3B8; max-width: 600px; margin: 0 auto 30px; }
+    .hero-version {
+      display: inline-block; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3);
+      color: #6EE7B7; padding: 4px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    /* Container */
+    .container { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+
+    /* Section */
+    .section { padding: 48px 0; }
+    .section-title {
+      font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 8px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .section-title .num {
+      background: linear-gradient(135deg, #3B82F6, #6366F1); color: white;
+      width: 36px; height: 36px; border-radius: 10px; display: inline-flex;
+      align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 800;
+      flex-shrink: 0;
+    }
+    .section-sub { color: #64748B; font-size: 0.95rem; margin-bottom: 28px; margin-left: 48px; }
+
+    /* Cards */
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 20px 0; }
+    .card {
+      background: white; border: 1px solid #E2E8F0; border-radius: 14px; padding: 24px;
+      transition: all 0.25s; position: relative; overflow: hidden;
+    }
+    .card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.08); transform: translateY(-2px); border-color: #93C5FD; }
+    .card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      border-radius: 14px 14px 0 0;
+    }
+    .card.blue::before { background: linear-gradient(90deg, #3B82F6, #6366F1); }
+    .card.green::before { background: linear-gradient(90deg, #10B981, #14B8A6); }
+    .card.purple::before { background: linear-gradient(90deg, #8B5CF6, #A78BFA); }
+    .card.amber::before { background: linear-gradient(90deg, #F59E0B, #F97316); }
+    .card-icon { font-size: 1.8rem; margin-bottom: 12px; }
+    .card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .card p { font-size: 0.85rem; color: #64748B; line-height: 1.5; }
+    .card a { color: #3B82F6; text-decoration: none; font-weight: 600; font-size: 0.85rem; }
+    .card a:hover { text-decoration: underline; }
+    .card .tag {
+      display: inline-block; background: #EFF6FF; color: #1D4ED8; padding: 2px 10px;
+      border-radius: 6px; font-size: 0.72rem; font-weight: 600; margin-top: 8px;
+    }
+    .card .tag.green-tag { background: #D1FAE5; color: #065F46; }
+    .card .tag.amber-tag { background: #FEF3C7; color: #92400E; }
+
+    /* Command blocks */
+    .cmd-block {
+      background: #1E293B; border-radius: 12px; padding: 20px 24px; margin: 16px 0;
+      position: relative; overflow-x: auto;
+    }
+    .cmd-block code {
+      color: #E2E8F0; font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.88rem; line-height: 1.7; white-space: pre;
+    }
+    .cmd-block .comment { color: #64748B; }
+    .cmd-block .prompt { color: #6EE7B7; }
+    .cmd-block .flag { color: #93C5FD; }
+    .cmd-copy {
+      position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15); color: #94A3B8; padding: 4px 12px;
+      border-radius: 6px; font-size: 0.72rem; cursor: pointer; font-family: inherit;
+      transition: all 0.2s;
+    }
+    .cmd-copy:hover { background: rgba(255,255,255,0.2); color: white; }
+    .cmd-copy.copied { background: rgba(16,185,129,0.2); border-color: rgba(16,185,129,0.3); color: #6EE7B7; }
+
+    /* Steps */
+    .steps { counter-reset: step; }
+    .step {
+      background: white; border: 1px solid #E2E8F0; border-radius: 14px;
+      padding: 28px; margin-bottom: 16px; position: relative;
+      padding-left: 80px; transition: all 0.25s;
+    }
+    .step:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.06); border-color: #93C5FD; }
+    .step::before {
+      counter-increment: step; content: counter(step);
+      position: absolute; left: 24px; top: 28px;
+      width: 40px; height: 40px; border-radius: 12px;
+      background: linear-gradient(135deg, #3B82F6, #6366F1);
+      color: white; display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; font-weight: 800;
+    }
+    .step h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
+    .step p { color: #475569; font-size: 0.9rem; }
+
+    /* Table */
+    .info-table {
+      width: 100%; border-collapse: collapse; margin: 16px 0;
+      background: white; border-radius: 14px; overflow: hidden;
+      border: 1px solid #E2E8F0;
+    }
+    .info-table th {
+      background: #F8FAFC; padding: 12px 16px; text-align: left;
+      font-size: 0.78rem; font-weight: 700; color: #475569;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      border-bottom: 2px solid #E2E8F0;
+    }
+    .info-table td {
+      padding: 12px 16px; border-bottom: 1px solid #F1F5F9;
+      font-size: 0.88rem; color: #334155;
+    }
+    .info-table tr:last-child td { border-bottom: none; }
+    .info-table .mono { font-family: 'SF Mono', monospace; color: #3B82F6; font-weight: 600; font-size: 0.82rem; }
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 8px;
+      font-size: 0.72rem; font-weight: 700;
+    }
+    .badge-green { background: #D1FAE5; color: #065F46; }
+    .badge-blue { background: #DBEAFE; color: #1E40AF; }
+    .badge-amber { background: #FEF3C7; color: #92400E; }
+    .badge-purple { background: #EDE9FE; color: #5B21B6; }
+
+    /* Callout */
+    .callout {
+      background: linear-gradient(135deg, #EFF6FF, #F0F9FF); border: 1px solid #BFDBFE;
+      border-left: 4px solid #3B82F6; border-radius: 0 12px 12px 0;
+      padding: 18px 22px; margin: 20px 0;
+    }
+    .callout.green { background: linear-gradient(135deg, #ECFDF5, #F0FDF4); border-color: #86EFAC; border-left-color: #10B981; }
+    .callout.amber { background: linear-gradient(135deg, #FFFBEB, #FEF3C7); border-color: #FCD34D; border-left-color: #F59E0B; }
+    .callout.purple { background: linear-gradient(135deg, #F5F3FF, #EDE9FE); border-color: #C4B5FD; border-left-color: #8B5CF6; }
+    .callout strong { font-weight: 700; }
+    .callout p { font-size: 0.88rem; color: #334155; }
+
+    /* Help banner */
+    .help-banner {
+      background: linear-gradient(135deg, #1E293B, #334155); border-radius: 16px;
+      padding: 32px; margin: 40px 0; color: white; display: flex;
+      align-items: center; gap: 24px;
+    }
+    .help-avatar {
+      width: 64px; height: 64px; border-radius: 16px;
+      background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; font-weight: 900; color: white; flex-shrink: 0;
+    }
+    .help-text h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
+    .help-text p { color: #94A3B8; font-size: 0.88rem; }
+    .help-text a { color: #60A5FA; text-decoration: none; }
+    .help-text a:hover { text-decoration: underline; }
+
+    /* Regions */
+    .region-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 20px 0; }
+    .region-card {
+      background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px;
+      text-align: center; transition: all 0.25s;
+    }
+    .region-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+    .region-card h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; }
+    .region-card .datasets { font-family: monospace; font-size: 0.78rem; color: #3B82F6; margin-top: 6px; }
+    .region-card .status { margin-top: 8px; }
+
+    /* Footer */
+    .footer {
+      text-align: center; padding: 40px 20px; color: #94A3B8; font-size: 0.82rem;
+      border-top: 1px solid #E2E8F0; margin-top: 40px;
+    }
+
+    /* Divider */
+    .divider { border: none; border-top: 1px solid #E2E8F0; margin: 0; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2rem; }
+      .card-grid { grid-template-columns: 1fr; }
+      .region-grid { grid-template-columns: 1fr; }
+      .help-banner { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-badge">Taleemabad Data Team</div>
+  <h1>Data <span>MCP</span> Setup Guide</h1>
+  <p>Ask questions in plain English, get governed BigQuery results with full audit trail. Takes 5 minutes to set up.</p>
+  <div class="hero-version">v0.16.5</div>
+</div>
+
+<div class="container">
+
+<!-- Prerequisites -->
+<div class="section">
+  <div class="section-title"><span class="num">1</span> Prerequisites</div>
+  <p class="section-sub">You need these four things before installing. Most take under 5 minutes.</p>
+
+  <div class="card-grid">
+    <div class="card blue">
+      <div class="card-icon">&#128187;</div>
+      <h3>An IDE / Terminal</h3>
+      <p>Any code editor with a terminal. VS Code, Cursor, Windsurf, or just a plain terminal window.</p>
+      <a href="https://code.visualstudio.com/" target="_blank">Download VS Code &#8594;</a>
+      <div class="tag">Free</div>
+    </div>
+
+    <div class="card green">
+      <div class="card-icon">&#9889;</div>
+      <h3>Node.js 18+</h3>
+      <p>Required to install Claude Code. Download the LTS version.</p>
+      <a href="https://nodejs.org/" target="_blank">Download Node.js &#8594;</a>
+      <div class="tag green-tag">One-time install</div>
+    </div>
+
+    <div class="card purple">
+      <div class="card-icon">&#129302;</div>
+      <h3>Claude Code CLI</h3>
+      <p>Anthropic's AI coding tool that runs in your terminal. Install via npm after Node.js.</p>
+      <a href="https://docs.anthropic.com/en/docs/claude-code/overview" target="_blank">Learn more &#8594;</a>
+      <div class="tag">npm install</div>
+    </div>
+
+    <div class="card amber">
+      <div class="card-icon">&#128179;</div>
+      <h3>Anthropic Subscription</h3>
+      <p>Claude Code requires a paid Anthropic plan. Pro ($20/mo) or Max ($100/mo).</p>
+      <a href="https://console.anthropic.com/" target="_blank">Sign up &#8594;</a>
+      <div class="tag amber-tag">Paid</div>
+    </div>
+  </div>
+
+  <table class="info-table">
+    <thead>
+      <tr><th>Plan</th><th>Cost</th><th>Claude Code Usage</th><th>Best For</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Claude Pro</strong></td><td>$20/month</td><td>Included with limits</td><td>Occasional data queries</td></tr>
+      <tr><td><strong>Claude Max</strong></td><td>$100/month</td><td>Higher limits</td><td>Daily data work</td></tr>
+      <tr><td><strong>API Pay-as-you-go</strong></td><td>Usage-based</td><td>Set ANTHROPIC_API_KEY</td><td>Heavy/automated usage</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <p><strong>Work Email Required:</strong> Your email must end with <code>@taleemabad.com</code>, <code>@niete.edu.pk</code>, or <code>@niete.pk</code>. This is verified by the MCP server for audit logging.</p>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Install Claude Code -->
+<div class="section">
+  <div class="section-title"><span class="num">2</span> Install Claude Code</div>
+  <p class="section-sub">Run this in your terminal (PowerShell on Windows, Terminal on Mac/Linux).</p>
+
+  <div class="cmd-block">
+    <button class="cmd-copy" onclick="copyCmd(this, 'npm install -g @anthropic-ai/claude-code')">Copy</button>
+    <code><span class="prompt">$</span> npm install <span class="flag">-g</span> @anthropic-ai/claude-code</code>
+  </div>
+
+  <p style="font-size:0.88rem;color:#64748B;margin-top:8px;">Then verify it works:</p>
+
+  <div class="cmd-block">
+    <button class="cmd-copy" onclick="copyCmd(this, 'claude --version')">Copy</button>
+    <code><span class="prompt">$</span> claude <span class="flag">--version</span></code>
+  </div>
+
+  <div class="callout green">
+    <p><strong>First time?</strong> Run <code>claude</code> in your terminal — it will walk you through Anthropic authentication. Sign in with your Anthropic account.</p>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Install Plugin -->
+<div class="section">
+  <div class="section-title"><span class="num">3</span> Install the Data MCP Plugin</div>
+  <p class="section-sub">Two commands to add the marketplace and install the plugin.</p>
+
+  <div class="cmd-block">
+    <button class="cmd-copy" onclick="copyCmd(this, 'claude plugin marketplace add Orenda-Project/taleemabad-data-mcp\nclaude plugin install taleemabad-data@Orenda-Project')">Copy</button>
+    <code><span class="comment"># Add the Orenda-Project marketplace</span>
+<span class="prompt">$</span> claude plugin marketplace add Orenda-Project/taleemabad-data-mcp
+
+<span class="comment"># Install the plugin</span>
+<span class="prompt">$</span> claude plugin install taleemabad-data@Orenda-Project</code>
+  </div>
+
+  <div class="callout amber">
+    <p><strong>Git access required.</strong> The repository is private. If you get a git error, ask IT to add your GitHub account to the <a href="https://github.com/Orenda-Project" target="_blank" style="color:#92400E;font-weight:600;">Orenda-Project</a> organization.</p>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Setup -->
+<div class="section">
+  <div class="section-title"><span class="num">4</span> Run Setup</div>
+  <p class="section-sub">One-time setup to save your email and sync governance rules.</p>
+
+  <div class="steps">
+    <div class="step">
+      <h3>Open Claude Code</h3>
+      <p>Open your terminal and type <code>claude</code> to start Claude Code. You can be in any project directory.</p>
+    </div>
+    <div class="step">
+      <h3>Run the setup command</h3>
+      <p>Type <code>/taleemabad-setup</code> and press Enter. It will ask for your work email.</p>
+      <div class="cmd-block" style="margin-top:12px;">
+        <code><span class="prompt">&gt;</span> /taleemabad-setup</code>
+      </div>
+    </div>
+    <div class="step">
+      <h3>Restart Claude Code</h3>
+      <p>Close and reopen Claude Code, or press <kbd style="background:#E2E8F0;padding:2px 8px;border-radius:4px;font-size:0.82rem;">Ctrl+R</kbd> to reload.</p>
+    </div>
+    <div class="step">
+      <h3>Verify connection</h3>
+      <p>Type <code>/mcp</code> — you should see <code style="color:#10B981;">taleemabad-data &middot; connected</code></p>
+      <p style="margin-top:8px;">Then try: <em>"How many active PRIMARY teachers are in ICT/Islamabad?"</em></p>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Regions -->
+<div class="section">
+  <div class="section-title"><span class="num">5</span> Available Regions & Data</div>
+  <p class="section-sub">Three regions are fully governed with query rules and audit logging.</p>
+
+  <div class="region-grid">
+    <div class="region-card">
+      <h4>ICT / Islamabad</h4>
+      <p style="font-size:0.82rem;color:#64748B;">Teachers, LPs, coaching, training, ACR, student results</p>
+      <div class="datasets">tbproddb</div>
+      <div class="status"><span class="badge badge-green">Complete</span></div>
+    </div>
+    <div class="region-card">
+      <h4>Rawalpindi</h4>
+      <p style="font-size:0.82rem;color:#64748B;">Teachers, AI coaching, lesson plans, reading assessments, ASER</p>
+      <div class="datasets">RUMI_DB + TaleemHub_DB</div>
+      <div class="status"><span class="badge badge-green">Complete</span></div>
+    </div>
+    <div class="region-card">
+      <h4>Moawin / Akhuwat</h4>
+      <p style="font-size:0.82rem;color:#64748B;">Teachers, schools, attendance, training, AI coaching, assessments</p>
+      <div class="datasets">Muawin_Akhuwat_db + Zavia_db</div>
+      <div class="status"><span class="badge badge-green">Complete</span></div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Update -->
+<div class="section">
+  <div class="section-title"><span class="num">6</span> Updating</div>
+  <p class="section-sub">Rules auto-sync every session. Manual updates are rarely needed.</p>
+
+  <table class="info-table">
+    <thead>
+      <tr><th>What</th><th>How</th><th>When</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Rules & Agents</strong></td>
+        <td><span class="badge badge-green">Automatic</span></td>
+        <td>Every Claude Code session start</td>
+      </tr>
+      <tr>
+        <td><strong>Plugin version</strong></td>
+        <td class="mono">claude plugin update taleemabad-data@Orenda-Project</td>
+        <td>When told a new version is out, or if things break</td>
+      </tr>
+      <tr>
+        <td><strong>Check version</strong></td>
+        <td>Ask: <em>"What MCP version am I running?"</em></td>
+        <td>Any time</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <p><strong>Update stuck on Windows?</strong> Close ALL Claude Code windows first, then retry. The plugin directory gets locked by running processes. If still stuck, uninstall and reinstall (see Troubleshooting).</p>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Example Queries -->
+<div class="section">
+  <div class="section-title"><span class="num">7</span> Try These Queries</div>
+  <p class="section-sub">Just type these in Claude Code — the AI handles everything.</p>
+
+  <div class="card-grid">
+    <div class="card blue">
+      <p style="font-style:italic;color:#334155;font-size:0.9rem;">"How many active PRIMARY teachers are in ICT?"</p>
+      <div class="tag">Teachers</div>
+    </div>
+    <div class="card green">
+      <p style="font-style:italic;color:#334155;font-size:0.9rem;">"What's the LP adoption rate this month?"</p>
+      <div class="tag green-tag">Lesson Plans</div>
+    </div>
+    <div class="card purple">
+      <p style="font-style:italic;color:#334155;font-size:0.9rem;">"Show me FICO Section B scores for Q1 2026"</p>
+      <div class="tag">Observations</div>
+    </div>
+    <div class="card amber">
+      <p style="font-style:italic;color:#334155;font-size:0.9rem;">"What's the average ACR score by designation?"</p>
+      <div class="tag amber-tag">ACR / Promotion</div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Help -->
+<div class="section">
+  <div class="help-banner">
+    <div class="help-avatar">AS</div>
+    <div class="help-text">
+      <h3>Need Help with Setup?</h3>
+      <p><strong>Abdurrehman Siddique</strong> can help you with prerequisites, installation, and getting started. Reach out for Node.js setup, Anthropic subscription, GitHub access, or any installation issues.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Troubleshooting -->
+<div class="section">
+  <div class="section-title" style="margin-bottom:20px;">Troubleshooting</div>
+
+  <table class="info-table">
+    <thead>
+      <tr><th>Problem</th><th>Fix</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>plugin not found</code></td><td>Run both commands: <code>marketplace add</code> then <code>plugin install</code></td></tr>
+      <tr><td><code>/taleemabad-setup</code> not recognized</td><td>Restart Claude Code after installing the plugin</td></tr>
+      <tr><td><code>Setup required</code></td><td>Run <code>/taleemabad-setup</code> and enter your work email</td></tr>
+      <tr><td><code>Unauthorized domain</code></td><td>Use email ending with @taleemabad.com, @niete.edu.pk, or @niete.pk</td></tr>
+      <tr><td><code>failed</code> or <code>disconnected</code></td><td>Check internet; server may be restarting — wait 1 minute</td></tr>
+      <tr><td>Git access error</td><td>Ask IT to add you to the <a href="https://github.com/Orenda-Project">Orenda-Project</a> GitHub org</td></tr>
+      <tr><td>Directory locked (Windows)</td><td>Close all Claude Code windows, then retry update/uninstall</td></tr>
+    </tbody>
+  </table>
+
+  <p style="font-size:0.85rem;color:#64748B;margin-top:16px;"><strong>Full reinstall</strong> (if update fails):</p>
+  <div class="cmd-block">
+    <button class="cmd-copy" onclick="copyCmd(this, 'claude plugin uninstall taleemabad-data@Orenda-Project\nclaude plugin marketplace remove Orenda-Project\nclaude plugin marketplace add Orenda-Project/taleemabad-data-mcp\nclaude plugin install taleemabad-data@Orenda-Project')">Copy</button>
+    <code><span class="comment"># Uninstall</span>
+<span class="prompt">$</span> claude plugin uninstall taleemabad-data@Orenda-Project
+<span class="prompt">$</span> claude plugin marketplace remove Orenda-Project
+
+<span class="comment"># Reinstall</span>
+<span class="prompt">$</span> claude plugin marketplace add Orenda-Project/taleemabad-data-mcp
+<span class="prompt">$</span> claude plugin install taleemabad-data@Orenda-Project</code>
+  </div>
+</div>
+
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>Taleemabad Data Governance MCP &mdash; Built by the Data Team</p>
+  <p style="margin-top:4px;"><a href="https://github.com/Orenda-Project/taleemabad-data-mcp" target="_blank" style="color:#3B82F6;text-decoration:none;">GitHub Repository</a></p>
+</div>
+
+<script>
+function copyCmd(btn, text) {
+  navigator.clipboard.writeText(text.replace(/\\n/g, '\n')).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+</script>
+
+</body>
+</html>
