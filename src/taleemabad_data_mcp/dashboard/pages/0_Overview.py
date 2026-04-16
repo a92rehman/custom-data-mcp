@@ -34,7 +34,6 @@ from taleemabad_data_mcp.dashboard.data.queries import (
     get_feedback,
     get_table_freshness,
 )
-from taleemabad_data_mcp.dashboard.data.client import get_bq_client, get_config
 from taleemabad_data_mcp.dashboard.data.projects import (
     load_projects,
     get_dataset_stats,
@@ -421,12 +420,6 @@ section_header(f"Project Status ({len(_active)} active / {len(_projects) - len(_
 
 # Build project status table
 project_rows = []
-try:
-    app_bq = get_bq_client()
-    _cfg_project = get_config()["project"]
-except Exception:
-    app_bq = None
-    _cfg_project = ""
 for p in _projects:
     ds = p.get("dataset", "—")
     status = p.get("status", "unknown")
@@ -434,26 +427,22 @@ for p in _projects:
 
     # Get dataset stats
     ds_stats = _ds_stats.get(ds, {})
-    table_count = ds_stats.get("table_count", "—")
-    row_count = ds_stats.get("row_count", "—")
+    table_count = ds_stats.get("table_count", 0) if isinstance(_ds_stats.get(ds, {}).get("table_count"), int) else 0
 
-    # Format row count
-    if row_count != "—":
-        if row_count >= 1_000_000:
-            row_count = f"{row_count / 1_000_000:.1f}M"
-        elif row_count >= 1_000:
-            row_count = f"{row_count / 1_000:.1f}K"
-
-    # Get governance coverage
+    # Get governance coverage with percentage
     gov_count = _gov_per_ds.get(ds, 0)
-    coverage = f"{gov_count} tables" if gov_count > 0 else ("No rules" if status in ("active", "system") else "—")
-    coverage_badge = (
-        f'<span style="background:#10B981;color:white;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;">{coverage}</span>'
-        if gov_count > 0
-        else f'<span style="background:#FEF3C7;color:#92400E;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;">{coverage}</span>'
-        if status in ("active", "system")
-        else f'<span style="color:#94A3B8;font-size:0.75rem;">—</span>'
-    )
+    if gov_count > 0 and table_count > 0:
+        cov_pct = round(gov_count / table_count * 100, 1)
+        coverage_badge = (
+            f'<span style="background:#10B981;color:white;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;">'
+            f'{cov_pct}% ({gov_count}/{table_count})</span>'
+        )
+    elif gov_count > 0:
+        coverage_badge = f'<span style="background:#10B981;color:white;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;">{gov_count} tables</span>'
+    elif status in ("active", "system"):
+        coverage_badge = f'<span style="background:#FEF3C7;color:#92400E;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;">No rules</span>'
+    else:
+        coverage_badge = '<span style="color:#94A3B8;font-size:0.75rem;">—</span>'
 
     # Status badge
     status_color = "#10B981" if status == "active" else ("#6366F1" if status == "system" else "#94A3B8")
@@ -463,80 +452,33 @@ for p in _projects:
         "name": p.get("name", "?"),
         "description": desc,
         "dataset": ds,
-        "status": f'<span style="background:{status_color};color:white;padding:3px 10px;border-radius:8px;font-size:0.75rem;font-weight:600;">{status_text}</span>',
-        "tables": table_count,
-        "rows": row_count,
+        "status_html": f'<span style="background:{status_color};color:white;padding:3px 10px;border-radius:8px;font-size:0.75rem;font-weight:600;">{status_text}</span>',
+        "tables": table_count or "—",
         "coverage": coverage_badge,
-        "is_child": False,
+        "children": p.get("children", []),
     })
 
-    # Add child rows (sub-tables within a project)
-    for child in p.get("children", []):
-        c_status = child.get("status", "active")
-        c_color = "#10B981" if c_status == "active" else ("#F59E0B" if c_status == "dev" else "#94A3B8")
-        c_label = "DEV" if c_status == "dev" else c_status.upper()
-        c_table = child.get("table", "—")
-
-        # Get row count for the specific child table
-        c_rows = "—"
-        if ds and c_table != "—":
-            try:
-                tbl_ref = app_bq.get_table(f"{_cfg_project}.{ds}.{c_table}") if app_bq else None
-                if tbl_ref:
-                    rc = tbl_ref.num_rows
-                    c_rows = f"{rc / 1_000_000:.1f}M" if rc >= 1_000_000 else (f"{rc / 1_000:.1f}K" if rc >= 1_000 else str(rc))
-            except Exception:
-                c_rows = "—"
-
-        project_rows.append({
-            "name": child.get("name", "?"),
-            "description": child.get("description", ""),
-            "dataset": f"{ds}.{c_table}",
-            "status": f'<span style="background:{c_color};color:white;padding:3px 10px;border-radius:8px;font-size:0.75rem;font-weight:600;">{c_label}</span>',
-            "tables": "1",
-            "rows": c_rows,
-            "coverage": '<span style="color:#94A3B8;font-size:0.75rem;">—</span>',
-            "is_child": True,
-        })
-
-# Render table HTML
+# Render table HTML (no Rows column)
+_th = "padding:12px 14px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;font-size:0.75rem;"
 table_html = '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-top:4px;">'
 table_html += '<thead style="background:#F8FAFC;border-bottom:2px solid #E2E8F0;">'
-table_html += '<tr style="height:40px;">'
-table_html += '<th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;">Project</th>'
-table_html += '<th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:180px;">Dataset</th>'
-table_html += '<th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:100px;">Status</th>'
-table_html += '<th style="padding:12px 14px;text-align:center;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:70px;">Tables</th>'
-table_html += '<th style="padding:12px 14px;text-align:center;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;width:80px;">Rows</th>'
-table_html += '<th style="padding:12px 14px;text-align:left;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;">Coverage</th>'
+table_html += f'<tr style="height:40px;"><th style="{_th}text-align:left;">Project</th>'
+table_html += f'<th style="{_th}text-align:left;width:180px;">Dataset</th>'
+table_html += f'<th style="{_th}text-align:left;width:100px;">Status</th>'
+table_html += f'<th style="{_th}text-align:center;width:70px;">Tables</th>'
+table_html += f'<th style="{_th}text-align:left;width:160px;">Coverage</th>'
 table_html += '</tr></thead><tbody>'
 
 for i, row in enumerate(project_rows):
-    is_child = row.get("is_child", False)
-    if is_child:
-        bg = "#F0F9FF"  # light blue tint for child rows
-        indent = "padding-left:36px;"
-        name_style = "font-weight:500;color:#475569;font-size:0.83rem;"
-        desc_style = "font-size:0.75rem;color:#94A3B8;"
-        ds_style = "font-family:monospace;color:#64748B;font-size:0.8rem;"
-        border = "border-bottom:1px solid #EFF6FF;"
-    else:
-        bg = "#FFFFFF" if i % 2 == 0 else "#F8FAFC"
-        indent = ""
-        name_style = "font-weight:600;color:#0F172A;"
-        desc_style = "font-size:0.8rem;color:#64748B;"
-        ds_style = "font-family:monospace;color:#3B82F6;font-weight:600;"
-        border = "border-bottom:1px solid #E2E8F0;"
-    table_html += f'<tr style="background:{bg};{border}height:48px;">'
-    table_html += f'<td style="padding:12px 14px;{indent}">'
-    prefix = "&#8627; " if is_child else ""
-    table_html += f'<div style="{name_style}margin-bottom:2px;">{prefix}{row["name"]}</div>'
-    table_html += f'<div style="{desc_style}">{row["description"]}</div>'
+    bg = "#FFFFFF" if i % 2 == 0 else "#F8FAFC"
+    table_html += f'<tr style="background:{bg};border-bottom:1px solid #E2E8F0;height:48px;">'
+    table_html += '<td style="padding:12px 14px;">'
+    table_html += f'<div style="font-weight:600;color:#0F172A;margin-bottom:2px;">{row["name"]}</div>'
+    table_html += f'<div style="font-size:0.8rem;color:#64748B;">{row["description"]}</div>'
     table_html += '</td>'
-    table_html += f'<td style="padding:12px 14px;{ds_style}">{row["dataset"]}</td>'
-    table_html += f'<td style="padding:12px 14px;">{row["status"]}</td>'
+    table_html += f'<td style="padding:12px 14px;font-family:monospace;color:#3B82F6;font-weight:600;">{row["dataset"]}</td>'
+    table_html += f'<td style="padding:12px 14px;">{row["status_html"]}</td>'
     table_html += f'<td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{row["tables"]}</td>'
-    table_html += f'<td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{row["rows"]}</td>'
     table_html += f'<td style="padding:12px 14px;">{row["coverage"]}</td>'
     table_html += '</tr>'
 
@@ -547,6 +489,40 @@ st.markdown(
     f'box-shadow:0 1px 3px rgba(0,0,0,0.04);margin-bottom:20px;">{table_html}</div>',
     unsafe_allow_html=True,
 )
+
+# Expandable child rows per project (click to reveal)
+for row in project_rows:
+    children = row.get("children", [])
+    if not children:
+        continue
+    with st.expander(f"**{row['name']}** — sub-tables ({len(children)})"):
+        child_html = '<table style="width:100%;border-collapse:collapse;font-size:0.83rem;">'
+        child_html += '<thead><tr style="background:#F0F9FF;border-bottom:1px solid #DBEAFE;">'
+        child_html += f'<th style="padding:8px 12px;text-align:left;color:#475569;font-weight:600;">Name</th>'
+        child_html += f'<th style="padding:8px 12px;text-align:left;color:#475569;font-weight:600;">Table</th>'
+        child_html += f'<th style="padding:8px 12px;text-align:left;color:#475569;font-weight:600;">Status</th>'
+        child_html += f'<th style="padding:8px 12px;text-align:left;color:#475569;font-weight:600;">Rules Coverage</th>'
+        child_html += '</tr></thead><tbody>'
+        for c in children:
+            c_status = c.get("status", "active")
+            c_color = "#10B981" if c_status == "active" else ("#F59E0B" if c_status == "dev" else "#94A3B8")
+            c_label = "DEV" if c_status == "dev" else c_status.upper()
+            c_table = c.get("table", "—")
+            # Check if child table is governed
+            ds = row["dataset"]
+            c_gov = _gov_map.get((ds, c_table), None)
+            if c_gov:
+                c_cov = f'<span style="background:#D1FAE5;color:#065F46;padding:2px 8px;border-radius:8px;font-size:0.75rem;font-weight:600;">Governed — {len(c_gov["rule_files"])} rule file(s)</span>'
+            else:
+                c_cov = f'<span style="background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:8px;font-size:0.75rem;font-weight:600;">No rules yet</span>'
+            child_html += f'<tr style="border-bottom:1px solid #EFF6FF;">'
+            child_html += f'<td style="padding:8px 12px;font-weight:500;">{c.get("name", "?")}<div style="font-size:0.75rem;color:#94A3B8;">{c.get("description", "")}</div></td>'
+            child_html += f'<td style="padding:8px 12px;font-family:monospace;color:#64748B;font-size:0.8rem;">{ds}.{c_table}</td>'
+            child_html += f'<td style="padding:8px 12px;"><span style="background:{c_color};color:white;padding:2px 8px;border-radius:6px;font-size:0.72rem;font-weight:600;">{c_label}</span></td>'
+            child_html += f'<td style="padding:8px 12px;">{c_cov}</td>'
+            child_html += '</tr>'
+        child_html += '</tbody></table>'
+        st.markdown(child_html, unsafe_allow_html=True)
 
 # ======================================================================
 # ROW 6 — RUMI Regional Deployment Dashboard
