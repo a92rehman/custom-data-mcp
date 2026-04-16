@@ -21,17 +21,17 @@ projects:
     region: "rawalpindi"
     description: "AI coaching, lesson plans, reading assessments for RWP"
 
-  - name: "Muawin/Akhuwat"
+  - name: "Muawin/Akhuwat (Schoolpilot)"
     dataset: "Muawin_Akhuwat_db"
     status: "active"
-    region: "muawin-akhuwat"
-    description: "Muawin + Akhuwat school program — teachers, attendance, student scores"
+    region: "moawin-akhuwat"
+    description: "Schoolpilot for Moawin + Akhuwat — teacher roster, student scores, institutional data"
 
-  - name: "Zaviya"
-    dataset: null
+  - name: "Zavia"
+    dataset: "Zavia_db"
     status: "active"
-    region: "zaviya"
-    description: "Zaviya program — not yet migrated to BigQuery"
+    region: "moawin-akhuwat"
+    description: "Zavia AI platform — coaching, lesson plans, reading assessments for Moawin/Akhuwat"
 
   - name: "MCP Audit"
     dataset: "mcp_audit"

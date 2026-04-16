@@ -6,139 +6,164 @@ User asks about:
 - School-administered student assessment marks in Moawin or Akhuwat
 - Student academic performance (human-entered scores)
 - Assessment scores by subject, grade, or teacher
-- Class-level or school-level assessment aggregates
-- Student results from formal school assessments
+- Student pass rates
+- PEFSIS student demographics linked to scores
 
 ## Mandatory Clarifications
 
 ### Assessment Type
-Ask: "Which assessment type?" (if multiple exist)
-- Verify available assessment types in table with data team
+Ask: "Which assessment? (name, academic_year, or assessment_type)"
+- `assessment_type` and `status` (draft/active/completed) on `assessments` table
 
-### Subject / Skill
-Ask: "Which subject or skill area, or all?"
-- Filter by assessment subject/type
+### Subject
+Ask: "Which subject, or all?"
+- Subjects defined in `assessment_subjects` per assessment
 
 ### Grade Level
 Ask: "Which grade level, or all?"
+- Grade is on `assessment_subjects.grade` and `pefsis_students.grade`
 
 ### Time Period
 Ask: "Which assessment period or date range?"
-- `created_at` is primary timestamp
+- `assessment_date` and `assessment_date_to` on `assessments`
 
 ### Region
 Ask: "Moawin or Akhuwat?"
-- Filter via teacher/school organization_id
+- Filter via `assessments.organization_id`
 
 ## Key Tables
 
-| Table | Role | Database | Rows | Status |
-|-------|------|----------|------|--------|
-| `neondb.public.student_scores` | Individual student assessment marks | Schoolpilot (PostgreSQL) | Variable | **CANONICAL** |
-| `neondb.public.assessments` | Assessment metadata (name, subject, type, rubric) | Schoolpilot | Variable | Supporting |
-| `neondb.public.users` | Teacher/assessor identity | Schoolpilot | 1,296+ | For enrichment |
-| `neondb.public.teachers` | Teacher institutional attributes (school, org_id) | Schoolpilot | Variable | For school context |
+| Table | Role | Dataset | Status |
+|-------|------|---------|--------|
+| `Muawin_Akhuwat_db.student_scores` | Individual student marks per subject | Schoolpilot (BigQuery) | **CANONICAL** |
+| `Muawin_Akhuwat_db.assessments` | Assessment definitions (name, type, dates, passing %) | Schoolpilot | **Required** |
+| `Muawin_Akhuwat_db.assessment_subjects` | Subjects within an assessment (name, total_marks, grade) | Schoolpilot | **Required** |
+| `Muawin_Akhuwat_db.pefsis_students` | Student identity (name, school, grade, demographics) | Schoolpilot | ~16,800 rows |
+| `Muawin_Akhuwat_db.schools` | School context (name, EMIS) | Schoolpilot | For school rollups |
+| `Muawin_Akhuwat_db.users` | Score entry user (entered_by) | Schoolpilot | For audit |
 
-**Note:** These tables are small and unpartitioned. Full scans acceptable at this scale. Revisit if student_scores grows beyond 100,000 rows.
+## Key Columns — Muawin_Akhuwat_db.student_scores
 
-## Key Columns — neondb.public.student_scores
+- `assessment_id` — FK to `assessments.id`
+- `student_id` — FK to `pefsis_students.id` (NOT a generic student table)
+- `subject_id` — FK to `assessment_subjects.id`
+- `marks_obtained` — student's raw score (NUMERIC)
+- `is_absent` — BOOLEAN, whether student was absent
+- `percentage` — computed percentage (FLOAT)
+- `grade` — letter grade (STRING)
+- `is_passed` — BOOLEAN, whether student passed
+- `entered_by` — FK to `users.id` (who entered the score)
 
-- `id` — primary key (STRING or INT)
-- `student_id` — FK to student record (STRING or INT — structure TBD)
-- `assessment_id` — FK to `neondb.public.assessments.id`
-- `score` — student's raw score (FLOAT or INT — scale TBD, e.g., 0-100)
-- `percentage` — score as percentage if different from raw score (FLOAT, 0-100)
-- `grade_label` — letter grade if applicable (STRING, e.g., "A", "B", "C")
-- `status` — submission status: `submitted`, `draft`, `reviewed`, etc.
-- `created_at`, `updated_at` — timestamps (DATETIME/TIMESTAMP)
-- `created_by`, `reviewed_by` — user IDs for audit trail (optional)
+**NOTE:** Score column is `marks_obtained` (NOT `score`). Pass status is `is_passed` (BOOLEAN, pre-computed).
 
-## Key Columns — neondb.public.assessments
+## Key Columns — Muawin_Akhuwat_db.assessments
 
-- `id` — primary key (STRING or INT)
-- `name` — assessment name / title
-- `subject` — subject area (STRING, e.g., "Math", "English", "Urdu", "Science")
-- `type` — assessment type (STRING, e.g., "quiz", "midterm", "final", "unit_test")
-- `grade_level` — target grade (INT, e.g., 1-12)
-- `total_marks` — full mark value (INT, e.g., 100)
-- `passing_marks` — passing threshold (INT, e.g., 40)
-- `rubric` — rubric definition or scoring guidelines (TEXT or JSON — structure TBD)
-- `created_at`, `updated_at` — temporal
-- `created_by` — assessor/teacher who created (FK to users.id)
+- `id` — primary key (VARCHAR UUID)
+- `organization_id` — FK to `organizations.id` (region filter)
+- `name` — assessment name (STRING)
+- `assessment_type` — type (STRING)
+- `academic_year` — year (STRING)
+- `assessment_date`, `assessment_date_to` — date range
+- `passing_percentage` — threshold for passing (FLOAT, e.g., 33.0)
+- `status` — `draft`, `active`, `completed`
+- `created_by` — FK to `users.id`
 
-## Join Pattern (Regional & School Context)
+## Key Columns — Muawin_Akhuwat_db.assessment_subjects
+
+- `assessment_id` — FK to `assessments.id`
+- `subject_name` — subject (STRING, e.g., "Math", "English", "Urdu")
+- `total_marks` — maximum marks for this subject (INTEGER)
+- `grade` — which grade this subject applies to (STRING)
+- `display_order` — ordering (INTEGER)
+
+## Key Columns — Muawin_Akhuwat_db.pefsis_students
+
+- `id` — primary key (VARCHAR UUID)
+- `pefsis_student_id` — unique external ID (INTEGER, from PEFSIS portal)
+- `emis` — school EMIS code
+- `school_id` — FK to `schools.id`
+- `organization_id` — FK to `organizations.id`
+- `name_with_father` — student + father name (STRING)
+- `registration_no`, `b_form` — identity documents
+- `class`, `grade` — student class/grade (STRING)
+- `date_of_birth` — **stored as TEXT, not date** — cast for age calculations
+- `gender` — STRING
+- `father_name`, `father_cnic`, `mother_cnic` — family
+- `approval_status` — `pending`, `approved`, `rejected`
+- `is_orphan`, `is_osc` (out-of-school child), `is_bricklin` — flags (BOOLEAN)
+- `sync_status`, `synced_at` — PEFSIS sync tracking
+- `created_at`, `updated_at`
+
+## Join Pattern
 
 ```sql
-SELECT ss.*, a.*, u.id as teacher_id, u.name as teacher_name, nu.organization_id, nt.school_assignment, nt.emis_code
-FROM neondb.public.student_scores ss
-JOIN neondb.public.assessments a ON ss.assessment_id = a.id
-LEFT JOIN neondb.public.users u ON a.created_by = u.id
-LEFT JOIN neondb.public.teachers nt ON u.id = nt.user_id
-LEFT JOIN neondb.public.users nu ON nt.user_id = nu.id
-WHERE nu.organization_id IN (<moawin_org_id>, <akhuwat_org_id>)
-  AND ss.status IN ('submitted', 'reviewed')  -- KPI reporting filter
+SELECT ss.marks_obtained, ss.percentage, ss.is_passed, ss.is_absent,
+       a.name AS assessment_name, a.assessment_type, a.academic_year,
+       asub.subject_name, asub.total_marks, asub.grade,
+       ps.name_with_father, ps.gender, ps.class,
+       sch.name AS school_name, sch.emis
+FROM Muawin_Akhuwat_db.student_scores ss
+JOIN Muawin_Akhuwat_db.assessments a ON ss.assessment_id = a.id
+JOIN Muawin_Akhuwat_db.assessment_subjects asub ON ss.subject_id = asub.id
+JOIN Muawin_Akhuwat_db.pefsis_students ps ON ss.student_id = ps.id
+JOIN Muawin_Akhuwat_db.schools sch ON ps.school_id = sch.id
+WHERE a.organization_id IN (<moawin_org_id>, <akhuwat_org_id>)
+  AND a.status IN ('active', 'completed')
+  AND ss.is_absent = false
 ```
 
 ## Filtering Rules
 
-- Exclude draft/incomplete scores: include only `status IN ('submitted', 'reviewed')` for KPI
-- Include active assessments: may need to filter on assessment `is_active = true` (verify with data team)
-- Region filter: `nu.organization_id` must match specified Moawin or Akhuwat org_id
-- Time filter on `ss.created_at >= DATE('...')` per global rules
+- Region: `a.organization_id` (on assessments table)
+- Active assessments: `a.status IN ('active', 'completed')` — exclude drafts for KPI
+- Absent students: `ss.is_absent = false` for score aggregation (include for attendance metrics)
+- Approved students: `ps.approval_status = 'approved'` (optional, for clean cohort)
 
 ## Counting & Aggregation Rules
 
-- Score count = `COUNT(DISTINCT ss.id)` (one per student per assessment)
-- Students assessed = `COUNT(DISTINCT ss.student_id)` per assessment or period
-- Never count raw rows — distinct student/score pairs
-- Passing count = `COUNTIF(ss.score >= a.passing_marks)`
-- Pass rate = `COUNTIF(ss.score >= a.passing_marks) / COUNT(DISTINCT ss.student_id)`
+- Score count = `COUNT(*)` where `is_absent = false` (one per student-subject)
+- Students assessed = `COUNT(DISTINCT ss.student_id)`
+- Pass rate = `COUNTIF(ss.is_passed) / COUNTIF(NOT ss.is_absent)` (pre-computed boolean)
+- Avg marks = `AVG(ss.marks_obtained)` where `is_absent = false`
 
 ## Aggregation Patterns
 
 | User asks about | GROUP BY | Aggregate |
 |-----------------|----------|-----------|
-| Total assessments administered | — | `COUNT(DISTINCT a.id)` |
-| Total student scores | — | `COUNT(DISTINCT ss.id)` |
-| Avg score (all) | — | `AVG(ss.score)` |
-| Avg score by subject | `a.subject` | `AVG(ss.score)` |
-| Avg score by grade | `a.grade_level` | `AVG(ss.score)` |
-| Avg score by assessment | `a.id`, `a.name` | `AVG(ss.score)` |
-| Pass rate (overall) | — | `COUNTIF(ss.score >= a.passing_marks) / COUNT(*)` |
-| Pass rate by subject | `a.subject` | `COUNTIF(ss.score >= a.passing_marks) / COUNT(*)` |
-| Pass rate by grade | `a.grade_level` | `COUNTIF(ss.score >= a.passing_marks) / COUNT(*)` |
-| Pass rate by assessment | `a.id`, `a.name` | `COUNTIF(ss.score >= a.passing_marks) / COUNT(*)` |
-| By school | `nt.school_assignment`, `nt.emis_code` | `AVG(ss.score)`, `COUNTIF(ss.score >= a.passing_marks) / COUNT(*)` |
-| By teacher | `u.id`, `u.name` | `AVG(ss.score)`, `COUNT(DISTINCT ss.id)` |
-| By date/week | `DATE(ss.created_at)` or `DATE_TRUNC(ss.created_at, WEEK)` | `COUNT(DISTINCT ss.id)`, `AVG(ss.score)` |
-| Grade distribution (for one assessment) | `ss.grade_label` | `COUNT(DISTINCT ss.student_id)` |
+| Total students scored | — | `COUNT(DISTINCT ss.student_id) WHERE NOT is_absent` |
+| Avg marks (overall) | — | `AVG(ss.marks_obtained)` |
+| Avg marks by subject | `asub.subject_name` | `AVG(ss.marks_obtained)` |
+| Avg marks by grade | `asub.grade` | `AVG(ss.marks_obtained)` |
+| Pass rate (overall) | — | `COUNTIF(ss.is_passed) / COUNTIF(NOT ss.is_absent)` |
+| Pass rate by subject | `asub.subject_name` | `COUNTIF(ss.is_passed) / COUNT(*)` |
+| Pass rate by school | `sch.name`, `sch.emis` | `COUNTIF(ss.is_passed) / COUNT(*)` |
+| By assessment | `a.name`, `a.academic_year` | `AVG(ss.marks_obtained)`, pass rate |
+| Grade distribution | `ss.grade` (letter) | `COUNT(DISTINCT ss.student_id)` |
+| By gender | `ps.gender` | `AVG(ss.marks_obtained)`, pass rate |
+| Absent rate | — | `COUNTIF(ss.is_absent) / COUNT(*)` |
 
 ## Data Conventions
 
-- Timezone: `Asia/Karachi` for all date/timestamp conversions
-- Score scale: typically 0-100 or 0-total_marks; verify exact range with data team
-- Percentage: if different from raw score, use for display; raw score for calculations
-- Grade labels: typically A/B/C/D/F or similar; verify exact label values
-- Passing marks threshold varies per assessment; use `a.passing_marks` not hardcoded threshold
+- Timezone: `Asia/Karachi`
+- `pefsis_students.date_of_birth` is TEXT — cast with `SAFE.PARSE_DATE('%Y-%m-%d', ...)` for age
+- `passing_percentage` on `assessments` is the threshold; `is_passed` on `student_scores` is pre-computed
+- `total_marks` is per-subject on `assessment_subjects`, not on `assessments`
 
 ## Key Difference from ICT/RWP/Zavia
 
-- **Zavia AI assessments:** Automated reading fluency tests (WCPM, comprehension, pronunciation)
-- **School assessments (Schoolpilot):** Human teacher-entered marks for academic subjects (Math, English, Urdu, Science)
-- **Cross-region:** School assessment schema should be similar across regions (Moawin/Akhuwat use same Schoolpilot database)
-- Comparison with Zavia: Different purpose (academic achievement vs reading fluency); not directly comparable
+- **Zavia AI assessments:** Automated reading fluency (WCPM, comprehension) — different purpose
+- **School assessments:** Human teacher-entered academic marks (Math, English, Urdu, Science)
+- **PEFSIS students:** Synced from external government portal, ~16,800 rows
+- Not directly comparable with AI reading assessments
 
 ## Important Notes
 
-- Student linking may be complex; verify `student_id` structure and join keys with data team
-- Assessment rubric structure (if present) needs clarification before advanced analysis
-- Exact score scale and passing marks threshold should be documented
-- Status values (`submitted`, `draft`, `reviewed`) need verification — use only confirmed final states for KPI
-- organization_id values must be verified with data team
-- If student_scores table is used by multiple regions (not just Moawin/Akhuwat), ensure regional filters are always applied
+- `student_id` FK goes to `pefsis_students` (government-synced student records)
+- `marks_obtained` is the score column (NOT `score`)
+- `is_passed` is pre-computed BOOLEAN (NOT derived from threshold)
+- No direct Zavia join needed — school assessments are purely Schoolpilot data
+- `pefsis_students.date_of_birth` and `admission_date` are TEXT, not DATE
 
 ## Data Status
-- Status: MATCHED (per Moawin/Akhuwat reconciliation notes)
-- School assessment KPI: `neondb.public.student_scores + assessments`
+- Status: SCHEMA VERIFIED
 - Last verified: April 2026
-- Related global rules: Database priority (data-governance.md), Schoolpilot as canonical user/teacher source

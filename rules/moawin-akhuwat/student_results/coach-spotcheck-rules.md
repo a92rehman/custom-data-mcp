@@ -29,14 +29,14 @@ Ask: "Moawin or Akhuwat?"
 
 ### What We Know
 - **Table:** TBD (to be provided by Mahrah Ashraf)
-- **Database:** Likely `neondb` (Schoolpilot) or new dedicated database
+- **Dataset:** Likely `Muawin_Akhuwat_db` (Schoolpilot) or new dedicated BigQuery dataset
 - **Purpose:** Coach-collected spot checks during visits or coaching sessions
 - **Standard Format:** Follow same structure as other spot check implementations (TBD)
 - **Relationship:** May link to coaching_sessions or visits, or be standalone
 
 ### What We Need
 
-1. **Table name and database** (e.g., `neondb.public.coach_spotchecks` or `spotcheck_db.public.assessments`)
+1. **Table name and dataset** (e.g., `Muawin_Akhuwat_db.coach_spotchecks` or a new dedicated BigQuery dataset)
 2. **Schema:** All column names, types, and meanings
 3. **Key identifiers:** Student ID, coach/assessor ID, assessment date, spot check type/standard
 4. **Score/Result columns:** How are spot check results captured? (numeric, categorical, rubric-based, etc.)

@@ -348,8 +348,8 @@ async def execute_query(
 async def list_datasets() -> str:
     """List all BigQuery datasets accessible to the service account and their tables.
 
-    Auto-discovers all datasets in the project. If BIGQUERY_DATASETS is configured,
-    those are listed first as "configured" datasets, followed by any others found.
+    Auto-discovers all datasets accessible to the service account.
+    If BIGQUERY_DATASETS is configured, those are listed first for priority ordering.
     """
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
@@ -404,9 +404,6 @@ async def check_table_freshness(dataset: str, table: str) -> str:
     err = _require_bq(app)
     if err:
         return err
-
-    if dataset not in app.config.bigquery_datasets:
-        return f"Dataset '{dataset}' is not in the allowed list: {app.config.bigquery_datasets}"
 
     try:
         # Try INFORMATION_SCHEMA.PARTITIONS first (partitioned tables)
@@ -482,9 +479,6 @@ async def get_table_schema(dataset: str, table: str) -> str:
     if err:
         return err
 
-    if dataset not in app.config.bigquery_datasets:
-        return f"Dataset '{dataset}' is not in the allowed list: {app.config.bigquery_datasets}"
-
     try:
         table_ref = app.bq_client.get_table(
             f"{app.config.bigquery_project}.{dataset}.{table}"
@@ -550,11 +544,20 @@ async def get_version() -> str:
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
 
+    # Auto-discover accessible datasets
+    datasets_str = ", ".join(app.config.bigquery_datasets) if app.config.bigquery_datasets else ""
+    if app.bq_client:
+        try:
+            discovered = [ds.dataset_id for ds in app.bq_client.list_datasets()]
+            datasets_str = ", ".join(discovered)
+        except Exception:
+            pass  # Fall back to configured list
+
     return (
         f"Taleemabad Data Navigator v{__version__}\n"
         f"User: {app.config.taleemabad_user}\n"
         f"Project: {app.config.bigquery_project}\n"
-        f"Datasets: {', '.join(app.config.bigquery_datasets)}"
+        f"Datasets: {datasets_str}"
     )
 
 
@@ -584,9 +587,6 @@ async def preview_table(
     err = _require_bq(app)
     if err:
         return err
-
-    if dataset not in app.config.bigquery_datasets:
-        return f"Dataset '{dataset}' is not in the allowed list: {app.config.bigquery_datasets}"
 
     if not _SAFE_IDENTIFIER_RE.match(table):
         return f"Invalid table name: '{table}'"

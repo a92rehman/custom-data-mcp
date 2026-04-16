@@ -81,25 +81,39 @@ When: reading assessments (AI), ASER assessments (human)
 - `human-assessment-rules.md` — DRAFT — TaleemHub ASER results, pending rubric verification
 
 ## Region: Moawin / Akhuwat (`moawin-akhuwat/`)
-Databases: `neondb` (Schoolpilot) + `zavia1` (Zavia) | Regional split: `organization_id` | School reference: TBD per region
+Datasets: `Muawin_Akhuwat_db` (Schoolpilot, ~50 tables) + `Zavia_db` (Zavia, ~57 tables) — BigQuery | Regional split: `organization_id`
+Join key: `teachers.zavia_user_id = Zavia_db.users.id` | Test exclusion: Schoolpilot `users.is_active = true`, Zavia `users.is_test_user = false`
 
 ### moawin-akhuwat/dimensions/users/
-When: teacher profiles, user counts, school assignments, institutional attributes
-- `user-query-rules.md` — Schoolpilot canonical roster + teachers enrichment, organization_id filter, test user exclusion
+When: teacher profiles, user counts, school assignments, qualifications, designations, geographic hierarchy
+- `user-query-rules.md` — `teachers` is primary (not `users`), geographic hierarchy (org → district → tehsil → cluster → school), `zavia_user_id` join key
 
 ### moawin-akhuwat/lesson_plans/
 When: AI lesson plan generation counts, LP volume by grade/subject
-- `lp-query-rules.md` — Zavia lesson_plans, test user exclusion
+- `lp-query-rules.md` — Zavia `lesson_plans` + `lesson_plan_requests` (pipeline)
 
 ### moawin-akhuwat/coaching/
-When: AI coaching sessions, coaching results, quality metrics
-- `ai-coaching-rules.md` — Zavia coaching_sessions + quality_metrics, test user exclusion, lesson fidelity scoring
+When: AI coaching sessions, coaching results, quality metrics, lesson fidelity
+- `ai-coaching-rules.md` — Zavia `coaching_sessions` + `coaching_quality_metrics`, fidelity scoring
 
 ### moawin-akhuwat/student_results/
 When: AI reading assessments, school-administered assessments, coach spot checks
-- `ai-assessment-rules.md` — Zavia reading_assessments
-- `school-assessment-rules.md` — Schoolpilot student_scores + assessments (human-entered)
-- `coach-spotcheck-rules.md` — COMING SOON — coach-collected spot checks (table deployment TBD, deadline Apr 13)
+- `ai-assessment-rules.md` — Zavia `reading_assessments` (89 columns: WCPM, fluency, comprehension, pronunciation, auto-levelling)
+- `school-assessment-rules.md` — Schoolpilot `student_scores` + `assessments` + `assessment_subjects` + `pefsis_students` (~16,800 students)
+- `coach-spotcheck-rules.md` — COMING SOON
+
+### moawin-akhuwat/attendance/
+When: teacher attendance, student attendance, enrollment counts
+- `teacher-attendance-rules.md` — Schoolpilot `teacher_attendances` (daily per-teacher) + `teacher_leave_requests`
+- `student-attendance-rules.md` — Schoolpilot aggregate per school + Zavia individual student-level AI attendance
+
+### moawin-akhuwat/training/
+When: teacher training levels, course progress, quiz scores
+- `training-rules.md` — Schoolpilot `training_levels` → `courses` → `modules` → `questions`, `teacher_training_progress`, `teacher_quiz_attempts`
+
+### moawin-akhuwat/schools/
+When: school profiles, infrastructure, geographic hierarchy, visit reports
+- `school-rules.md` — `schools`, `school_profiles` (infrastructure), `school_visit_reports`, `school_improvement_plans`
 
 ## Cross-Region KPI Comparability
 
@@ -107,17 +121,16 @@ Cross-region comparison is limited to **volume and coverage metrics**. Qualitati
 
 | KPI | ICT Source | RWP Source | Moawin/Akhuwat Source | Comparable Metric |
 |-----|-----------|-----------|----------------------|-------------------|
-| User data | user_school_profiles | TaleemHub_DB.users | neondb.users + teachers | Teacher count, cohort size |
-| Lesson plans | analytics_events (canonical) | RUMI_DB.lesson_plans | zavia1.lesson_plans | Volume only |
-| Coaching - Human | coaching_observation (scored) | mentoring_visits (narrative) | DEPRECATED / TBD | Session count + coverage % |
-| Coaching - AI | observation stack (automated) | coaching_sessions | coaching_sessions | Session count + completion rate |
-| AI Coaching - Lesson Fidelity | coaching_observationquestion | analysis_data | analysis_data (fidelity_score) | Fidelity score (if comparable) |
-| Student results - AI | not active | reading_assessments | reading_assessments | Not comparable yet |
-| Student results - Human | ODK ASER | TaleemHub ASER | student_scores + assessments | Volume only |
-| Training | teacher_training_level | Not in scope | Not in scope | ICT only |
+| User data | user_school_profiles | TaleemHub_DB.users | Muawin_Akhuwat_db.teachers | Teacher count, cohort size |
+| Lesson plans | analytics_events (canonical) | RUMI_DB.lesson_plans | Zavia_db.lesson_plans | Volume only |
+| Coaching - Human | coaching_observation (scored) | mentoring_visits (narrative) | N/A | Session count + coverage % |
+| Coaching - AI | observation stack (automated) | coaching_sessions | Zavia_db.coaching_sessions | Session count + completion rate |
+| Student results - AI | not active | reading_assessments | Zavia_db.reading_assessments | Not comparable yet |
+| Student results - Human | ODK ASER | TaleemHub ASER | Muawin_Akhuwat_db.student_scores | Volume only |
+| Training | teacher_training_level | Not in scope | Muawin_Akhuwat_db.teacher_training_progress | Module/quiz completion |
+| Attendance | Not in scope | Not in scope | Muawin_Akhuwat_db.teacher_attendances | Moawin/Akhuwat only |
 
 ## Database Context
-- **BigQuery:** Project `niete-bq-prod` — ICT/Islamabad dataset `tbproddb` (466 tables), `RUMI_DB` (70 tables), `TaleemHub_DB` (60 tables)
-- **PostgreSQL (Schoolpilot):** Database `neondb` — user/teacher rosters, student assessments, institutional attributes
-- **PostgreSQL (Zavia):** Database `zavia1` — AI coaching sessions, lesson plans, reading assessments, quality metrics
+- **BigQuery:** Project `niete-bq-prod` — `tbproddb` (466 tables, ICT), `RUMI_DB` (70 tables, RWP AI), `TaleemHub_DB` (60 tables, RWP roster), `Muawin_Akhuwat_db` (~50 tables, Schoolpilot), `Zavia_db` (~57 tables, Zavia AI)
+- **PostgreSQL (Rawalpindi only):** `neondb` (Schoolpilot) and `zavia1` (Zavia) — still PostgreSQL for RWP
 - More datasets will be added after migration from other sources

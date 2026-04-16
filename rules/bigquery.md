@@ -20,12 +20,27 @@
 - Always include `WHERE created >= DATE('...')` when querying `events_partitioned` (fallback only)
 - The description on `analytics_events` mentions "Prefer `taleemabad_analytics.activity_events`" — this is a cross-dataset alias; use the `tbproddb.analytics_events` path
 
-## PostgreSQL Databases — Hierarchy (Moawin / Akhuwat / Rawalpindi)
+## Moawin / Akhuwat — BigQuery Datasets (migrated from PostgreSQL)
+
+Moawin/Akhuwat data has been migrated to BigQuery. Use these datasets:
+
+| Dataset | Role | Source | Tables | Notes |
+|---------|------|--------|--------|-------|
+| `Muawin_Akhuwat_db` (Schoolpilot) | **USE THIS** for user/teacher data | Migrated from `neondb` (PostgreSQL) | `users`, `teachers`, `student_scores`, `assessments` | CANONICAL. User roster, institutional attributes, student assessments. |
+| `Zavia_db` (Zavia) | **USE THIS** for AI coaching/LP/assessments | Migrated from `zavia1` (PostgreSQL) | `lesson_plans`, `coaching_sessions`, `reading_assessments`, etc. | CANONICAL. AI-generated content, coaching pipeline, quality metrics. |
+
+**Rules:**
+- Reference tables as `Muawin_Akhuwat_db.users`, `Zavia_db.lesson_plans` (no `public.` schema — BigQuery doesn't use it)
+- When querying small unpartitioned tables (Schoolpilot/Zavia): full scans acceptable if table < 10,000 rows
+- For large queries: check with data team on partition strategy
+- No hardcoded credentials in queries — use environment variable substitution
+
+## Rawalpindi — PostgreSQL Databases (still PostgreSQL)
 
 | Database | Role | Type | Schema | Notes |
 |----------|------|------|--------|-------|
-| `neondb` (Schoolpilot) | **USE THIS** for user/teacher data | PostgreSQL | `public.users`, `public.teachers`, `public.student_scores`, `public.assessments` | CANONICAL. User roster, institutional attributes, student assessments. |
-| `zavia1` (Zavia) | **USE THIS** for AI coaching/LP/assessments | PostgreSQL | `public.lesson_plans`, `public.coaching_sessions`, `public.reading_assessments`, etc. | CANONICAL. AI-generated content, coaching pipeline, quality metrics. |
+| `neondb` (Schoolpilot) | **USE THIS** for user/teacher data | PostgreSQL | `public.users`, `public.teachers`, `public.student_scores`, `public.assessments` | CANONICAL for Rawalpindi. User roster, institutional attributes, student assessments. |
+| `zavia1` (Zavia) | **USE THIS** for AI coaching/LP/assessments | PostgreSQL | `public.lesson_plans`, `public.coaching_sessions`, `public.reading_assessments`, etc. | CANONICAL for Rawalpindi. AI-generated content, coaching pipeline, quality metrics. |
 
 **Rules:**
 - Every PostgreSQL query must specify database and schema explicitly: `neondb.public.users`, `zavia1.public.lesson_plans`

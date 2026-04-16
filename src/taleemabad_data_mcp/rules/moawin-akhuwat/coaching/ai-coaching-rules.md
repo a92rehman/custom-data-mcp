@@ -18,83 +18,81 @@ Ask: "Session count, coaching results (analysis/transcripts), quality metrics, o
 ### Session Filter
 Ask: "All sessions or completed only?"
 - Default for KPI reporting: `status = 'completed'` only
-- Include all statuses (failed, in-progress, etc.) only for pipeline diagnostics
 
 ### Time Period
 Ask: "Which time period?"
-- `created_at` (TIMESTAMP) is the primary timestamp
 
 ### Region
 Ask: "Moawin or Akhuwat?"
-- Filter via teacher's `organization_id` through LEFT JOIN to `neondb.public.users`
 
 ## Key Tables
 
-| Table | Role | Database | Rows | Status |
-|-------|------|----------|------|--------|
-| `zavia1.public.coaching_sessions` | AI coaching session records | Zavia (PostgreSQL) | 170 | **CANONICAL** |
-| `zavia1.public.coaching_quality_metrics` | Quality and performance metrics | Zavia | 125 | For enrichment |
-| `zavia1.public.users` | Session creator identity (user_id) | Zavia | 5,319 | For join |
-| `neondb.public.users` | Teacher enrichment (organization_id, status) | Schoolpilot | 1,296+ | For regional filter |
+| Table | Role | Dataset | Rows | Status |
+|-------|------|---------|------|--------|
+| `Zavia_db.coaching_sessions` | AI coaching session records | Zavia (BigQuery) | 170 | **CANONICAL** |
+| `Zavia_db.coaching_quality_metrics` | Quality and performance metrics | Zavia | 125 | For enrichment |
+| `Zavia_db.audio_sessions` | Raw audio uploads (pre-processing) | Zavia | Variable | Supporting |
+| `Zavia_db.users` | Session creator identity | Zavia | 5,319 | For join |
+| `Muawin_Akhuwat_db.teachers` | Teacher enrichment (school, org) | Schoolpilot | Variable | For regional filter |
 
-**Note:** These tables are small and unpartitioned. Full scans acceptable at this scale.
-
-## Key Columns — zavia1.public.coaching_sessions
+## Key Columns — Zavia_db.coaching_sessions
 
 ### Identity & Status
-- `id` — primary key (STRING), use `COUNT(DISTINCT id)` for session count
-- `user_id` — FK to `zavia1.public.users.id` (teacher being coached)
-- `status` — session status: `completed`, `failed`, `in_progress`, `initiated`, `cancelled`, `test_cleanup`, `awaiting_photo`, `awaiting_lesson_plan`
+- `id` — primary key (UUID)
+- `user_id` — FK to `Zavia_db.users.id`
+- `session_id` — FK to `Zavia_db.chat_sessions.id`
+- `status` — `completed`, `failed`, `in_progress`, `initiated`, `cancelled`, `test_cleanup`, `awaiting_photo`, `awaiting_lesson_plan`
 - `last_successful_step`, `failed_step`, `error_message`, `can_resume` — pipeline diagnostics
 
-### Pipeline Timestamps
-- `created_at` — session start (primary timestamp for filtering/grouping)
-- `confirmed_at`, `transcription_started_at`, `transcription_completed_at`, `analysis_started_at`, `analysis_completed_at`, `completed_at` — milestone timestamps
-- All TIMESTAMP type
+### Audio & Transcript
+- `audio_url`, `audio_duration_seconds`, `audio_format`, `audio_size_bytes`, `audio_id`
+- `transcript_text`, `transcript_language`
+- `diarization_data` (JSONB → STRING), `diarization_confidence`
 
-### Coaching Content
-- `transcript_text` — full lesson transcript (STRING, can be large)
-- `analysis_data` — AI analysis output (JSON STRING — parse with JSON functions for structured access)
-  - **Key field:** `fidelity_analysis.score` (0-100) — lesson plan fidelity rating when `has_lesson_plan = true`
-- `lesson_plan_text`, `lesson_plan_excerpt` — LP being coached against
-- `report_pdf_url` — generated PDF coaching report
-- `voice_debrief_url`, `voice_debrief_duration_seconds` — AI voice debrief for teacher
-- `prioritized_action` — key action item from AI analysis
-- `agency_response` — teacher's reflection/response
-- `classroom_photos`, `photo_analysis` — visual evidence (JSON STRING)
+### Lesson Plan Context
+- `lesson_plan_url`, `lesson_plan_text`, `lesson_plan_structured` (JSONB → STRING)
+- `lesson_plan_format`, `has_lesson_plan`, `lesson_plan_word_count`, `lesson_plan_extraction_status`
 
-### Audio & Transcription
-- `audio_url`, `audio_duration_seconds`, `audio_format`, `audio_size_bytes` — recorded lesson audio
-- `transcript_language` — detected language
+### Analysis & Reports
+- `analysis_data` (JSONB → STRING) — contains `fidelity_analysis.score` (0-100) when `has_lesson_plan = true`
+- `conversation_state` (JSONB → STRING), `silence_markers` (JSONB → STRING), `tokens_raw` (JSONB → STRING)
+- `report_pdf_url`, `report_generated_at`, `report_gamma_url`
+- `voice_debrief_url`, `voice_debrief_duration_seconds`
 
-### Cost & Usage
-- `transcription_cost`, `analysis_cost`, `total_cost` — per-session cost (FLOAT)
-- `gpt5_input_tokens`, `gpt5_output_tokens`, `gpt5_cached_tokens` — token usage (FLOAT)
+### Cost & Tokens
+- `transcription_cost`, `analysis_cost`, `total_cost` (FLOAT)
+- `gpt5_input_tokens`, `gpt5_output_tokens`, `gpt5_cached_tokens` (FLOAT)
 
-## Key Columns — zavia1.public.coaching_quality_metrics
+### Timestamps
+- `created_at`, `confirmed_at`, `transcription_started_at`, `transcription_completed_at`
+- `analysis_started_at`, `analysis_completed_at`, `completed_at`, `updated_at`, `reminder_sent_at`
+
+## Key Columns — Zavia_db.coaching_quality_metrics
 
 - `coaching_session_id` — FK to `coaching_sessions.id`
-- `diarization_confidence` — audio quality score (FLOAT, 0-1)
-- `processing_time_seconds`, `transcription_time_seconds`, `analysis_time_seconds` — performance metrics (INT)
-- `user_satisfaction_rating` — teacher rating (STRING — cast to FLOAT for aggregation, scale TBD)
-- `user_feedback` — free text teacher feedback
-- `session_cost` — cost perspective metric (FLOAT)
-- `had_errors` — BOOLEAN, whether errors occurred
-- `retry_count` — INT, number of retries
+- `diarization_confidence` (FLOAT, 0-1)
+- `processing_time_seconds`, `transcription_time_seconds`, `analysis_time_seconds`, `report_generation_time_seconds` (INT)
+- `user_satisfaction_rating` (STRING — cast to FLOAT for aggregation)
+- `user_feedback` — free text
+- `worker_id` — processing worker ID
+- `retry_count` (INT), `had_errors` (BOOLEAN)
+- `session_cost` (FLOAT)
+- `created_at`
 
 ## Join Pattern (Regional Filter)
 
 ```sql
-SELECT cs.*, cqm.*, zu.user_id, zu.testing_account, nu.organization_id, nu.status
-FROM zavia1.public.coaching_sessions cs
-JOIN zavia1.public.users zu ON cs.user_id = zu.id
-LEFT JOIN neondb.public.users nu ON zu.phone_number = nu.phone_number
-LEFT JOIN zavia1.public.coaching_quality_metrics cqm ON cqm.coaching_session_id = cs.id
-WHERE nu.organization_id IN (<moawin_org_id>, <akhuwat_org_id>)
-  AND zu.testing_account = false
-  AND nu.testing_account = false
-  AND nu.status = 'active'
-  AND cs.status = 'completed'  -- FOR KPI REPORTING (omit for diagnostics)
+SELECT cs.*, cqm.*, zu.name AS teacher_name, zu.phone_number,
+       t.school_id, t.designation, s.name AS school_name
+FROM Zavia_db.coaching_sessions cs
+JOIN Zavia_db.users zu ON cs.user_id = zu.id
+LEFT JOIN Muawin_Akhuwat_db.teachers t ON t.zavia_user_id = zu.id
+LEFT JOIN Muawin_Akhuwat_db.schools s ON t.school_id = s.id
+LEFT JOIN Zavia_db.coaching_quality_metrics cqm ON cqm.coaching_session_id = cs.id
+WHERE t.organization_id IN (<moawin_org_id>, <akhuwat_org_id>)
+  AND zu.is_test_user = false
+  AND t.status = 'ACTIVE'
+  AND cs.status = 'completed'  -- FOR KPI REPORTING
 ```
 
 ## Status Values
@@ -103,74 +101,63 @@ WHERE nu.organization_id IN (<moawin_org_id>, <akhuwat_org_id>)
 |--------|---------|-----------------|
 | `completed` | Successfully processed | YES (default) |
 | `failed` | Processing failed | Only for diagnostics |
-| `test_cleanup` | Test data cleanup | **NEVER** |
+| `test_cleanup` | Test data | **NEVER** |
 | `cancelled` | User cancelled | Only if asked |
 | `initiated` | Started, not completed | Only for diagnostics |
 | `in_progress` | Actively processing | Only for diagnostics |
-| `awaiting_photo` | Waiting for photo upload | Only for diagnostics |
-| `awaiting_lesson_plan` | Waiting for LP upload | Only for diagnostics |
-
-**Default KPI filter:** `cs.status = 'completed'`
-**Always exclude:** `cs.status != 'test_cleanup'`
+| `awaiting_photo` | Waiting for photo | Only for diagnostics |
+| `awaiting_lesson_plan` | Waiting for LP | Only for diagnostics |
 
 ## Filtering Rules
 
-- Exclude test users: `zu.testing_account = false` AND `nu.testing_account = false`
-- Exclude inactive users: `nu.status = 'active'`
-- Include date filter on `cs.created_at >= DATE('...')` per global bigquery rules
-- For lesson fidelity queries: add `cs.analysis_data::json->>'has_lesson_plan' = 'true'` (PostgreSQL JSON syntax — verify exact syntax with data team)
+- Zavia test exclusion: `zu.is_test_user = false`
+- Schoolpilot active: `t.status = 'ACTIVE'`
+- Always exclude: `cs.status != 'test_cleanup'`
+- KPI default: `cs.status = 'completed'`
+- Lesson fidelity: add `JSON_VALUE(cs.analysis_data, '$.has_lesson_plan') = 'true'`
 
 ## Counting Rules
 
-- Session count = `COUNT(DISTINCT cs.id)` with appropriate status filter
+- Session count = `COUNT(DISTINCT cs.id)`
 - Completion rate = `COUNTIF(cs.status = 'completed') / COUNTIF(cs.status != 'test_cleanup')`
-- Teachers with AI coaching = `COUNT(DISTINCT cs.user_id)`
-- Sessions with lesson fidelity score = `COUNT(DISTINCT cs.id) WHERE analysis_data contains fidelity_analysis.score`
+- Teachers with coaching = `COUNT(DISTINCT cs.user_id)`
 
 ## Aggregation Patterns
 
 | User asks about | GROUP BY | Aggregate |
 |-----------------|----------|-----------|
 | Total sessions (completed) | — | `COUNT(DISTINCT cs.id) WHERE status='completed'` |
-| Sessions by region | `nu.organization_id` | `COUNT(DISTINCT cs.id)` |
+| Sessions by region | `t.organization_id` | `COUNT(DISTINCT cs.id)` |
 | Sessions per teacher | `cs.user_id` | `COUNT(DISTINCT cs.id)` |
-| Completion rate (overall) | — | `COUNTIF(status='completed') / COUNTIF(status!='test_cleanup')` |
+| Completion rate | — | `COUNTIF(status='completed') / COUNTIF(status!='test_cleanup')` |
 | Avg processing time | — | `AVG(cqm.processing_time_seconds)` |
-| Avg satisfaction rating | — | `AVG(CAST(cqm.user_satisfaction_rating AS FLOAT))` |
+| Avg satisfaction | — | `AVG(CAST(cqm.user_satisfaction_rating AS FLOAT64))` |
 | Total cost | — | `SUM(cs.total_cost)` |
-| Avg cost per session | — | `AVG(cs.total_cost)` |
-| Avg lesson fidelity score | — | `AVG(CAST(analysis_data::json->>'fidelity_analysis.score' AS FLOAT))` (PostgreSQL; adjust syntax per dialect) |
-| Sessions by week | `DATE_TRUNC(cs.created_at, WEEK(SATURDAY))` or `DATE_TRUNC(cs.created_at, 7 DAY)` (PostgreSQL) | `COUNT(DISTINCT cs.id)` |
-| Sessions by month | `DATE_TRUNC(cs.created_at, MONTH)` | `COUNT(DISTINCT cs.id)` |
-| Error rate (diagnostics) | — | `COUNTIF(cqm.had_errors) / COUNT(*)` |
-| By status (diagnostics) | `cs.status` | `COUNT(DISTINCT cs.id)` |
+| Avg lesson fidelity | — | `AVG(CAST(JSON_VALUE(cs.analysis_data, '$.fidelity_analysis.score') AS FLOAT64))` |
+| Sessions by week | `DATE_TRUNC(cs.created_at, WEEK(SATURDAY))` | `COUNT(DISTINCT cs.id)` |
+| Error rate | — | `COUNTIF(cqm.had_errors) / COUNT(*)` |
 
 ## Data Conventions
 
-- Timezone: `Asia/Karachi` for all date/timestamp conversions
-- Weeks run Saturday to Friday (consistent with Taleemabad convention)
-- `analysis_data` is a JSON string — use appropriate PostgreSQL JSON functions for structured access (JSON_VALUE, JSON_QUERY, or `::json` casting)
-- `user_satisfaction_rating` is stored as STRING — cast to FLOAT for numeric aggregation
-- Lesson fidelity score (0-100) only present when `has_lesson_plan = true`
+- Timezone: `Asia/Karachi`
+- Weeks: Saturday to Friday
+- `analysis_data` is JSONB → STRING — use `JSON_VALUE()` for structured access
+- `user_satisfaction_rating` is STRING — cast to FLOAT64 for numeric aggregation
+- Lesson fidelity score (0-100) only when `has_lesson_plan = true`
 
 ## Key Difference from ICT/RWP
 
-- **ICT AI coaching:** Same observation stack as human coaching, scored via FICO B/C/D sections, `source='automated'` bifurcation
-- **RWP AI coaching:** Separate audio-based system with transcription + analysis pipeline, quality metrics, no FICO framework
-- **Moawin/Akhuwat AI coaching:** Audio-based system similar to RWP (same Zavia infrastructure), includes lesson fidelity scoring (0-100) when LP context available
-- **Cross-region AI coaching comparison:** Session count + completion rate only. Fidelity scores not comparable due to different scoring frameworks (FICO vs fidelity_analysis).
+- **ICT:** Same observation stack as human coaching, FICO B/C/D sections
+- **RWP:** Separate audio-based system via RUMI_DB (same architecture as Moawin/Akhuwat)
+- **Moawin/Akhuwat:** Audio-based via Zavia_db, includes lesson fidelity scoring
+- **Cross-region:** Session count + completion rate only
 
 ## Important Notes
 
-- Always exclude test users via `testing_account = false` on BOTH Zavia and Schoolpilot (global rule)
-- Phone_number is the join key; verify it's populated and not null before joining
-- `analysis_data` is JSON — verify exact structure with data team for correct path to `fidelity_analysis.score`
-- If coaching_sessions table grows significantly, coordinate with data team on partitioning strategy
-- organization_id values must be verified with data team before hardcoding
-- Lesson fidelity score availability and scale (0-100? other?) should be confirmed with data team
+- Join to Schoolpilot via `teachers.zavia_user_id` (NOT phone_number on users table)
+- Zavia test filter: `is_test_user = false` (NOT `testing_account`)
+- `analysis_data` JSON path: `$.fidelity_analysis.score` for fidelity
 
 ## Data Status
-- Status: TRANSCRIPT MATCH (per Moawin/Akhuwat reconciliation notes)
-- Lesson fidelity: analysis_data contains `fidelity_analysis.score` (1-100), only when `has_lesson_plan = true`
+- Status: SCHEMA VERIFIED
 - Last verified: April 2026
-- Related global rules: Test user exclusion (data-governance.md), Database priority (data-governance.md)

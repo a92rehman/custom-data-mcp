@@ -20,15 +20,22 @@
 - Individual teacher FICO scores and student outcomes are `internal`, not restricted
 
 ## Test User Exclusion (All Regions)
-- **Schoolpilot (neondb):** Filter `users.testing_account = false` OR use name-based patterns to exclude internal test accounts
-- **Zavia (zavia1):** Filter `users.testing_account = false` OR name-based exclusions where applicable
+- **Moawin/Akhuwat Schoolpilot (`Muawin_Akhuwat_db`):** Filter `users.is_active = true` (no `testing_account` field — `users` table is minimal auth)
+- **Moawin/Akhuwat Zavia (`Zavia_db`):** Filter `users.is_test_user = false`
+- **Rawalpindi Schoolpilot (`neondb`):** Filter `users.testing_account = false`
+- **Rawalpindi Zavia (`zavia1`):** Filter `users.testing_account = false`
+- **ICT (`tbproddb`):** Filter `u.is_testing_account = "false"`
 - **Purpose:** Prevent test/pilot data from polluting production KPI reports
 - **When applying:** All user counts, coaching counts, assessment counts must exclude test accounts
 - Never include test data in dashboards or external reports without explicit flagging
 
 ## Database Priority Rules
-- **User/Teacher data:** Schoolpilot (`neondb.public.users` + `neondb.public.teachers`) is canonical; Zavia is secondary/verification only
-- **Lesson plans, coaching, assessments:** Zavia (`zavia1.public.*`) is canonical; Schoolpilot provides supporting context
-- **Teacher enrichment:** Always LEFT JOIN Schoolpilot users with teachers table on `teachers.user_id = users.id` for institutional attributes (EMIS, qualifications, designation, etc.)
-- **Cross-database joins:** Use phone_number or other stable identifiers where available; prefer primary keys within same database
-- Never use secondary database as source of truth for teacher counts or institutional attributes
+- **User/Teacher data:** Schoolpilot `teachers` table is canonical (has teacher_name, CNIC, school, qualification, designation)
+  - Moawin/Akhuwat: `Muawin_Akhuwat_db.teachers` (primary) + `Muawin_Akhuwat_db.users` (auth only — minimal: id, org_id, mobile_number, is_active)
+  - Rawalpindi: `neondb.public.users` + `neondb.public.teachers` (PostgreSQL)
+- **Lesson plans, coaching, assessments:** Zavia is canonical
+  - Moawin/Akhuwat: `Zavia_db.*` (BigQuery)
+  - Rawalpindi: `zavia1.public.*` (PostgreSQL)
+- **Cross-dataset join (Moawin/Akhuwat):** `Muawin_Akhuwat_db.teachers.zavia_user_id = Zavia_db.users.id` (primary). Fallback: `teachers.mobile_number = Zavia_db.users.phone_number`
+- **Cross-database join (Rawalpindi):** `phone_number` or other stable identifiers
+- Never use Zavia as source of truth for teacher counts or institutional attributes

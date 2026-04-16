@@ -19,6 +19,7 @@ KNOWN_DATASETS: set[str] = {
     "TaleemHub_DB",
     "odk",
     "Muawin_Akhuwat_db",
+    "Zavia_db",
     "mcp_audit",
     "rwp_proddb",
     "bl_proddb",
@@ -53,6 +54,9 @@ _DIR_TO_DOMAIN: dict[str, str] = {
     "dimensions": "teachers",      # dimensions/teachers → teachers
     "student_results": "student_results",
     "users": "users",
+    "attendance": "attendance",
+    "schools": "schools",
+    "platform": "platform",
 }
 
 

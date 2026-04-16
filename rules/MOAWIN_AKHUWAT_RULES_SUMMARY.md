@@ -10,30 +10,30 @@
 ### 1. `data-governance.md` — Added Two New Sections
 
 #### Test User Exclusion (All Regions)
-- **Schoolpilot (neondb):** Filter `users.testing_account = false` OR use name-based patterns
-- **Zavia (zavia1):** Filter `users.testing_account = false` OR name-based exclusions
+- **Schoolpilot (`Muawin_Akhuwat_db` for Moawin/Akhuwat, `neondb` for Rawalpindi):** Filter `users.testing_account = false` OR use name-based patterns
+- **Zavia (`Zavia_db` for Moawin/Akhuwat, `zavia1` for Rawalpindi):** Filter `users.testing_account = false` OR name-based exclusions
 - **When applying:** All user counts, coaching counts, assessment counts must exclude test accounts
 - **Purpose:** Prevent test/pilot data from polluting production KPI reports
 - **Applies to:** ICT/Islamabad, Rawalpindi, Moawin/Akhuwat
 
 #### Database Priority Rules
-- **User/Teacher data:** Schoolpilot (`neondb.public.users` + `neondb.public.teachers`) CANONICAL; Zavia secondary
-- **Lesson plans, coaching, assessments:** Zavia (`zavia1.public.*`) CANONICAL; Schoolpilot supporting
+- **User/Teacher data:** Schoolpilot (`Muawin_Akhuwat_db.users` + `Muawin_Akhuwat_db.teachers`) CANONICAL; Zavia secondary
+- **Lesson plans, coaching, assessments:** Zavia (`Zavia_db.*`) CANONICAL; Schoolpilot supporting
 - **Teacher enrichment:** Always LEFT JOIN Schoolpilot users + teachers on `teachers.user_id = users.id`
 - **Cross-database joins:** Use phone_number or stable identifiers; prefer primary keys within same database
 - **Applies to:** Rawalpindi, Moawin/Akhuwat (uses both databases)
 
-### 2. `bigquery.md` — Added PostgreSQL Database Hierarchy
+### 2. `bigquery.md` — Added Moawin/Akhuwat BigQuery Datasets
 
-New section: **PostgreSQL Databases — Hierarchy (Moawin / Akhuwat / Rawalpindi)**
+New section: **Moawin / Akhuwat — BigQuery Datasets (migrated from PostgreSQL)**
 
-| Database | Role | Type | Status |
-|----------|------|------|--------|
-| `neondb` (Schoolpilot) | User/teacher data, student assessments | PostgreSQL | CANONICAL |
-| `zavia1` (Zavia) | AI coaching/LP/assessments | PostgreSQL | CANONICAL |
+| Dataset | Role | Source | Status |
+|---------|------|--------|--------|
+| `Muawin_Akhuwat_db` (Schoolpilot) | User/teacher data, student assessments | Migrated from `neondb` (PostgreSQL) | CANONICAL |
+| `Zavia_db` (Zavia) | AI coaching/LP/assessments | Migrated from `zavia1` (PostgreSQL) | CANONICAL |
 
 **Rules:**
-- Specify database and schema explicitly: `neondb.public.users`, `zavia1.public.lesson_plans`
+- Reference tables as `Muawin_Akhuwat_db.users`, `Zavia_db.lesson_plans` (no `public.` schema)
 - Small unpartitioned tables acceptable for full scans (< 10,000 rows)
 - No hardcoded credentials in queries
 
@@ -50,7 +50,7 @@ New section: **PostgreSQL Databases — Hierarchy (Moawin / Akhuwat / Rawalpindi
 
 ```
 ## Region: Moawin / Akhuwat (`moawin-akhuwat/`)
-Databases: `neondb` (Schoolpilot) + `zavia1` (Zavia) | Regional split: `organization_id`
+Datasets: `Muawin_Akhuwat_db` (Schoolpilot) + `Zavia_db` (Zavia) — BigQuery | Regional split: `organization_id`
 
 ### moawin-akhuwat/dimensions/users/
 - user-query-rules.md — Schoolpilot canonical + enrichment, org_id filter, test exclusion
@@ -73,8 +73,8 @@ Added Moawin/Akhuwat column:
 
 | KPI | ICT | RWP | Moawin/Akhuwat | Comparable |
 |-----|-----|-----|-----------------|-----------|
-| User data | user_school_profiles | TaleemHub_DB.users | **neondb.users + teachers** | ✓ Count, cohort |
-| Lesson plans | analytics_events | RUMI_DB.lesson_plans | **zavia1.lesson_plans** | ✓ Volume |
+| User data | user_school_profiles | TaleemHub_DB.users | **Muawin_Akhuwat_db.users + teachers** | ✓ Count, cohort |
+| Lesson plans | analytics_events | RUMI_DB.lesson_plans | **Zavia_db.lesson_plans** | ✓ Volume |
 | Coaching - AI | observation stack (auto) | coaching_sessions | **coaching_sessions** | ✓ Count + rate |
 | AI Coaching - Lesson Fidelity | coaching_observationquestion | analysis_data | **analysis_data** | Fidelity score (if comparable) |
 | Student results - AI | not active | reading_assessments | **reading_assessments** | Not comparable yet |
@@ -82,7 +82,7 @@ Added Moawin/Akhuwat column:
 
 ### Database Context Updated
 
-Now documents both BigQuery (ICT) and PostgreSQL (Schoolpilot/Zavia) contexts.
+Now documents BigQuery datasets for all regions: ICT (`tbproddb`), Rawalpindi (`RUMI_DB` + `TaleemHub_DB`), and Moawin/Akhuwat (`Muawin_Akhuwat_db` + `Zavia_db`). PostgreSQL (`neondb` + `zavia1`) remains for Rawalpindi only.
 
 ---
 
@@ -93,9 +93,9 @@ Now documents both BigQuery (ICT) and PostgreSQL (Schoolpilot/Zavia) contexts.
 **Purpose:** Teacher profiles, user counts, school assignments, institutional attributes
 
 **Key Tables:**
-- `neondb.public.users` — CANONICAL user identity + registration
-- `neondb.public.teachers` — REQUIRED enrichment (EMIS, school, qualifications, designation, gender, experience, certifications)
-- `zavia1.public.users` — Verification only
+- `Muawin_Akhuwat_db.users` — CANONICAL user identity + registration
+- `Muawin_Akhuwat_db.teachers` — REQUIRED enrichment (EMIS, school, qualifications, designation, gender, experience, certifications)
+- `Zavia_db.users` — Verification only
 
 **Key Rule:** ALWAYS LEFT JOIN users + teachers; users table alone insufficient
 
@@ -115,10 +115,10 @@ Now documents both BigQuery (ICT) and PostgreSQL (Schoolpilot/Zavia) contexts.
 **Purpose:** AI lesson plan generation counts, volume, trends, grade/subject breakdown
 
 **Key Table:**
-- `zavia1.public.lesson_plans` — CANONICAL LP records (4,759 baseline)
-- `zavia1.lesson_plan_requests` — Supporting flow table
+- `Zavia_db.lesson_plans` — CANONICAL LP records (4,759 baseline)
+- `Zavia_db.lesson_plan_requests` — Supporting flow table
 
-**Key Rule:** Regional filter via LEFT JOIN to `neondb.public.users` on phone_number
+**Key Rule:** Regional filter via LEFT JOIN to `Muawin_Akhuwat_db.users` on phone_number
 
 **Filters:**
 - `testing_account = false` on BOTH Zavia and Schoolpilot
@@ -136,8 +136,8 @@ Now documents both BigQuery (ICT) and PostgreSQL (Schoolpilot/Zavia) contexts.
 **Purpose:** AI coaching sessions, quality metrics, analysis outputs, lesson fidelity
 
 **Key Tables:**
-- `zavia1.public.coaching_sessions` — CANONICAL session records (170 baseline)
-- `zavia1.public.coaching_quality_metrics` — Quality/performance metrics (125 baseline)
+- `Zavia_db.coaching_sessions` — CANONICAL session records (170 baseline)
+- `Zavia_db.coaching_quality_metrics` — Quality/performance metrics (125 baseline)
 
 **Key Feature:** Lesson fidelity scoring
 - Located in `analysis_data` JSON: `fidelity_analysis.score` (0-100)
@@ -146,7 +146,7 @@ Now documents both BigQuery (ICT) and PostgreSQL (Schoolpilot/Zavia) contexts.
 **Filters:**
 - `status = 'completed'` for KPI (default)
 - Exclude `status = 'test_cleanup'` always
-- `testing_account = false` on both databases
+- `testing_account = false` on both datasets
 - `status = 'active'` on Schoolpilot
 
 **Aggregation:** By region, teacher, week, month, plus quality metrics (processing time, satisfaction, cost)
@@ -160,7 +160,7 @@ Now documents both BigQuery (ICT) and PostgreSQL (Schoolpilot/Zavia) contexts.
 **Purpose:** Student AI reading assessments (WCPM, accuracy, comprehension, pronunciation)
 
 **Key Table:**
-- `zavia1.public.reading_assessments` — CANONICAL assessment records (277 baseline)
+- `Zavia_db.reading_assessments` — CANONICAL assessment records (277 baseline)
 
 **Key Metrics:**
 - WCPM = Words Correct Per Minute (fluency)
@@ -170,7 +170,7 @@ Now documents both BigQuery (ICT) and PostgreSQL (Schoolpilot/Zavia) contexts.
 
 **Filters:**
 - `status = 'completed'` for KPI
-- `testing_account = false` on both databases
+- `testing_account = false` on both datasets
 - `status = 'active'` on Schoolpilot
 
 **Aggregation:** By grade, subject, teacher, school, language, passage type, plus on-track rate
@@ -184,8 +184,8 @@ Now documents both BigQuery (ICT) and PostgreSQL (Schoolpilot/Zavia) contexts.
 **Purpose:** Human-entered school assessment marks (academic subjects)
 
 **Key Tables:**
-- `neondb.public.student_scores` — CANONICAL student marks
-- `neondb.public.assessments` — Assessment metadata (subject, type, rubric, total_marks, passing_marks)
+- `Muawin_Akhuwat_db.student_scores` — CANONICAL student marks
+- `Muawin_Akhuwat_db.assessments` — Assessment metadata (subject, type, rubric, total_marks, passing_marks)
 
 **Key Metrics:**
 - `score` = raw mark (scale TBD)
@@ -235,12 +235,12 @@ WHERE users.testing_account = false
 **Purpose:** Prevent test/pilot data from dashboards
 
 ### Database Priority
-- **Canonical user/teacher data:** `neondb.public.users` + `teachers` (Schoolpilot)
-- **Canonical coaching/LP/assessments:** `zavia1.public.*` (Zavia)
+- **Canonical user/teacher data:** `Muawin_Akhuwat_db.users` + `teachers` (Schoolpilot, BigQuery)
+- **Canonical coaching/LP/assessments:** `Zavia_db.*` (Zavia, BigQuery)
 - **Teacher enrichment:** Always `LEFT JOIN teachers` on `teachers.user_id = users.id`
 
 ### Regional Filtering
-- Use `organization_id` in `neondb.public.users` to split Moawin vs Akhuwat
+- Use `organization_id` in `Muawin_Akhuwat_db.users` to split Moawin vs Akhuwat
 - Exact org_id values TBD — verify with data team before hardcoding
 
 ---
@@ -257,10 +257,10 @@ WHERE users.testing_account = false
 - **Added:** Global rule in `data-governance.md`
 - **Applies to:** Rawalpindi, Moawin/Akhuwat (multi-database regions)
 
-### 3. ✅ PostgreSQL Database Hierarchy
-- **Gap:** `bigquery.md` only documented BigQuery; PostgreSQL not covered
-- **Added:** New section in `bigquery.md` with explicit database + schema requirements
-- **Applies to:** All regions using PostgreSQL (Moawin/Akhuwat, Rawalpindi via Schoolpilot/Zavia)
+### 3. ✅ Moawin/Akhuwat BigQuery Datasets
+- **Gap:** `bigquery.md` only documented ICT BigQuery; Moawin/Akhuwat not covered
+- **Added:** New section in `bigquery.md` with BigQuery dataset references (`Muawin_Akhuwat_db` + `Zavia_db`)
+- **Applies to:** Moawin/Akhuwat (migrated to BigQuery). Rawalpindi still uses PostgreSQL (`neondb` + `zavia1`)
 
 ---
 
@@ -268,7 +268,7 @@ WHERE users.testing_account = false
 
 - [x] Global rules updated with test user exclusion
 - [x] Global rules updated with database priority
-- [x] BigQuery rules updated with PostgreSQL hierarchy
+- [x] BigQuery rules updated with Moawin/Akhuwat BigQuery datasets
 - [x] Index updated with Moawin/Akhuwat section
 - [x] Cross-region KPI table updated with Moawin/Akhuwat sources
 - [x] User query rules created (dimensions/users)
