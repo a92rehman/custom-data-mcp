@@ -143,9 +143,12 @@ def _require_auth(app: "AppContext") -> str | None:
 
     # Email header is optional — used for audit enrichment only
     # Treat unexpanded env var placeholders (e.g. "${TALEEMABAD_USER}") as absent
+    # Treat non-email values (no @) as absent — MCP clients may send session IDs
     email = _get_request_user_email()
     if email and (email.startswith("${") or email.startswith("${")):
         email = None
+    if email and "@" not in email:
+        email = None  # Not an email — likely a session ID or username
     if email and not _validate_email_domain(email):
         return f"Unauthorized domain in email '{email}'. Allowed: @taleemabad.com, @niete.edu.pk, @niete.pk"
 
