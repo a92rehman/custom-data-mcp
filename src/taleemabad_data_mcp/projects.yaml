@@ -7,7 +7,7 @@ projects:
     dataset: "tbproddb"
     status: "active"
     region: "ict-islamabad"
-    description: "ICT school program — teachers, lesson plans, coaching, training"
+    description: "ICT school program — teachers, lesson plans, coaching, training, ACR/promotion policy"
 
   - name: "TaleemHub (RWP)"
     dataset: "TaleemHub_DB"

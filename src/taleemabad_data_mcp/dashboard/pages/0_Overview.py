@@ -313,7 +313,9 @@ _DOM_ICONS = {
     "observations": ("#F97316", "Ob"), "teachers": ("#3B82F6", "Te"),
     "lesson_plans": ("#10B981", "LP"), "training": ("#8B5CF6", "Tr"),
     "coaching": ("#EC4899", "Co"), "students": ("#14B8A6", "St"),
-    "events": ("#6366F1", "Ev"), "platform": ("#F59E0B", "Pl"), "other": ("#94A3B8", "Ot"),
+    "events": ("#6366F1", "Ev"), "platform": ("#F59E0B", "Pl"),
+    "teacher_acr": ("#059669", "ACR"), "attendance": ("#0891B2", "At"),
+    "schools": ("#7C3AED", "Sc"), "other": ("#94A3B8", "Ot"),
 }
 domain_html = ""
 for _, r in dom.iterrows():
