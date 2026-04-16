@@ -34,6 +34,7 @@ from taleemabad_data_mcp.dashboard.data.queries import (
     get_feedback,
     get_table_freshness,
 )
+from taleemabad_data_mcp.dashboard.data.client import get_bq_client, get_config
 from taleemabad_data_mcp.dashboard.data.projects import (
     load_projects,
     get_dataset_stats,
@@ -420,6 +421,12 @@ section_header(f"Project Status ({len(_active)} active / {len(_projects) - len(_
 
 # Build project status table
 project_rows = []
+try:
+    app_bq = get_bq_client()
+    _cfg_project = get_config()["project"]
+except Exception:
+    app_bq = None
+    _cfg_project = ""
 for p in _projects:
     ds = p.get("dataset", "—")
     status = p.get("status", "unknown")
@@ -460,7 +467,37 @@ for p in _projects:
         "tables": table_count,
         "rows": row_count,
         "coverage": coverage_badge,
+        "is_child": False,
     })
+
+    # Add child rows (sub-tables within a project)
+    for child in p.get("children", []):
+        c_status = child.get("status", "active")
+        c_color = "#10B981" if c_status == "active" else ("#F59E0B" if c_status == "dev" else "#94A3B8")
+        c_label = "DEV" if c_status == "dev" else c_status.upper()
+        c_table = child.get("table", "—")
+
+        # Get row count for the specific child table
+        c_rows = "—"
+        if ds and c_table != "—":
+            try:
+                tbl_ref = app_bq.get_table(f"{_cfg_project}.{ds}.{c_table}") if app_bq else None
+                if tbl_ref:
+                    rc = tbl_ref.num_rows
+                    c_rows = f"{rc / 1_000_000:.1f}M" if rc >= 1_000_000 else (f"{rc / 1_000:.1f}K" if rc >= 1_000 else str(rc))
+            except Exception:
+                c_rows = "—"
+
+        project_rows.append({
+            "name": child.get("name", "?"),
+            "description": child.get("description", ""),
+            "dataset": f"{ds}.{c_table}",
+            "status": f'<span style="background:{c_color};color:white;padding:3px 10px;border-radius:8px;font-size:0.75rem;font-weight:600;">{c_label}</span>',
+            "tables": "1",
+            "rows": c_rows,
+            "coverage": '<span style="color:#94A3B8;font-size:0.75rem;">—</span>',
+            "is_child": True,
+        })
 
 # Render table HTML
 table_html = '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-top:4px;">'
@@ -475,13 +512,28 @@ table_html += '<th style="padding:12px 14px;text-align:left;font-weight:700;colo
 table_html += '</tr></thead><tbody>'
 
 for i, row in enumerate(project_rows):
-    bg = "#FFFFFF" if i % 2 == 0 else "#F8FAFC"
-    table_html += f'<tr style="background:{bg};border-bottom:1px solid #E2E8F0;height:48px;">'
-    table_html += '<td style="padding:12px 14px;">'
-    table_html += f'<div style="font-weight:600;color:#0F172A;margin-bottom:2px;">{row["name"]}</div>'
-    table_html += f'<div style="font-size:0.8rem;color:#64748B;">{row["description"]}</div>'
+    is_child = row.get("is_child", False)
+    if is_child:
+        bg = "#F0F9FF"  # light blue tint for child rows
+        indent = "padding-left:36px;"
+        name_style = "font-weight:500;color:#475569;font-size:0.83rem;"
+        desc_style = "font-size:0.75rem;color:#94A3B8;"
+        ds_style = "font-family:monospace;color:#64748B;font-size:0.8rem;"
+        border = "border-bottom:1px solid #EFF6FF;"
+    else:
+        bg = "#FFFFFF" if i % 2 == 0 else "#F8FAFC"
+        indent = ""
+        name_style = "font-weight:600;color:#0F172A;"
+        desc_style = "font-size:0.8rem;color:#64748B;"
+        ds_style = "font-family:monospace;color:#3B82F6;font-weight:600;"
+        border = "border-bottom:1px solid #E2E8F0;"
+    table_html += f'<tr style="background:{bg};{border}height:48px;">'
+    table_html += f'<td style="padding:12px 14px;{indent}">'
+    prefix = "&#8627; " if is_child else ""
+    table_html += f'<div style="{name_style}margin-bottom:2px;">{prefix}{row["name"]}</div>'
+    table_html += f'<div style="{desc_style}">{row["description"]}</div>'
     table_html += '</td>'
-    table_html += f'<td style="padding:12px 14px;font-family:monospace;color:#3B82F6;font-weight:600;">{row["dataset"]}</td>'
+    table_html += f'<td style="padding:12px 14px;{ds_style}">{row["dataset"]}</td>'
     table_html += f'<td style="padding:12px 14px;">{row["status"]}</td>'
     table_html += f'<td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{row["tables"]}</td>'
     table_html += f'<td style="padding:12px 14px;text-align:center;color:#64748B;font-weight:600;">{row["rows"]}</td>'

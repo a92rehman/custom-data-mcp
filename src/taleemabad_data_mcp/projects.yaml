@@ -8,6 +8,15 @@ projects:
     status: "active"
     region: "ict-islamabad"
     description: "ICT school program — teachers, lesson plans, coaching, training, ACR/promotion policy"
+    children:
+      - name: "Teacher ACR / Promotion"
+        table: "fico_kpis"
+        description: "FICO → ACR KPI mapping (6 KPIs, scored 0-10, total/60)"
+        status: "active"
+      - name: "Student Results"
+        table: "student_results_data"
+        description: "Teacher → student outcome link (early stage, under development)"
+        status: "dev"
 
   - name: "TaleemHub (RWP)"
     dataset: "TaleemHub_DB"
