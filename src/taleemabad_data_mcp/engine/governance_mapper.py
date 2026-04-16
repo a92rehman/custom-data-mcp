@@ -57,6 +57,7 @@ _DIR_TO_DOMAIN: dict[str, str] = {
     "attendance": "attendance",
     "schools": "schools",
     "platform": "platform",
+    "teacher_acr": "teacher_acr",
 }
 
 

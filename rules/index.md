@@ -55,6 +55,10 @@ When: teacher training levels, pass rates, completion status
 - `training-query-rules.md` — pass threshold (>=80), two data sources, level ordering
 - `training-product-analytics.md` — 93 events across 3 features (training courses, exam generator, exam checker), video/quiz funnels, level progression, reliability metrics
 
+### ict-islamabad/teacher_acr/
+When: teacher ACR (Annual Confidential Report) scores, promotion policy, FICO-to-ACR KPI mapping, teacher performance vs student outcomes
+- `acr-kpi-rules.md` — `fico_kpis` (5,180 rows, 6 KPIs scored 0-10, total/60), `student_results_data` (539 rows, early stage)
+
 ### ict-islamabad/platform/
 When: app-level engagement, signup/onboarding, navigation, data sync, push notifications, community, errors
 - `app-product-analytics.md` — 47 events: signup funnel, dashboard navigation, data sync health, push notifications, community engagement, error rates
