@@ -34,12 +34,22 @@ if [ -f "$ENV_FILE" ]; then
   done < "$ENV_FILE"
 fi
 
+# --- Sync rules function (reused after update) ---
+sync_rules() {
+  if [ -d "$RULES_SRC" ]; then
+    mkdir -p "$(dirname "$RULES_DEST")"
+    rm -rf "$RULES_DEST"
+    cp -r "$RULES_SRC" "$RULES_DEST"
+
+    # Verify sync succeeded — index.md must exist
+    if [ ! -f "$RULES_DEST/index.md" ]; then
+      echo "[Taleemabad Data] WARNING: Rule sync failed — index.md not found at $RULES_DEST"
+    fi
+  fi
+}
+
 # --- Always sync rules (every session, ensures new files are picked up) ---
-if [ -d "$RULES_SRC" ]; then
-  mkdir -p "$(dirname "$RULES_DEST")"
-  rm -rf "$RULES_DEST"
-  cp -r "$RULES_SRC" "$RULES_DEST"
-fi
+sync_rules
 
 # Respect pin
 if [ -n "$TALEEMABAD_PIN_VERSION" ]; then
@@ -68,10 +78,7 @@ if [ $? -eq 0 ]; then
   echo "$LATEST" > .current-version
 
   # Sync rules after update
-  if [ -d "$RULES_SRC" ]; then
-    rm -rf "$RULES_DEST"
-    cp -r "$RULES_SRC" "$RULES_DEST"
-  fi
+  sync_rules
 
   echo "[Taleemabad Data] Updated to ${LATEST}"
 fi
