@@ -113,6 +113,13 @@ def bump_version(minor: bool = False) -> None:
                 shutil.rmtree(claude_rules_dir)
             shutil.copytree(rules_source, claude_rules_dir)
 
+        # → ~/.claude/rules/taleemabad/ (user's global rules, loaded as session context)
+        user_rules_dir = Path.home() / ".claude" / "rules" / "taleemabad"
+        if user_rules_dir.parent.exists():
+            if user_rules_dir.exists():
+                shutil.rmtree(user_rules_dir)
+            shutil.copytree(rules_source, user_rules_dir)
+
     # Update plugin manifest version
     plugin_json = repo_root / ".claude-plugin" / "plugin.json"
     if plugin_json.exists():
