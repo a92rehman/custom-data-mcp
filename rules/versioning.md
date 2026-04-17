@@ -26,13 +26,26 @@ This updates both `__init__.py` and `pyproject.toml` automatically.
 2. `git commit -m "description"`
 3. `python -m taleemabad_data_mcp bump` (or `bump --minor`)
 4. `git add -A && git commit -m "chore: bump version to vX.Y.Z"`
-5. `git push origin master && git push origin master:main`
+5. `git tag vX.Y.Z`
+6. `git push origin master --tags && git push origin master:main --tags`
+
+**The git tag is critical** — users' session-start hooks check `git ls-remote --tags` to find the latest version. Without a tag, users won't see the update.
 
 Never push without bumping. Users check `/mcp` and `version` command to know what they're running.
+
+## How Rules Reach Users
+
+The session-start hook automatically downloads the latest rules on every session:
+1. Checks `git ls-remote --tags` against `~/.claude/taleemabad-rules-version`
+2. If newer tag exists: shallow-clones tag, extracts `rules/`, syncs to `~/.claude/rules/taleemabad/`
+3. Checks at most once every 6 hours (skips if recently checked)
+4. Fallback: uses plugin cache rules if network unavailable
+
+No git repo needed in plugin cache. No manual reinstall needed. Rules auto-update.
 
 ## What `bump` Does
 
 Running `python -m taleemabad_data_mcp bump` also:
-- Syncs `plugin/rules/` from `src/taleemabad_data_mcp/rules/` (ensures plugin ships latest rules)
-- Updates `plugin/.claude-plugin/plugin.json` version field
-- Updates `plugin/.current-version`
+- Syncs rules to `src/taleemabad_data_mcp/rules/`, `rules/`, `.claude/rules/`, and `~/.claude/rules/taleemabad/`
+- Updates `.claude-plugin/plugin.json` and `marketplace.json` version fields
+- Updates `.current-version`

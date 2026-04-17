@@ -74,7 +74,7 @@ agents/                         # Plugin agents (loaded by Claude Code plugin sy
   data-admin.md                 # Diagnostics — schema, freshness, audit, troubleshooting
 commands/                       # Plugin slash commands
   setup.md                      # /taleemabad-setup — save email + sync rules
-hooks/                          # Plugin hooks (auto-update via git tags)
+hooks/                          # Plugin hooks (session-start: auto-download latest rules via git shallow clone)
 rules/                          # DERIVED COPY — synced from src/ by bump command
                                 # Plugin agents read from this location
 tests/
@@ -143,9 +143,10 @@ Always edit in `.claude/rules/` in the project directory. This is your **working
         ├──▶ src/taleemabad_data_mcp/rules/   (ships with Python package)
         └──▶ rules/                           (plugin agents read from here)
                 │
-                │  git push + session-start hook on user machines
+                │  git push --tags
+                │  session-start hook: git ls-remote → shallow clone → extract rules/
                 ▼
-~/.claude/rules/taleemabad/      ← User's copy (auto-synced every session)
+~/.claude/rules/taleemabad/      ← User's copy (auto-downloaded from latest git tag)
 ```
 
 ### Steps to add a new rule

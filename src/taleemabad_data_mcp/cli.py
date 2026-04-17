@@ -141,10 +141,11 @@ def bump_version(minor: bool = False) -> None:
         current_version_file.write_text(f"v{new_version}\n", encoding="utf-8")
 
     click.echo(f"Version bumped: {old_version} -> {new_version}")
-    click.echo(
-        f"  Next: git add -A && git commit -m "
-        f"'chore: bump version to v{new_version}' && git push"
-    )
+    click.echo(f"  Next steps:")
+    click.echo(f"    git add -A")
+    click.echo(f"    git commit -m 'chore: bump version to v{new_version}'")
+    click.echo(f"    git tag v{new_version}")
+    click.echo(f"    git push origin master --tags && git push origin master:main --tags")
 
 
 @main.command(name="bump")

@@ -1,32 +1,25 @@
 #!/usr/bin/env bash
-# Auto-update Taleemabad Data Plugin on session start
-# - Initializes git if plugin cache is not a repo (Claude installs a snapshot, not a clone)
-# - Checks for new git tags and updates plugin cache
-# - Syncs governance rules to ~/.claude/rules/taleemabad/ every session
-# - Exports TALEEMABAD_USER from saved env file
-# Set TALEEMABAD_PIN_VERSION env var to skip updates and stay on current version
+# Taleemabad Data Plugin — session-start hook
+# Downloads latest governance rules from GitHub when needed.
+# Uses git (shallow clone) since the repo is private.
+#
+# Flow:
+#   1. Export TALEEMABAD_USER from saved env file
+#   2. If rules exist and were checked <6 hours ago: skip network call
+#   3. Otherwise: check latest tag, download if newer, sync rules
+#   4. Fallback: sync from plugin cache if network fails
+#
+# Set TALEEMABAD_PIN_VERSION=v0.17.5 to lock to a specific version.
+# Delete ~/.claude/taleemabad-rules-version to force immediate refresh.
 
 REPO_URL="https://github.com/Orenda-Project/taleemabad-data-mcp.git"
-
-# Use CLAUDE_PLUGIN_ROOT if available, otherwise try common paths
-PLUGIN_DIR="${CLAUDE_PLUGIN_ROOT:-}"
-if [ -z "$PLUGIN_DIR" ]; then
-  for d in "${HOME}/.claude/plugins/cache/Orenda-Project/taleemabad-data"/*; do
-    if [ -d "$d/.claude-plugin" ]; then
-      PLUGIN_DIR="$d"
-      break
-    fi
-  done
-fi
-
-# Must have a valid plugin directory
-if [ -z "$PLUGIN_DIR" ] || [ ! -d "$PLUGIN_DIR" ]; then
-  exit 0
-fi
-
-RULES_SRC="${PLUGIN_DIR}/rules"
 RULES_DEST="${HOME}/.claude/rules/taleemabad"
+VERSION_FILE="${HOME}/.claude/taleemabad-rules-version"
 ENV_FILE="${HOME}/.claude/taleemabad-data-mcp.env"
+CHECK_INTERVAL=21600  # 6 hours in seconds
+
+# Never prompt for credentials — fail fast if not available
+export GIT_TERMINAL_PROMPT=0
 
 # --- Export TALEEMABAD_USER from saved env file ---
 if [ -f "$ENV_FILE" ]; then
@@ -37,63 +30,180 @@ if [ -f "$ENV_FILE" ]; then
   done < "$ENV_FILE"
 fi
 
-# --- Sync rules function (reused after update) ---
-sync_rules() {
-  if [ -d "$RULES_SRC" ]; then
+# --- Locate plugin directory (fallback rules source) ---
+PLUGIN_DIR="${CLAUDE_PLUGIN_ROOT:-}"
+if [ -z "$PLUGIN_DIR" ]; then
+  for d in "${HOME}/.claude/plugins/cache/Orenda-Project/taleemabad-data"/*; do
+    if [ -d "$d/.claude-plugin" ]; then
+      PLUGIN_DIR="$d"
+      break
+    fi
+  done
+fi
+FALLBACK_RULES="${PLUGIN_DIR}/rules"
+
+# --- Sync rules from a local directory (fallback) ---
+sync_from_dir() {
+  local src="$1"
+  if [ -d "$src" ] && [ -f "$src/index.md" ]; then
     mkdir -p "$(dirname "$RULES_DEST")"
     rm -rf "$RULES_DEST"
-    cp -r "$RULES_SRC" "$RULES_DEST"
+    cp -r "$src" "$RULES_DEST"
+    return 0
+  fi
+  return 1
+}
 
-    # Verify sync succeeded — index.md must exist
-    if [ ! -f "$RULES_DEST/index.md" ]; then
-      echo "[Taleemabad Data] WARNING: Rule sync failed — index.md not found"
-    fi
+# --- Check if version file was modified recently ---
+is_recently_checked() {
+  [ ! -f "$VERSION_FILE" ] && return 1
+
+  local now file_time age
+  now=$(date +%s 2>/dev/null)
+  [ -z "$now" ] && return 1
+
+  # Get file modification time (portable across macOS and Linux)
+  if stat --version >/dev/null 2>&1; then
+    # GNU stat (Linux / Git Bash on Windows)
+    file_time=$(stat -c %Y "$VERSION_FILE" 2>/dev/null)
+  else
+    # BSD stat (macOS)
+    file_time=$(stat -f %m "$VERSION_FILE" 2>/dev/null)
+  fi
+  [ -z "$file_time" ] && return 1
+
+  age=$((now - file_time))
+  [ "$age" -lt "$CHECK_INTERVAL" ]
+}
+
+# --- Get latest tag via git ls-remote ---
+get_latest_tag() {
+  local tmp_tags
+  tmp_tags=$(mktemp 2>/dev/null || mktemp -t 'tags')
+
+  # Run in background with timeout to prevent hanging
+  git ls-remote --tags "$REPO_URL" 'v*' > "$tmp_tags" 2>/dev/null &
+  local pid=$!
+
+  # Wait up to 15 seconds
+  local waited=0
+  while kill -0 "$pid" 2>/dev/null && [ "$waited" -lt 15 ]; do
+    sleep 1
+    waited=$((waited + 1))
+  done
+
+  # Kill if still running
+  if kill -0 "$pid" 2>/dev/null; then
+    kill "$pid" 2>/dev/null
+    wait "$pid" 2>/dev/null
+    rm -f "$tmp_tags"
+    return 1
+  fi
+  wait "$pid" 2>/dev/null
+
+  local tags
+  tags=$(cat "$tmp_tags" 2>/dev/null)
+  rm -f "$tmp_tags"
+  [ -z "$tags" ] && return 1
+
+  echo "$tags" \
+    | sed 's/.*refs\/tags\///' \
+    | sed 's/\^{}//' \
+    | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+    | sort -Vr \
+    | head -1
+}
+
+# --- Download rules from a specific tag ---
+download_rules() {
+  local tag="$1"
+  local tmp_dir
+  tmp_dir=$(mktemp -d 2>/dev/null || mktemp -d -t 'taleemabad')
+
+  # Shallow clone — fetches ~500KB, not full repo
+  if ! timeout 20 git clone --depth 1 --branch "$tag" --no-checkout --quiet \
+       "$REPO_URL" "${tmp_dir}/repo" 2>/dev/null; then
+    rm -rf "$tmp_dir"
+    return 1
+  fi
+
+  # Checkout only the rules/ directory
+  if ! git -C "${tmp_dir}/repo" checkout "$tag" -- rules/ 2>/dev/null; then
+    rm -rf "$tmp_dir"
+    return 1
+  fi
+
+  if [ ! -f "${tmp_dir}/repo/rules/index.md" ]; then
+    rm -rf "$tmp_dir"
+    return 1
+  fi
+
+  mkdir -p "$(dirname "$RULES_DEST")"
+  rm -rf "$RULES_DEST"
+  cp -r "${tmp_dir}/repo/rules" "$RULES_DEST"
+  echo "$tag" > "$VERSION_FILE"
+
+  rm -rf "$tmp_dir"
+  return 0
+}
+
+# --- Touch version file to update last-checked timestamp ---
+# Creates file with "unknown" if it doesn't exist, or touches existing file.
+touch_version() {
+  if [ -f "$VERSION_FILE" ]; then
+    touch "$VERSION_FILE" 2>/dev/null
+  else
+    echo "unknown" > "$VERSION_FILE"
   fi
 }
 
-# --- Always sync rules (every session, ensures new files are picked up) ---
-sync_rules
+# --- Main logic ---
 
-# Respect pin
+# Respect version pin
 if [ -n "$TALEEMABAD_PIN_VERSION" ]; then
+  if [ ! -f "$RULES_DEST/index.md" ]; then
+    sync_from_dir "$FALLBACK_RULES"
+  fi
   exit 0
 fi
 
-cd "$PLUGIN_DIR" || exit 0
-
-# --- Initialize git if not a repo (Claude plugin install creates a snapshot, not a clone) ---
-if [ ! -d ".git" ]; then
-  git init --quiet 2>/dev/null || exit 0
-  git remote add origin "$REPO_URL" 2>/dev/null || true
-fi
-
-# Ensure remote is set correctly
-if ! git remote get-url origin >/dev/null 2>&1; then
-  git remote add origin "$REPO_URL" 2>/dev/null || exit 0
-fi
-
-# Fetch latest tags quietly
-git fetch --tags --quiet 2>/dev/null || exit 0
-
-LATEST=$(git tag -l 'v*' --sort=-v:refname 2>/dev/null | head -1)
-CURRENT=$(cat .current-version 2>/dev/null || echo "none")
-
-if [ -z "$LATEST" ]; then
+# If rules exist and were checked recently, skip network call
+if [ -f "$RULES_DEST/index.md" ] && is_recently_checked; then
   exit 0
 fi
 
-if [ "$LATEST" = "$CURRENT" ]; then
-  exit 0
+CURRENT=$(cat "$VERSION_FILE" 2>/dev/null || echo "none")
+
+# Check latest tag from GitHub
+LATEST=$(get_latest_tag)
+
+if [ -n "$LATEST" ] && [ "$LATEST" != "$CURRENT" ]; then
+  # New version available
+  if download_rules "$LATEST"; then
+    echo "[Taleemabad Data] Rules updated to ${LATEST}"
+  else
+    # Download failed — ensure we have rules from plugin cache
+    if [ ! -f "$RULES_DEST/index.md" ]; then
+      sync_from_dir "$FALLBACK_RULES"
+    fi
+    # Touch version file so we don't retry for CHECK_INTERVAL
+    touch_version
+  fi
+elif [ -n "$LATEST" ]; then
+  # Already up to date — touch version file to reset check interval
+  touch_version
+else
+  # Network failed — ensure rules exist from plugin cache
+  if [ ! -f "$RULES_DEST/index.md" ]; then
+    sync_from_dir "$FALLBACK_RULES"
+  fi
+  # Write/touch version file to prevent retry storms
+  if [ ! -f "$VERSION_FILE" ]; then
+    echo "unknown" > "$VERSION_FILE"
+  fi
+  touch_version
 fi
 
-# Update plugin cache to latest tag
-git fetch origin "refs/tags/${LATEST}:refs/tags/${LATEST}" --quiet 2>/dev/null
-git checkout "$LATEST" --force --quiet 2>/dev/null
-if [ $? -eq 0 ]; then
-  echo "$LATEST" > .current-version
-
-  # Sync rules after update
-  sync_rules
-
-  echo "[Taleemabad Data] Updated to ${LATEST}"
+if [ ! -f "$RULES_DEST/index.md" ]; then
+  echo "[Taleemabad Data] WARNING: Governance rules not available"
 fi
