@@ -22,7 +22,7 @@ _RULES_DIR = Path(__file__).parent.parent.parent / "rules"
 # ---------------------------------------------------------------------------
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=600)
 def load_projects() -> list[dict]:
     """Load the project registry from projects.yaml.
 
@@ -43,7 +43,7 @@ def load_projects() -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=600)
 def get_dataset_stats(datasets: list[str]) -> dict[str, dict]:
     """Query BigQuery __TABLES__ for table_count and total_rows per dataset.
 
@@ -80,7 +80,7 @@ def get_dataset_stats(datasets: list[str]) -> dict[str, dict]:
     return result
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=600)
 def get_all_tables(datasets: list[str]) -> pd.DataFrame:
     """Get all tables across the given datasets with metadata.
 
@@ -124,7 +124,7 @@ def get_all_tables(datasets: list[str]) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=600)
 def get_governance_coverage() -> dict:
     """Return the governance map from all rule files, cached 1 hour.
 

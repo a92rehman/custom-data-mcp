@@ -144,7 +144,7 @@ real = df[df["error_type"] != "dry_run"]
 errs = real[real["error_type"].notna()]
 cost_df = df[df["cost_usd"].notna() & (df["cost_usd"] > 0)]
 total_q = len(real)
-n_users = df["user_name"].nunique()
+n_users = real["user_name"].nunique()  # Exclude dry-run-only users — matches Query Analytics
 total_cost = cost_df["cost_usd"].sum() if not cost_df.empty else 0
 err_count = len(errs)
 err_rate = err_count / total_q * 100 if total_q > 0 else 0
@@ -165,20 +165,15 @@ _ds_stats = get_dataset_stats(_ds_to_q) if _ds_to_q else {}
 total_tables_all = sum(s["table_count"] for s in _ds_stats.values())
 
 # Count governed tables by cross-referencing actual BQ tables with governance map
-# This matches the Governance page logic — only count tables that actually exist in BQ
+# Same logic as Governance page — only count tables that actually exist in BQ
 _gov_per_ds: dict[str, int] = {}
-try:
-    from taleemabad_data_mcp.dashboard.data.projects import get_all_tables
-    _all_tables_df = get_all_tables(_ds_to_q) if _ds_to_q else None
-    if _all_tables_df is not None and not _all_tables_df.empty:
-        for _, _row in _all_tables_df.iterrows():
-            _key = (_row["dataset"], _row["table_name"])
-            if _key in _gov_map:
-                _gov_per_ds[_row["dataset"]] = _gov_per_ds.get(_row["dataset"], 0) + 1
-except Exception:
-    # Fallback to governance map count (may overcount)
-    for (_ds, _), _ in _gov_map.items():
-        _gov_per_ds[_ds] = _gov_per_ds.get(_ds, 0) + 1
+from taleemabad_data_mcp.dashboard.data.projects import get_all_tables
+_all_tables_df = get_all_tables(_ds_to_q) if _ds_to_q else pd.DataFrame()
+if not _all_tables_df.empty:
+    for _, _row in _all_tables_df.iterrows():
+        _key = (_row["dataset"], _row["table_name"])
+        if _key in _gov_map:
+            _gov_per_ds[_row["dataset"]] = _gov_per_ds.get(_row["dataset"], 0) + 1
 governed = sum(_gov_per_ds.values())
 
 try:

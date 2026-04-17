@@ -47,7 +47,7 @@ if fb.empty:
 up_count = int((fb["rating"] == "up").sum())
 down_count = int((fb["rating"] == "down").sum())
 total_fb = len(fb)
-total_queries = len(activity) if not activity.empty else 0
+total_queries = len(activity[activity["error_type"] != "dry_run"]) if not activity.empty else 0
 sat_pct = up_count / total_fb * 100 if total_fb > 0 else 0
 adoption = total_fb / total_queries * 100 if total_queries > 0 else 0
 
