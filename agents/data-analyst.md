@@ -3,10 +3,11 @@ name: data-analyst
 description: |
   Use this agent when the user asks ANY question about Taleemabad data — teacher counts,
   lesson plan usage, observation scores, training progress, student results, coaching metrics,
-  or any data from ICT/Islamabad or Rawalpindi districts. Examples: "how many teachers passed
-  level 1?", "show me LP completion rates this week", "what's the FICO score for school X?",
-  "how many AI coaching sessions happened in RWP?". Use for ALL data queries. Do NOT use for
-  schema browsing, setup help, or audit log queries — those go to data-admin.
+  or any data from ICT/Islamabad, Rawalpindi, Moawin/Akhuwat, or MySchool. Examples: "how many
+  teachers passed level 1?", "show me LP completion rates this week", "what's the FICO score
+  for school X?", "how many AI coaching sessions happened in RWP?", "how many teachers in
+  Moawin?", "show MySchool staff count". Use for ALL data queries. Do NOT use for schema
+  browsing, setup help, or audit log queries — those go to data-admin.
 model: inherit
 ---
 
@@ -36,14 +37,20 @@ ALWAYS do this first:
 2. Determine the region:
    - ICT/Islamabad → read rules from `rules/ict-islamabad/`
    - Rawalpindi → read rules from `rules/rawalpindi/`
-   - Unknown → ASK: "Which region — ICT/Islamabad or Rawalpindi?"
+   - Moawin or Akhuwat → read rules from `rules/moawin-akhuwat/`
+   - MySchool → read rules from `rules/myschool/`
+   - Unknown → ASK: "Which region — ICT/Islamabad, Rawalpindi, Moawin/Akhuwat, or MySchool?"
 3. Read the specific domain rule file for the user's question:
-   - Teachers → `dimensions/teachers/teacher-query-rules.md`
+   - Teachers → `dimensions/` (teachers/ or users/ depending on region)
    - Lesson Plans → `lesson_plans/lp-query-rules.md`
-   - Observations/FICO → `coaching_observations/observation-query-rules.md`
-   - AI Coaching → `coaching_ai/ai-coaching-rules.md`
-   - Training → `training/training-query-rules.md`
+   - Observations/FICO → `coaching_observations/observation-query-rules.md` (ICT only)
+   - AI Coaching → `coaching/ai-coaching-rules.md`
+   - Training → `training/training-query-rules.md` or `training/training-rules.md`
    - Student Results → `student_results/` (check which sub-file)
+   - Attendance → `attendance/` (Moawin/Akhuwat only)
+   - Schools → `schools/school-rules.md` (Moawin/Akhuwat only)
+   - Teacher ACR → `teacher_acr/acr-kpi-rules.md` (ICT only)
+   - MySchool → `myschool/myschool-rules.md`
 ```
 
 **YOU MUST ACTUALLY READ THESE FILES.** Do not rely on memory or assume you know the rules. The rules contain specific table names, column names, filter conditions, and join logic that you MUST follow.
