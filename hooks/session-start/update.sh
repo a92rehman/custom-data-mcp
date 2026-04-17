@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 # Taleemabad Data Plugin — session-start hook
-# Downloads latest governance rules from GitHub when needed.
-# Uses git (shallow clone) since the repo is private.
+# Downloads latest governance rules into the plugin's rules/ directory.
+# Rules are NOT placed in ~/.claude/rules/ — that would inject them into the
+# parent session's context, causing it to bypass the agent's Read→Clarify→Execute flow.
 #
 # Flow:
 #   1. Export TALEEMABAD_USER from saved env file
-#   2. If rules exist and were checked <6 hours ago: skip network call
-#   3. Otherwise: check latest tag, download if newer, sync rules
-#   4. Fallback: sync from plugin cache if network fails
+#   2. If rules were checked <6 hours ago: skip network call
+#   3. Otherwise: check latest tag, download rules/ via shallow clone
+#   4. Fallback: plugin ships with rules/ already — no sync needed
 #
 # Set TALEEMABAD_PIN_VERSION=v0.17.5 to lock to a specific version.
 # Delete ~/.claude/taleemabad-rules-version to force immediate refresh.
 
 REPO_URL="https://github.com/Orenda-Project/taleemabad-data-mcp.git"
-RULES_DEST="${HOME}/.claude/rules/taleemabad"
 VERSION_FILE="${HOME}/.claude/taleemabad-rules-version"
 ENV_FILE="${HOME}/.claude/taleemabad-data-mcp.env"
 CHECK_INTERVAL=21600  # 6 hours in seconds
@@ -30,7 +30,7 @@ if [ -f "$ENV_FILE" ]; then
   done < "$ENV_FILE"
 fi
 
-# --- Locate plugin directory (fallback rules source) ---
+# --- Locate plugin directory ---
 PLUGIN_DIR="${CLAUDE_PLUGIN_ROOT:-}"
 if [ -z "$PLUGIN_DIR" ]; then
   for d in "${HOME}/.claude/plugins/cache/Orenda-Project/taleemabad-data"/*; do
@@ -40,19 +40,20 @@ if [ -z "$PLUGIN_DIR" ]; then
     fi
   done
 fi
-FALLBACK_RULES="${PLUGIN_DIR}/rules"
 
-# --- Sync rules from a local directory (fallback) ---
-sync_from_dir() {
-  local src="$1"
-  if [ -d "$src" ] && [ -f "$src/index.md" ]; then
-    mkdir -p "$(dirname "$RULES_DEST")"
-    rm -rf "$RULES_DEST"
-    cp -r "$src" "$RULES_DEST"
-    return 0
-  fi
-  return 1
-}
+# Must have a valid plugin directory
+if [ -z "$PLUGIN_DIR" ] || [ ! -d "$PLUGIN_DIR" ]; then
+  exit 0
+fi
+
+RULES_DEST="${PLUGIN_DIR}/rules"
+
+# --- Clean up old global rules (from previous versions) ---
+# These were injected into parent session context, causing governance bypass.
+OLD_GLOBAL_RULES="${HOME}/.claude/rules/taleemabad"
+if [ -d "$OLD_GLOBAL_RULES" ]; then
+  rm -rf "$OLD_GLOBAL_RULES"
+fi
 
 # --- Check if version file was modified recently ---
 is_recently_checked() {
@@ -62,12 +63,9 @@ is_recently_checked() {
   now=$(date +%s 2>/dev/null)
   [ -z "$now" ] && return 1
 
-  # Get file modification time (portable across macOS and Linux)
   if stat --version >/dev/null 2>&1; then
-    # GNU stat (Linux / Git Bash on Windows)
     file_time=$(stat -c %Y "$VERSION_FILE" 2>/dev/null)
   else
-    # BSD stat (macOS)
     file_time=$(stat -f %m "$VERSION_FILE" 2>/dev/null)
   fi
   [ -z "$file_time" ] && return 1
@@ -81,18 +79,15 @@ get_latest_tag() {
   local tmp_tags
   tmp_tags=$(mktemp 2>/dev/null || mktemp -t 'tags')
 
-  # Run in background with timeout to prevent hanging
   git ls-remote --tags "$REPO_URL" 'v*' > "$tmp_tags" 2>/dev/null &
   local pid=$!
 
-  # Wait up to 15 seconds
   local waited=0
   while kill -0 "$pid" 2>/dev/null && [ "$waited" -lt 15 ]; do
     sleep 1
     waited=$((waited + 1))
   done
 
-  # Kill if still running
   if kill -0 "$pid" 2>/dev/null; then
     kill "$pid" 2>/dev/null
     wait "$pid" 2>/dev/null
@@ -114,20 +109,18 @@ get_latest_tag() {
     | head -1
 }
 
-# --- Download rules from a specific tag ---
+# --- Download rules from a specific tag into plugin rules/ ---
 download_rules() {
   local tag="$1"
   local tmp_dir
   tmp_dir=$(mktemp -d 2>/dev/null || mktemp -d -t 'taleemabad')
 
-  # Shallow clone — fetches ~500KB, not full repo
   if ! timeout 20 git clone --depth 1 --branch "$tag" --no-checkout --quiet \
        "$REPO_URL" "${tmp_dir}/repo" 2>/dev/null; then
     rm -rf "$tmp_dir"
     return 1
   fi
 
-  # Checkout only the rules/ directory
   if ! git -C "${tmp_dir}/repo" checkout "$tag" -- rules/ 2>/dev/null; then
     rm -rf "$tmp_dir"
     return 1
@@ -138,7 +131,7 @@ download_rules() {
     return 1
   fi
 
-  mkdir -p "$(dirname "$RULES_DEST")"
+  # Replace plugin's rules/ directory with downloaded version
   rm -rf "$RULES_DEST"
   cp -r "${tmp_dir}/repo/rules" "$RULES_DEST"
   echo "$tag" > "$VERSION_FILE"
@@ -148,7 +141,6 @@ download_rules() {
 }
 
 # --- Touch version file to update last-checked timestamp ---
-# Creates file with "unknown" if it doesn't exist, or touches existing file.
 touch_version() {
   if [ -f "$VERSION_FILE" ]; then
     touch "$VERSION_FILE" 2>/dev/null
@@ -161,9 +153,6 @@ touch_version() {
 
 # Respect version pin
 if [ -n "$TALEEMABAD_PIN_VERSION" ]; then
-  if [ ! -f "$RULES_DEST/index.md" ]; then
-    sync_from_dir "$FALLBACK_RULES"
-  fi
   exit 0
 fi
 
@@ -174,36 +163,20 @@ fi
 
 CURRENT=$(cat "$VERSION_FILE" 2>/dev/null || echo "none")
 
-# Check latest tag from GitHub
 LATEST=$(get_latest_tag)
 
 if [ -n "$LATEST" ] && [ "$LATEST" != "$CURRENT" ]; then
-  # New version available
   if download_rules "$LATEST"; then
     echo "[Taleemabad Data] Rules updated to ${LATEST}"
   else
-    # Download failed — ensure we have rules from plugin cache
-    if [ ! -f "$RULES_DEST/index.md" ]; then
-      sync_from_dir "$FALLBACK_RULES"
-    fi
-    # Touch version file so we don't retry for CHECK_INTERVAL
     touch_version
   fi
 elif [ -n "$LATEST" ]; then
-  # Already up to date — touch version file to reset check interval
   touch_version
 else
-  # Network failed — ensure rules exist from plugin cache
-  if [ ! -f "$RULES_DEST/index.md" ]; then
-    sync_from_dir "$FALLBACK_RULES"
-  fi
-  # Write/touch version file to prevent retry storms
-  if [ ! -f "$VERSION_FILE" ]; then
-    echo "unknown" > "$VERSION_FILE"
-  fi
   touch_version
 fi
 
 if [ ! -f "$RULES_DEST/index.md" ]; then
-  echo "[Taleemabad Data] WARNING: Governance rules not available"
+  echo "[Taleemabad Data] WARNING: Governance rules not available in ${RULES_DEST}"
 fi

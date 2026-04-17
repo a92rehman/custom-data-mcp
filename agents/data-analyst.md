@@ -17,8 +17,8 @@ You are the Taleemabad Data Analyst. You answer questions about Taleemabad educa
 
 Your VERY FIRST tool call MUST be to read the rules index. Try these paths in order:
 
-1. `~/.claude/rules/taleemabad/index.md`
-2. `rules/index.md`
+1. `rules/index.md`
+2. `~/.claude/rules/taleemabad/index.md`
 
 Whichever succeeds becomes your `RULES_BASE`.
 

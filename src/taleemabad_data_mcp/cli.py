@@ -113,12 +113,10 @@ def bump_version(minor: bool = False) -> None:
                 shutil.rmtree(claude_rules_dir)
             shutil.copytree(rules_source, claude_rules_dir)
 
-        # → ~/.claude/rules/taleemabad/ (user's global rules, loaded as session context)
+        # Clean up old global rules (they bypass agent governance if loaded as context)
         user_rules_dir = Path.home() / ".claude" / "rules" / "taleemabad"
-        if user_rules_dir.parent.exists():
-            if user_rules_dir.exists():
-                shutil.rmtree(user_rules_dir)
-            shutil.copytree(rules_source, user_rules_dir)
+        if user_rules_dir.exists():
+            shutil.rmtree(user_rules_dir)
 
     # Update plugin manifest version
     plugin_json = repo_root / ".claude-plugin" / "plugin.json"
@@ -196,19 +194,12 @@ def setup(email: str) -> None:
         click.echo(f"Error: {err}", err=True)
         sys.exit(1)
 
-    # 1. Copy rules to ~/.claude/rules/taleemabad/
-    src_rules = _bundled_rules_dir()
+    # 1. Clean up old global rules (they were injected into parent context, bypassing agent)
     dest_rules = _rules_dest()
-
-    if not src_rules.exists():
-        click.echo(f"Error: bundled rules not found at {src_rules}", err=True)
-        sys.exit(1)
-
     if dest_rules.exists():
         shutil.rmtree(dest_rules)
-    dest_rules.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(src_rules, dest_rules)
-    click.echo(f"Rules installed to {dest_rules}")
+        click.echo(f"Removed old global rules from {dest_rules}")
+    click.echo("Rules are managed by the plugin (auto-updated via session-start hook)")
 
     # 2. Save user config to env file
     env_content = f"TALEEMABAD_USER={email}\n"

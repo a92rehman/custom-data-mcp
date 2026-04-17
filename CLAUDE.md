@@ -146,8 +146,12 @@ Always edit in `.claude/rules/` in the project directory. This is your **working
                 │  git push --tags
                 │  session-start hook: git ls-remote → shallow clone → extract rules/
                 ▼
-~/.claude/rules/taleemabad/      ← User's copy (auto-downloaded from latest git tag)
+PLUGIN_CACHE/rules/              ← User's copy (auto-downloaded into plugin directory)
 ```
+
+**Rules are NOT placed in `~/.claude/rules/`** — that would inject them into the parent
+session's context, causing it to bypass the agent's Read→Clarify→Execute governance flow.
+Rules live only in the plugin's `rules/` directory, read by the data-analyst subagent.
 
 ### Steps to add a new rule
 1. Create the `.md` file in `.claude/rules/<region>/<domain>/`
@@ -157,8 +161,9 @@ Always edit in `.claude/rules/` in the project directory. This is your **working
 
 ### Who reads rules
 - **You (developer)** — edit `.claude/rules/` directly, loaded as Claude Code context
-- **Plugin agents** (`data-analyst.md`, `data-admin.md`) — read from `${CLAUDE_PLUGIN_ROOT}/rules/`
-- **End users** — `~/.claude/rules/taleemabad/` auto-synced by session-start hook
+- **Plugin agents** (`data-analyst.md`) — read from `rules/index.md` (relative to plugin root)
+- **End users** — rules auto-updated in plugin's `rules/` directory by session-start hook
+- Rules are NOT in `~/.claude/rules/` — that would bypass agent governance
 - All copies are kept in sync by the bump command + session-start hook
 
 ### Important
