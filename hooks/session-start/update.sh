@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # Auto-update Taleemabad Data Plugin on session start
+# - Initializes git if plugin cache is not a repo (Claude installs a snapshot, not a clone)
 # - Checks for new git tags and updates plugin cache
 # - Syncs governance rules to ~/.claude/rules/taleemabad/ every session
 # - Exports TALEEMABAD_USER from saved env file
 # Set TALEEMABAD_PIN_VERSION env var to skip updates and stay on current version
+
+REPO_URL="https://github.com/Orenda-Project/taleemabad-data-mcp.git"
 
 # Use CLAUDE_PLUGIN_ROOT if available, otherwise try common paths
 PLUGIN_DIR="${CLAUDE_PLUGIN_ROOT:-}"
@@ -43,7 +46,7 @@ sync_rules() {
 
     # Verify sync succeeded — index.md must exist
     if [ ! -f "$RULES_DEST/index.md" ]; then
-      echo "[Taleemabad Data] WARNING: Rule sync failed — index.md not found at $RULES_DEST"
+      echo "[Taleemabad Data] WARNING: Rule sync failed — index.md not found"
     fi
   fi
 }
@@ -57,6 +60,17 @@ if [ -n "$TALEEMABAD_PIN_VERSION" ]; then
 fi
 
 cd "$PLUGIN_DIR" || exit 0
+
+# --- Initialize git if not a repo (Claude plugin install creates a snapshot, not a clone) ---
+if [ ! -d ".git" ]; then
+  git init --quiet 2>/dev/null || exit 0
+  git remote add origin "$REPO_URL" 2>/dev/null || true
+fi
+
+# Ensure remote is set correctly
+if ! git remote get-url origin >/dev/null 2>&1; then
+  git remote add origin "$REPO_URL" 2>/dev/null || exit 0
+fi
 
 # Fetch latest tags quietly
 git fetch --tags --quiet 2>/dev/null || exit 0
@@ -73,7 +87,8 @@ if [ "$LATEST" = "$CURRENT" ]; then
 fi
 
 # Update plugin cache to latest tag
-git checkout "$LATEST" --quiet 2>/dev/null
+git fetch origin "refs/tags/${LATEST}:refs/tags/${LATEST}" --quiet 2>/dev/null
+git checkout "$LATEST" --force --quiet 2>/dev/null
 if [ $? -eq 0 ]; then
   echo "$LATEST" > .current-version
 
