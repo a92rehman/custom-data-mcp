@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "taleemabad-data-mcp"
-version = "0.17.6"
+version = "0.17.7"
 description = "Taleemabad's Data Navigator — governed semantic layer for BigQuery"
 requires-python = ">=3.11"
 dependencies = [
