@@ -158,13 +158,28 @@ confidence = success_rate * 0.7 + sat * 0.3 if fb_total > 0 else success_rate
 _projects = load_projects()
 _active = [p for p in _projects if p.get("status") == "active"]
 _gov_map = get_governance_coverage()
-_gov_per_ds: dict[str, int] = {}
-for (_ds, _), _ in _gov_map.items():
-    _gov_per_ds[_ds] = _gov_per_ds.get(_ds, 0) + 1
-governed = sum(_gov_per_ds.values())
-_ds_to_q = [p["dataset"] for p in _projects if p.get("dataset") and p.get("status") in ("active", "system")]
+
+# Use only active project datasets (exclude system/inactive) — same scope as Governance page
+_ds_to_q = [p["dataset"] for p in _active if p.get("dataset")]
 _ds_stats = get_dataset_stats(_ds_to_q) if _ds_to_q else {}
 total_tables_all = sum(s["table_count"] for s in _ds_stats.values())
+
+# Count governed tables by cross-referencing actual BQ tables with governance map
+# This matches the Governance page logic — only count tables that actually exist in BQ
+_gov_per_ds: dict[str, int] = {}
+try:
+    from taleemabad_data_mcp.dashboard.data.projects import get_all_tables
+    _all_tables_df = get_all_tables(_ds_to_q) if _ds_to_q else None
+    if _all_tables_df is not None and not _all_tables_df.empty:
+        for _, _row in _all_tables_df.iterrows():
+            _key = (_row["dataset"], _row["table_name"])
+            if _key in _gov_map:
+                _gov_per_ds[_row["dataset"]] = _gov_per_ds.get(_row["dataset"], 0) + 1
+except Exception:
+    # Fallback to governance map count (may overcount)
+    for (_ds, _), _ in _gov_map.items():
+        _gov_per_ds[_ds] = _gov_per_ds.get(_ds, 0) + 1
+governed = sum(_gov_per_ds.values())
 
 try:
     fresh_df = get_table_freshness()
