@@ -5,10 +5,15 @@ See [VISION.md](docs/VISION.md) for why and what. See [README.md](README.md) for
 
 ## For Data Questions
 
-**All data questions MUST go through the `data-analyst` agent.** Do NOT query BigQuery directly.
-Do NOT call `execute_query`, `list_datasets`, `get_table_schema`, or any MCP tool without the agent.
+**All data questions MUST go through the `data-analyst` agent first.** The workflow:
 
-The data-analyst agent reads governance rules, asks mandatory clarification questions, and generates governed SQL. This is the only valid path to query execution.
+1. Dispatch the `data-analyst` agent with the user's question
+2. The agent reads governance rules, asks mandatory clarification questions, and returns governed SQL
+3. **You (parent session) execute the SQL** via `execute_query` MCP tool
+4. Present results to the user with freshness, cost, and rule file used
+
+The agent generates the SQL but cannot call MCP tools directly — you must execute it.
+Do NOT generate SQL yourself. Do NOT call `execute_query` without the agent's governed SQL.
 
 ## Architecture
 - **MCP server is a thin execution layer** — runs queries, estimates costs, logs audits
