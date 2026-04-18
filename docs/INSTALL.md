@@ -9,28 +9,34 @@ See the [README](../README.md) for complete installation instructions.
 claude plugin marketplace add Orenda-Project/taleemabad-data-mcp
 claude plugin install taleemabad-data@Orenda-Project
 
-# 2. Copy credentials file to your project directory
-# (ask the data team for niete-bq-prod-48ae5260d1ea.json)
-
-# 3. Restart Claude Code, then run:
+# 2. Open Claude Code and run setup (one time, for your email)
 /taleemabad-setup
 
-# 4. Restart Claude Code again, verify:
+# 3. Restart Claude Code, verify:
 /mcp
 ```
 
 ## Prerequisites
 
-- Claude Code
-- GCP service account key (ask data team for `niete-bq-prod-48ae5260d1ea.json`)
+- Node.js 18+ and Claude Code CLI
+- Anthropic subscription (Pro, Max, or API)
+- GitHub access to [Orenda-Project](https://github.com/Orenda-Project)
+- Work email (`@taleemabad.com`, `@niete.edu.pk`, or `@niete.pk`)
 
-## For New Projects
+No local Python, credentials file, or BigQuery access needed — the MCP server runs remotely.
 
-Just copy `niete-bq-prod-48ae5260d1ea.json` to the project directory. No other steps needed.
+## How It Works
 
-## Migration from v0.11.0 or Earlier
+- The plugin includes agents that read governance rules and generate correct SQL
+- Rules auto-update from GitHub on every session start (via session-start hook)
+- The MCP server runs on Railway — queries execute remotely
+- All queries are audited with your email, cost, and domain
+
+## Migration from v0.14 or Earlier
 
 If you used a previous version:
 1. Delete old `.mcp.json` files from your project directories
-2. Run `/taleemabad-setup` once (it will clean up old artifacts)
-3. You can delete `~/.claude/taleemabad-venv/` manually (no longer needed)
+2. Delete old credentials files (`niete-bq-prod-*.json`) — no longer needed
+3. Run `/taleemabad-setup` once to save your email
+4. Delete `~/.claude/taleemabad-venv/` if it exists (no longer needed)
+5. Delete `~/.claude/rules/taleemabad/` if it exists (rules now live in the plugin)

@@ -96,7 +96,7 @@ Open Claude Code in any project directory and type:
 /taleemabad-setup
 ```
 
-The setup will ask for your **work email** (for audit logs) and sync governance rules to your machine.
+The setup will ask for your **work email** (for audit logs). Governance rules are managed automatically by the plugin.
 
 ### Step 3: Restart Claude Code
 
@@ -132,13 +132,13 @@ Just type your question in Claude Code:
 
 > "What's the average ACR score by designation?"
 
-The AI reads governance rules, generates the correct SQL, runs it against BigQuery with cost guardrails, and returns results with full audit logging.
+The data-analyst agent reads governance rules, asks mandatory clarification questions, generates the correct SQL, runs it against BigQuery with cost guardrails, and returns results with full audit logging.
 
 ### Available Slash Commands
 
 | Command | What It Does |
 |---------|-------------|
-| `/taleemabad-setup` | Save your email + sync governance rules (one-time) |
+| `/taleemabad-setup` | Save your email for audit logging (one-time) |
 | `/mcp` | Check MCP connection status |
 
 ---
@@ -227,6 +227,7 @@ You don't call these directly — Claude Code picks the right tool based on your
 | ICT/Islamabad | Complete | `tbproddb` | Teachers, lesson plans, coaching/FICO, training, ACR/promotion, student results |
 | Rawalpindi | Complete | `RUMI_DB` + `TaleemHub_DB` | Teachers, AI coaching, lesson plans, reading assessments, ASER |
 | Moawin/Akhuwat | Complete | `Muawin_Akhuwat_db` + `Zavia_db` | Teachers, schools, attendance, training, AI coaching, lesson plans, reading assessments, student scores |
+| MySchool | Complete | `MySchool_db` | Staff, students, attendance, infrastructure, timetables, analytics |
 
 All datasets accessible to the service account are available dynamically — no configuration needed when new datasets are migrated to BigQuery.
 

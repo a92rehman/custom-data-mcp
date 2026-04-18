@@ -44,7 +44,7 @@ Every interaction follows a five-step flow:
 
 1. **Conversation over assumption** — always clarify, never guess
 2. **Rules over ad-hoc SQL** — no direct raw table access
-3. **Definitions as code** — metric definitions and query logic stored in `.claude/rules/`, version-controlled, review-gated
+3. **Definitions as code** — metric definitions and query logic stored in governance rule files, version-controlled, review-gated
 4. **Observe everything** — full audit trail of who asked what
 5. **Progressive trust** — Bronze → Silver → Gold tier system
 
@@ -122,7 +122,7 @@ Individual teacher FICO scores and student outcomes are Internal, not restricted
 
 BigQuery charges by data scanned. The MCP enforces a **partition-first execution policy**: always route to partitioned tables, reject queries without date filters, and estimate cost before execution. Unpartitioned tables are flagged as "partition debt" for the data team rather than scanned.
 
-Exact thresholds and enforcement rules: `.claude/rules/bigquery.md`
+Exact thresholds and enforcement rules: `rules/bigquery.md`
 
 ---
 
@@ -132,7 +132,7 @@ The user always knows how fresh their data is, and the system never pretends cac
 
 The system pre-computes critical metrics on schedule and auto-invalidates stale cache. Ad-hoc queries always go live. The caching design includes explicit loop prevention to ensure users and the system never get stuck serving stale data.
 
-Exact rules and loop prevention logic: `.claude/rules/caching.md`
+Exact rules and loop prevention logic: `rules/caching.md`
 
 ---
 
@@ -148,7 +148,7 @@ The MCP never returns partial or wrong data silently. Every failure tells the us
 
 **Loop prevention:** retries with backoff, circuit breaker pattern, clarification depth limit, and a dead letter queue for unresolvable requests.
 
-Exact thresholds, retry counts, and circuit breaker parameters: `.claude/rules/failure-handling.md`
+Exact thresholds, retry counts, and circuit breaker parameters: `rules/failure-handling.md`
 
 ---
 
