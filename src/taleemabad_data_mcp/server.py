@@ -1,7 +1,8 @@
 """FastMCP server — thin BigQuery execution layer.
 
-Claude Code reads governance rules from .claude/rules/ and uses these tools
-to execute validated queries, estimate costs, and log interactions.
+The data-analyst agent reads governance rules from the plugin's rules/
+directory and uses these tools to execute validated queries, estimate
+costs, and log interactions.
 
 Supports two modes:
 - **Local (stdio):** Used by Claude Code plugin, reads user from env file.
@@ -264,12 +265,11 @@ async def execute_query(
 ) -> str:
     """Execute a validated SQL query against BigQuery.
 
-    Use this tool ONLY after consulting the rules in .claude/rules/ to determine
-    the correct query. Never generate ad-hoc SQL — always follow the governed
-    metric definitions.
+    Use this tool ONLY after reading the governance rules to determine the correct
+    query. Never generate ad-hoc SQL — always follow the governed metric definitions.
 
     Args:
-        sql: The SQL query to execute. Must be a governed query from .claude/rules/.
+        sql: The SQL query to execute. Must be a governed query from the rule files.
         question: REQUIRED — the user's original natural language question exactly
             as they asked it. This is logged for audit and activity tracking.
             Always pass this parameter.
