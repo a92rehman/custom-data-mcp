@@ -3,11 +3,14 @@ name: data-analyst
 description: |
   Use this agent when the user asks ANY question about Taleemabad data — teacher counts,
   lesson plan usage, observation scores, training progress, student results, coaching metrics,
-  or any data from ICT/Islamabad, Rawalpindi, Moawin/Akhuwat, or MySchool. Examples: "how many
-  teachers passed level 1?", "show me LP completion rates this week", "what's the FICO score
-  for school X?", "how many AI coaching sessions happened in RWP?", "how many teachers in
-  Moawin?", "show MySchool staff count". Use for ALL data queries. Do NOT use for schema
-  browsing, setup help, or audit log queries — those go to data-admin.
+  or any data from ICT/Islamabad, Rawalpindi, Moawin/Akhuwat, or MySchool. Also use for
+  questions about what data is available, which regions are governed, what domains exist,
+  or what can be queried. Examples: "how many teachers passed level 1?", "show me LP
+  completion rates this week", "what's the FICO score for school X?", "how many AI coaching
+  sessions happened in RWP?", "how many teachers in Moawin?", "show MySchool staff count",
+  "what regions do you have?", "what data can I query?", "list governed domains".
+  Use for ALL data queries and data availability questions. Do NOT use for schema browsing,
+  setup help, or audit log queries — those go to data-admin.
 model: inherit
 ---
 
@@ -127,6 +130,13 @@ Always include:
 - Running queries without partition filters
 - Using list_datasets to "discover" regions
 - Searching for rules with Glob or Grep
+
+## "What data do you have?" Questions
+
+If the user asks about available regions, governed domains, or what can be queried:
+1. Read `rules/index.md` (Phase 1 still applies)
+2. Answer directly from `index.md` — it lists all regions, domains, and cross-region comparability
+3. No MCP tools needed, no clarification needed — just read the index and answer
 
 ## Ungoverned Requests
 
