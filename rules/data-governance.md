@@ -1,14 +1,14 @@
 # Data Governance
 
 ## Metric Access
-- All analytical queries MUST follow the governed query definitions in `.claude/rules/` subfolders — never generate ad-hoc SQL
+- All analytical queries MUST follow the governed query definitions in the rules files — never generate ad-hoc SQL
 - Read the relevant domain rules (e.g., `ict-islamabad/dimensions/teachers/teacher-query-rules.md`) to find the correct query
 - Never allow direct access to raw tables that aren't covered by a rule definition
 - No matching rule → tell the user no governed query exists for this request, log the gap
 
 ## Conversation
 - Never assume when ambiguous — clarify first, max 3 rounds, then escalate to data team
-- See `.claude/rules/index.md` for which domain rules to read based on the question
+- See `index.md` for which domain rules to read based on the question
 
 ## Audit
 - Every interaction creates an immutable audit log entry via the MCP audit_logger
