@@ -294,9 +294,9 @@ WHERE users.testing_account = false
 
 ## References
 
-- **Global rules:** `.claude/rules/data-governance.md`, `bigquery.md`
-- **Index:** `.claude/rules/index.md`
-- **Moawin/Akhuwat rules:** `.claude/rules/moawin-akhuwat/`
+- **Global rules:** `data-governance.md`, `bigquery.md`
+- **Index:** `index.md`
+- **Moawin/Akhuwat rules:** `moawin-akhuwat/`
 - **Related regions:** `ict-islamabad/`, `rawalpindi/`
 
 ---

@@ -3,7 +3,7 @@
 This file is auto-loaded every session. Read the relevant section based on the user's question.
 
 ## How This Works
-- **Governance logic lives here** in `.claude/rules/` — not in Python code
+- **Governance logic lives here** in these rule files — not in Python code
 - **MCP server is a thin execution layer** — use `execute_query`, `list_datasets`, `get_table_schema` tools
 - **Rules are organized by region** — always determine the region first, then read that region's rules
 

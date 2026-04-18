@@ -37,15 +37,15 @@ Never push without bumping. Users check `/mcp` and `version` command to know wha
 
 The session-start hook automatically downloads the latest rules on every session:
 1. Checks `git ls-remote --tags` against `~/.claude/taleemabad-rules-version`
-2. If newer tag exists: shallow-clones tag, extracts `rules/`, syncs to `~/.claude/rules/taleemabad/`
+2. If newer tag exists: shallow-clones tag, extracts `rules/` into plugin cache directory
 3. Checks at most once every 6 hours (skips if recently checked)
-4. Fallback: uses plugin cache rules if network unavailable
+4. Fallback: uses existing plugin cache rules if network unavailable
 
-No git repo needed in plugin cache. No manual reinstall needed. Rules auto-update.
+Rules auto-update. No manual reinstall needed.
 
 ## What `bump` Does
 
 Running `python -m taleemabad_data_mcp bump` also:
-- Syncs rules to `src/taleemabad_data_mcp/rules/`, `rules/`, `.claude/rules/`, and `~/.claude/rules/taleemabad/`
+- Syncs rules to `src/taleemabad_data_mcp/rules/` and `rules/`
 - Updates `.claude-plugin/plugin.json` and `marketplace.json` version fields
 - Updates `.current-version`
