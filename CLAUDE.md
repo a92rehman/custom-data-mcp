@@ -115,7 +115,16 @@ src/taleemabad_data_mcp/rules/   ← SOURCE OF TRUTH (committed)
                 │  session-start hook: shallow clone → extract rules/
                 ▼
 PLUGIN_CACHE/rules/              ← User's copy (auto-downloaded)
+                │
+                │  session-start hook writes absolute path
+                ▼
+~/.claude/taleemabad-rules-path  ← Pointer file (agent reads this to find rules)
 ```
+
+### How the agent finds rules
+The data-analyst agent runs as a subprocess from the user's working directory — NOT the plugin directory. It cannot use relative paths to find rules in the plugin cache.
+
+The session-start hook writes `~/.claude/taleemabad-rules-path` containing the absolute path to the rules directory (e.g., `/home/user/.claude/plugins/cache/Orenda-Project/taleemabad-data/0.17.15/rules`). The agent reads this file first, then uses the path to read `index.md` and domain-specific rule files.
 
 ### Steps to add a new rule
 1. Create the `.md` file in `src/taleemabad_data_mcp/rules/<region>/<domain>/`

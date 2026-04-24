@@ -29,6 +29,7 @@ No local Python, credentials file, or BigQuery access needed — the MCP server 
 
 - The plugin includes agents that read governance rules and generate correct SQL
 - Rules auto-update from GitHub on every session start (via session-start hook)
+- The session-start hook writes `~/.claude/taleemabad-rules-path` so agents can find rules regardless of your working directory
 - The MCP server runs on Railway — queries execute remotely
 - All queries are audited with your email, cost, and domain
 
@@ -40,3 +41,4 @@ If you used a previous version:
 3. Run `/taleemabad-setup` once to save your email
 4. Delete `~/.claude/taleemabad-venv/` if it exists (no longer needed)
 5. Delete `~/.claude/rules/taleemabad/` if it exists (rules now live in the plugin)
+6. Delete `~/.claude/taleemabad-rules-path` if it exists (recreated automatically on next session)

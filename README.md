@@ -239,19 +239,21 @@ All datasets accessible to the service account are available dynamically — no 
 User's Machine                              Railway (Cloud)
 +--------------------------+     HTTPS     +----------------------+
 | Claude Code              |-------------->| MCP Server           |
-|  +- Plugin               |              |  +- FastMCP (HTTP)    |
+|  +- Plugin (cached)      |              |  +- FastMCP (HTTP)    |
 |  |   +- agents/          |              |  +- BigQuery client   |
 |  |   +- rules/           |              |  +- Audit logger      |
 |  |   +- commands/        |              |  +- Cost estimator    |
-|  |   +- .mcp.json (URL)  |              |  +- Feedback logger   |
-|  +- ~/.claude/ (email)   |              +----------------------+
-+--------------------------+                        |
-                                                    v
-                                            Google BigQuery
-                                            (niete-bq-prod)
+|  |   +- hooks/           |              |  +- Feedback logger   |
+|  |   +- .mcp.json (URL)  |              +----------------------+
+|  +- ~/.claude/            |                        |
+|  |   +- taleemabad-       |                        v
+|  |   |  rules-path (ptr)  |              Google BigQuery
+|  |   +- email config      |              (niete-bq-prod)
++--------------------------+
 ```
 
-- **Plugin** runs locally: agents read governance rules and generate correct SQL
+- **Plugin** runs locally: agents read governance rules from the plugin cache and generate correct SQL
+- **Session-start hook** writes `~/.claude/taleemabad-rules-path` so agents can locate rules regardless of working directory
 - **MCP server** runs on Railway: executes queries, enforces cost guardrails, logs audits
 - **No local dependencies** needed — no Python, no credentials file, no BigQuery access
 
@@ -282,6 +284,12 @@ You must use a work email ending with `@taleemabad.com`, `@niete.edu.pk`, or `@n
 
 ### "Git access required" error during install
 The repository is private. Ask IT to add your GitHub account to the [Orenda-Project](https://github.com/Orenda-Project) organization.
+
+### Agent not reading rules / generating ad-hoc SQL
+The data-analyst agent needs `~/.claude/taleemabad-rules-path` to find governance rules. This file is created automatically by the session-start hook. If it's missing:
+1. Start a new Claude Code session (triggers the hook)
+2. If still missing, check that the plugin is installed: `claude plugin list`
+3. Reinstall if needed (see "Reinstall" section below)
 
 ### Windows: "directory locked" during update
 Close all Claude Code windows and terminals, then retry. The plugin directory gets locked by running processes.

@@ -47,6 +47,15 @@ if [ -z "$PLUGIN_DIR" ] || [ ! -d "$PLUGIN_DIR" ]; then
 fi
 
 RULES_DEST="${PLUGIN_DIR}/rules"
+RULES_PATH_FILE="${HOME}/.claude/taleemabad-rules-path"
+
+# --- Write rules path immediately (before network update) ---
+# The data-analyst agent needs this to find rules on user machines.
+# Write it early so even if the network update is slow, the agent can
+# find the bundled rules that ship with the plugin.
+if [ -f "$RULES_DEST/index.md" ]; then
+  echo "$RULES_DEST" > "$RULES_PATH_FILE"
+fi
 
 # --- Clean up old global rules (from previous versions) ---
 # These were injected into parent session context, causing governance bypass.
@@ -179,4 +188,7 @@ fi
 
 if [ ! -f "$RULES_DEST/index.md" ]; then
   echo "[Taleemabad Data] WARNING: Governance rules not available in ${RULES_DEST}"
+else
+  # Update path file again — rules may have been downloaded to a new location
+  echo "$RULES_DEST" > "$RULES_PATH_FILE"
 fi
