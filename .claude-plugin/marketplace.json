@@ -12,7 +12,7 @@
       "name": "taleemabad-data",
       "source": "./",
       "description": "Governed semantic layer for Taleemabad BigQuery data. Two AI agents with self-healing query loop, auto-updating governance rules, and full audit trail.",
-      "version": "0.17.14",
+      "version": "0.17.15",
       "author": {
         "name": "Orenda Project",
         "email": "tech@orenda.pk"

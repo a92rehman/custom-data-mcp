@@ -36,10 +36,12 @@ Never push without bumping. Users check `/mcp` and `version` command to know wha
 ## How Rules Reach Users
 
 The session-start hook automatically downloads the latest rules on every session:
-1. Checks `git ls-remote --tags` against `~/.claude/taleemabad-rules-version`
-2. If newer tag exists: shallow-clones tag, extracts `rules/` into plugin cache directory
-3. Checks at most once every 6 hours (skips if recently checked)
-4. Fallback: uses existing plugin cache rules if network unavailable
+1. Writes `~/.claude/taleemabad-rules-path` with the absolute path to the rules directory (so the agent can find them)
+2. Checks `git ls-remote --tags` against `~/.claude/taleemabad-rules-version`
+3. If newer tag exists: shallow-clones tag, extracts `rules/` into plugin cache directory
+4. Updates `~/.claude/taleemabad-rules-path` again (rules may have moved to a new version directory)
+5. Checks at most once every 6 hours (skips if recently checked)
+6. Fallback: uses existing plugin cache rules if network unavailable
 
 Rules auto-update. No manual reinstall needed.
 
