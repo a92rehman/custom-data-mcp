@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taleemabad Data MCP — Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface2: #334155;
+    --border: #475569;
+    --text: #f1f5f9;
+    --text2: #94a3b8;
+    --blue: #3b82f6;
+    --cyan: #06b6d4;
+    --green: #10b981;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --purple: #8b5cf6;
+    --pink: #ec4899;
+    --indigo: #6366f1;
+    --teal: #14b8a6;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  /* ---- Hero ---- */
+  .hero {
+    text-align: center;
+    padding: 60px 20px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -120px; left: 50%; transform: translateX(-50%);
+    width: 800px; height: 800px;
+    background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero h1 {
+    font-size: 42px; font-weight: 800;
+    background: linear-gradient(135deg, var(--blue), var(--cyan), var(--purple));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+  .hero .sub { color: var(--text2); font-size: 17px; font-weight: 400; }
+  .hero .version {
+    display: inline-block; margin-top: 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 4px 14px; border-radius: 20px; font-size: 13px; color: var(--cyan);
+  }
+
+  /* ---- KPI strip ---- */
+  .kpi-strip {
+    display: flex; justify-content: center; gap: 16px;
+    padding: 0 20px 50px; flex-wrap: wrap;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 28px;
+    text-align: center; min-width: 140px;
+    transition: transform .2s, border-color .2s;
+  }
+  .kpi:hover { transform: translateY(-3px); border-color: var(--blue); }
+  .kpi .val { font-size: 32px; font-weight: 700; }
+  .kpi .lbl { font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: .8px; margin-top: 4px; }
+
+  /* ---- Section ---- */
+  .section {
+    max-width: 1200px; margin: 0 auto 60px; padding: 0 24px;
+  }
+  .section-title {
+    font-size: 26px; font-weight: 700; margin-bottom: 6px;
+  }
+  .section-sub { color: var(--text2); font-size: 14px; margin-bottom: 30px; }
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
+    margin-left: 8px; vertical-align: middle;
+  }
+
+  /* ---- Flow container (SVG based) ---- */
+  .flow-wrapper {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 30px;
+    overflow-x: auto;
+  }
+  .flow-wrapper svg { display: block; margin: 0 auto; }
+
+  /* ---- Agent cards ---- */
+  .agents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+  }
+  .agent-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .agent-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,.3);
+  }
+  .agent-card .glow {
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    border-radius: 14px 14px 0 0;
+  }
+  .agent-card .icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; margin-bottom: 14px;
+  }
+  .agent-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .agent-card p { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .agent-card .tools-list {
+    margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .agent-card .tool-tag {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.08);
+    padding: 2px 8px; border-radius: 6px;
+    font-size: 11px; color: var(--text2); font-family: 'Courier New', monospace;
+  }
+
+  /* ---- Tools grid ---- */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .tool-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px;
+    transition: border-color .2s;
+  }
+  .tool-card:hover { border-color: var(--cyan); }
+  .tool-card .name {
+    font-family: 'Courier New', monospace;
+    font-size: 13px; font-weight: 600; color: var(--cyan);
+    margin-bottom: 4px;
+  }
+  .tool-card .desc { font-size: 12px; color: var(--text2); }
+  .tool-card .category {
+    display: inline-block; margin-top: 8px;
+    padding: 1px 8px; border-radius: 8px;
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+  }
+
+  /* ---- Symptom table ---- */
+  .symptom-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+  }
+  .symptom-table th {
+    background: var(--surface2);
+    padding: 12px 16px; text-align: left;
+    font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: .5px;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+  }
+  .symptom-table th:first-child { border-radius: 10px 0 0 0; }
+  .symptom-table th:last-child { border-radius: 0 10px 0 0; }
+  .symptom-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(71,85,105,.4);
+    vertical-align: top;
+  }
+  .symptom-table tr:last-child td { border-bottom: none; }
+  .symptom-table tr:hover td { background: rgba(59,130,246,.04); }
+  .symptom-table code {
+    background: rgba(6,182,212,.1); color: var(--cyan);
+    padding: 1px 6px; border-radius: 4px; font-size: 12px;
+  }
+  .fix-auto { color: var(--green); font-weight: 600; }
+  .fix-user { color: var(--amber); font-weight: 600; }
+  .fix-escalate { color: var(--red); font-weight: 600; }
+
+  /* ---- Ticket lifecycle ---- */
+  .lifecycle {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0; flex-wrap: wrap; padding: 10px 0;
+  }
+  .lc-step {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 16px 22px; position: relative;
+  }
+  .lc-dot {
+    width: 48px; height: 48px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 700;
+    border: 2px solid;
+    margin-bottom: 8px;
+    transition: transform .3s;
+  }
+  .lc-step:hover .lc-dot { transform: scale(1.15); }
+  .lc-label { font-size: 12px; font-weight: 600; text-align: center; }
+  .lc-sub { font-size: 10px; color: var(--text2); text-align: center; max-width: 100px; }
+  .lc-arrow {
+    font-size: 22px; color: var(--border); margin: 0 -6px;
+    align-self: flex-start; margin-top: 12px;
+  }
+
+  /* ---- Animated pulse ---- */
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+  .pulse { animation: pulse 2s ease-in-out infinite; }
+
+  /* ---- Footer ---- */
+  .footer {
+    text-align: center; padding: 40px 20px 60px;
+    color: var(--text2); font-size: 13px;
+  }
+  .footer a { color: var(--blue); text-decoration: none; }
+
+  /* ---- SVG flow styles ---- */
+  .flow-node {
+    rx: 10; ry: 10;
+    stroke-width: 1.5;
+    transition: filter .2s;
+  }
+  .flow-node:hover { filter: brightness(1.2); }
+  .flow-text {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 600;
+    fill: white;
+    text-anchor: middle;
+    pointer-events: none;
+  }
+  .flow-text-sm {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 11px;
+    fill: #94a3b8;
+    text-anchor: middle;
+    pointer-events: none;
+  }
+  .flow-arrow {
+    stroke-width: 2;
+    fill: none;
+    marker-end: url(#arrowhead);
+  }
+  @keyframes dashFlow {
+    to { stroke-dashoffset: -20; }
+  }
+  .flow-arrow-animated {
+    stroke-dasharray: 8 4;
+    animation: dashFlow 1s linear infinite;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<div class="hero">
+  <h1>Taleemabad Data MCP</h1>
+  <div class="sub">Self-Healing Governed Analytics Architecture</div>
+  <div class="version">v0.18.0 &middot; 4 Agents &middot; 12 Tools &middot; 2 Recovery Loops</div>
+</div>
+
+<!-- ============ KPI STRIP ============ -->
+<div class="kpi-strip">
+  <div class="kpi">
+    <div class="val" style="color:var(--blue)">4</div>
+    <div class="lbl">Agents</div>
+  </div>
+  <div class="kpi">
+    <div class="val" style="color:var(--cyan)">12</div>
+    <div class="lbl">MCP Tools</div>
+  </div>
+  <div class="kpi">
+    <div class="val" style="color:var(--green)">2</div>
+    <div class="lbl">Healing Loops</div>
+  </div>
+  <div class="kpi">
+    <div class="val" style="color:var(--amber)">9</div>
+    <div class="lbl">Symptom Handlers</div>
+  </div>
+  <div class="kpi">
+    <div class="val" style="color:var(--purple)">5</div>
+    <div class="lbl">Regions</div>
+  </div>
+  <div class="kpi">
+    <div class="val" style="color:var(--pink)">6</div>
+    <div class="lbl">BigQuery Datasets</div>
+  </div>
+</div>
+
+<!-- ============ MAIN FLOW ============ -->
+<div class="section">
+  <div class="section-title">System Architecture <span class="badge" style="background:rgba(59,130,246,.15);color:var(--blue)">Overview</span></div>
+  <div class="section-sub">How a user question flows through the governed pipeline with self-healing</div>
+  <div class="flow-wrapper">
+    <svg viewBox="0 0 1100 520" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+        </marker>
+        <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
+        </marker>
+        <marker id="arrowRed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444"/>
+        </marker>
+        <marker id="arrowAmber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b"/>
+        </marker>
+        <linearGradient id="gUser" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#8b5cf6"/>
+        </linearGradient>
+        <linearGradient id="gAnalyst" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#06b6d4"/>
+        </linearGradient>
+        <linearGradient id="gMCP" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#0f766e"/><stop offset="100%" stop-color="#14b8a6"/>
+        </linearGradient>
+        <linearGradient id="gBQ" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#4338ca"/><stop offset="100%" stop-color="#6366f1"/>
+        </linearGradient>
+        <linearGradient id="gFixer" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#d97706"/><stop offset="100%" stop-color="#f59e0b"/>
+        </linearGradient>
+        <linearGradient id="gDoctor" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#dc2626"/><stop offset="100%" stop-color="#ef4444"/>
+        </linearGradient>
+        <linearGradient id="gTicket" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#9333ea"/><stop offset="100%" stop-color="#a855f7"/>
+        </linearGradient>
+      </defs>
+
+      <!-- User -->
+      <rect class="flow-node" x="20" y="60" width="150" height="56" fill="url(#gUser)" stroke="#818cf8"/>
+      <text class="flow-text" x="95" y="84" font-size="13">User</text>
+      <text class="flow-text-sm" x="95" y="102" fill="#c7d2fe">"How many teachers...?"</text>
+
+      <!-- Arrow: User → Analyst -->
+      <path class="flow-arrow" d="M 170 88 L 215 88" stroke="#64748b"/>
+
+      <!-- Data Analyst -->
+      <rect class="flow-node" x="220" y="40" width="180" height="96" fill="url(#gAnalyst)" stroke="#60a5fa"/>
+      <text class="flow-text" x="310" y="64" font-size="14">data-analyst</text>
+      <text class="flow-text-sm" x="310" y="82" fill="#bfdbfe">Phase 1: Read Rules</text>
+      <text class="flow-text-sm" x="310" y="96" fill="#bfdbfe">Phase 2: Clarify</text>
+      <text class="flow-text-sm" x="310" y="110" fill="#bfdbfe">Phase 3: Generate SQL</text>
+      <text class="flow-text-sm" x="310" y="124" fill="#93c5fd">Phase 4: Retry on Error</text>
+
+      <!-- Arrow: Analyst → MCP Server -->
+      <path class="flow-arrow" d="M 400 88 L 470 88" stroke="#64748b"/>
+      <text class="flow-text-sm" x="435" y="80">SQL</text>
+
+      <!-- MCP Server -->
+      <rect class="flow-node" x="475" y="48" width="190" height="80" fill="url(#gMCP)" stroke="#2dd4bf"/>
+      <text class="flow-text" x="570" y="74" font-size="14">MCP Server</text>
+      <text class="flow-text-sm" x="570" y="92" fill="#99f6e4">execute_query</text>
+      <text class="flow-text-sm" x="570" y="106" fill="#99f6e4">12 tools &middot; Railway</text>
+
+      <!-- Arrow: MCP → BigQuery -->
+      <path class="flow-arrow" d="M 665 88 L 740 88" stroke="#64748b"/>
+
+      <!-- BigQuery -->
+      <rect class="flow-node" x="745" y="52" width="170" height="72" fill="url(#gBQ)" stroke="#818cf8"/>
+      <text class="flow-text" x="830" y="80" font-size="14">Google BigQuery</text>
+      <text class="flow-text-sm" x="830" y="98" fill="#c7d2fe">niete-bq-prod</text>
+      <text class="flow-text-sm" x="830" y="112" fill="#a5b4fc">6 datasets</text>
+
+      <!-- Arrow: BigQuery → MCP (results) -->
+      <path class="flow-arrow" d="M 745 118 Q 700 150 665 118" stroke="#10b981" marker-end="url(#arrowGreen)"/>
+      <text class="flow-text-sm" x="705" y="148" fill="#6ee7b7">Results</text>
+
+      <!-- ===== SUCCESS PATH ===== -->
+      <!-- Arrow: MCP → User (success) -->
+      <path class="flow-arrow" d="M 475 48 Q 280 -10 170 60" stroke="#10b981" marker-end="url(#arrowGreen)"/>
+      <text x="300" y="18" font-size="12" fill="#10b981" font-family="Inter" font-weight="600" text-anchor="middle">Structured JSON Response</text>
+
+      <!-- ===== ERROR PATH (Query Loop) ===== -->
+      <!-- Error label -->
+      <rect x="440" y="170" width="260" height="32" rx="16" fill="rgba(239,68,68,.12)" stroke="rgba(239,68,68,.3)" stroke-width="1"/>
+      <text x="570" y="191" font-size="12" fill="#fca5a5" font-family="Inter" font-weight="600" text-anchor="middle">Query Failed? &rarr; Structured Error JSON</text>
+
+      <!-- Arrow: MCP → Error -->
+      <path class="flow-arrow" d="M 570 128 L 570 170" stroke="#ef4444" marker-end="url(#arrowRed)"/>
+
+      <!-- Arrow: Error → Phase 4 -->
+      <path class="flow-arrow flow-arrow-animated" d="M 440 186 L 360 186 L 360 136" stroke="#f59e0b" marker-end="url(#arrowAmber)"/>
+      <text x="390" y="178" font-size="11" fill="#fbbf24" font-family="Inter" font-weight="500" text-anchor="middle">Phase 4</text>
+
+      <!-- Query Fixer -->
+      <rect class="flow-node" x="200" y="230" width="180" height="70" fill="url(#gFixer)" stroke="#fbbf24"/>
+      <text class="flow-text" x="290" y="258" font-size="14">query-fixer</text>
+      <text class="flow-text-sm" x="290" y="276" fill="#fef3c7">Diagnose &amp; fix SQL</text>
+      <text class="flow-text-sm" x="290" y="290" fill="#fde68a">Max 3 attempts</text>
+
+      <!-- Arrow: Phase 4 → Fixer -->
+      <path class="flow-arrow flow-arrow-animated" d="M 290 136 L 290 230" stroke="#f59e0b" marker-end="url(#arrowAmber)"/>
+      <text x="272" y="180" font-size="11" fill="#fbbf24" font-family="Inter" font-weight="500" transform="rotate(-90, 272, 180)">dispatch</text>
+
+      <!-- Arrow: Fixer → MCP (retry) -->
+      <path class="flow-arrow flow-arrow-animated" d="M 380 260 Q 440 240 500 200 Q 540 170 570 128" stroke="#f59e0b" marker-end="url(#arrowAmber)"/>
+      <text x="468" y="228" font-size="11" fill="#fbbf24" font-family="Inter" font-weight="500" text-anchor="middle">SQL v2</text>
+
+      <!-- Ticket System -->
+      <rect class="flow-node" x="200" y="340" width="180" height="56" fill="url(#gTicket)" stroke="#c084fc"/>
+      <text class="flow-text" x="290" y="364" font-size="13">Ticket System</text>
+      <text class="flow-text-sm" x="290" y="382" fill="#e9d5ff">JSONL + BigQuery</text>
+
+      <!-- Arrow: Fixer → Ticket -->
+      <path class="flow-arrow" d="M 290 300 L 290 340" stroke="#a855f7"/>
+      <text x="305" y="324" font-size="10" fill="#c084fc" font-family="Inter">track</text>
+
+      <!-- ===== SYSTEM LOOP ===== -->
+      <!-- System Doctor -->
+      <rect class="flow-node" x="740" y="230" width="190" height="80" fill="url(#gDoctor)" stroke="#f87171"/>
+      <text class="flow-text" x="835" y="258" font-size="14">system-doctor</text>
+      <text class="flow-text-sm" x="835" y="276" fill="#fecaca">9 symptom handlers</text>
+      <text class="flow-text-sm" x="835" y="290" fill="#fca5a5">Auto-heal + escalate</text>
+      <text class="flow-text-sm" x="835" y="304" fill="#fecaca">/taleemabad-doctor</text>
+
+      <!-- Arrow: System errors → Doctor -->
+      <path class="flow-arrow flow-arrow-animated" d="M 700 186 L 760 230" stroke="#ef4444" marker-end="url(#arrowRed)"/>
+      <text x="738" y="200" font-size="10" fill="#fca5a5" font-family="Inter" font-weight="500">system error</text>
+
+      <!-- Session Hook -->
+      <rect class="flow-node" x="770" y="370" width="140" height="50" fill="var(--surface2)" stroke="#64748b"/>
+      <text class="flow-text" x="840" y="392" font-size="12">Session Hook</text>
+      <text class="flow-text-sm" x="840" y="408" fill="#94a3b8">update.py</text>
+
+      <!-- Arrow: Hook → Doctor (sentinel) -->
+      <path class="flow-arrow flow-arrow-animated" d="M 840 370 L 840 310" stroke="#ef4444" marker-end="url(#arrowRed)"/>
+      <text x="858" y="345" font-size="10" fill="#fca5a5" font-family="Inter">sentinel</text>
+
+      <!-- Arrow: Doctor → Ticket -->
+      <path class="flow-arrow" d="M 740 300 Q 570 360 380 368" stroke="#a855f7"/>
+      <text x="560" y="348" font-size="10" fill="#c084fc" font-family="Inter" text-anchor="middle">track</text>
+
+      <!-- GitHub Escalation -->
+      <rect class="flow-node" x="500" y="340" width="160" height="50" fill="var(--surface2)" stroke="#64748b"/>
+      <text class="flow-text" x="580" y="362" font-size="12">GitHub Issues</text>
+      <text class="flow-text-sm" x="580" y="378" fill="#94a3b8">auto-filed on escalation</text>
+
+      <!-- Arrow: Ticket → GitHub -->
+      <path class="flow-arrow" d="M 380 365 L 500 365" stroke="#64748b"/>
+      <text x="440" y="358" font-size="10" fill="#94a3b8" font-family="Inter" text-anchor="middle">escalate</text>
+
+      <!-- Data Admin -->
+      <rect class="flow-node" x="20" y="170" width="140" height="56" fill="var(--surface2)" stroke="#64748b"/>
+      <text class="flow-text" x="90" y="194" font-size="13">data-admin</text>
+      <text class="flow-text-sm" x="90" y="212" fill="#94a3b8">Schema &amp; diagnostics</text>
+
+      <!-- Arrow: Analyst → Admin -->
+      <path class="flow-arrow" d="M 250 136 Q 160 160 130 170" stroke="#64748b"/>
+      <text x="175" y="152" font-size="10" fill="#94a3b8" font-family="Inter">"check schema"</text>
+
+      <!-- Legend -->
+      <rect x="20" y="430" width="340" height="80" rx="10" fill="rgba(30,41,59,.8)" stroke="var(--border)" stroke-width="1"/>
+      <text x="36" y="452" font-size="11" fill="var(--text2)" font-family="Inter" font-weight="600">LEGEND</text>
+      <line x1="36" y1="468" x2="56" y2="468" stroke="#10b981" stroke-width="2"/>
+      <text x="62" y="472" font-size="11" fill="#94a3b8" font-family="Inter">Success path</text>
+      <line x1="140" y1="468" x2="160" y2="468" stroke="#ef4444" stroke-width="2"/>
+      <text x="166" y="472" font-size="11" fill="#94a3b8" font-family="Inter">Error path</text>
+      <line x1="230" y1="468" x2="250" y2="468" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6 3"/>
+      <text x="256" y="472" font-size="11" fill="#94a3b8" font-family="Inter">Retry loop</text>
+      <line x1="36" y1="492" x2="56" y2="492" stroke="#a855f7" stroke-width="2"/>
+      <text x="62" y="496" font-size="11" fill="#94a3b8" font-family="Inter">Ticket tracking</text>
+      <line x1="160" y1="492" x2="180" y2="492" stroke="#64748b" stroke-width="2"/>
+      <text x="186" y="496" font-size="11" fill="#94a3b8" font-family="Inter">Diagnostic / infra</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ============ AGENTS ============ -->
+<div class="section">
+  <div class="section-title">Agents <span class="badge" style="background:rgba(6,182,212,.15);color:var(--cyan)">4 Agents</span></div>
+  <div class="section-sub">Autonomous subprocesses that handle different responsibilities</div>
+  <div class="agents-grid">
+    <div class="agent-card">
+      <div class="glow" style="background:linear-gradient(90deg,var(--blue),var(--cyan))"></div>
+      <div class="icon" style="background:rgba(59,130,246,.15);color:var(--blue)">&#9881;</div>
+      <h3>data-analyst</h3>
+      <p>Reads governance rules, asks mandatory clarification questions, generates governed SQL. Phase 4 dispatches query-fixer on errors and retries up to 3 times.</p>
+      <div class="tools-list">
+        <span class="tool-tag">Read</span><span class="tool-tag">Glob</span><span class="tool-tag">Grep</span>
+      </div>
+    </div>
+    <div class="agent-card">
+      <div class="glow" style="background:linear-gradient(90deg,#64748b,#94a3b8)"></div>
+      <div class="icon" style="background:rgba(148,163,184,.15);color:#94a3b8">&#128736;</div>
+      <h3>data-admin</h3>
+      <p>Schema browsing, table freshness checks, audit log queries, cost analysis, and troubleshooting failed queries.</p>
+      <div class="tools-list">
+        <span class="tool-tag">All MCP tools</span>
+      </div>
+    </div>
+    <div class="agent-card">
+      <div class="glow" style="background:linear-gradient(90deg,var(--amber),#fbbf24)"></div>
+      <div class="icon" style="background:rgba(245,158,11,.15);color:var(--amber)">&#128295;</div>
+      <h3>query-fixer</h3>
+      <p>Diagnoses failed SQL by error class (schema drift, missing partition, syntax, cost). Reads actual table schema and rules to propose corrected SQL. Cannot execute queries.</p>
+      <div class="tools-list">
+        <span class="tool-tag">Read</span><span class="tool-tag">Glob</span><span class="tool-tag">Grep</span>
+      </div>
+    </div>
+    <div class="agent-card">
+      <div class="glow" style="background:linear-gradient(90deg,var(--red),#f87171)"></div>
+      <div class="icon" style="background:rgba(239,68,68,.15);color:var(--red)">&#9889;</div>
+      <h3>system-doctor</h3>
+      <p>Detects and fixes infrastructure issues: MCP connectivity, env config, rules sync, hook crashes. 9 symptom handlers with auto-heal and GitHub escalation.</p>
+      <div class="tools-list">
+        <span class="tool-tag">Read</span><span class="tool-tag">Bash</span><span class="tool-tag">Write</span><span class="tool-tag">Glob</span><span class="tool-tag">Grep</span><span class="tool-tag">WebFetch</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ QUERY LOOP ============ -->
+<div class="section">
+  <div class="section-title">Query Self-Healing Loop <span class="badge" style="background:rgba(245,158,11,.15);color:var(--amber)">Loop 1</span></div>
+  <div class="section-sub">When a governed query fails, the system diagnoses and retries automatically</div>
+  <div class="flow-wrapper">
+    <svg viewBox="0 0 1060 200" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="ah2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#f59e0b"/>
+        </marker>
+      </defs>
+      <!-- Step 1 -->
+      <rect x="10" y="40" width="130" height="60" rx="10" fill="var(--surface2)" stroke="var(--border)"/>
+      <text x="75" y="66" font-size="12" fill="var(--text)" font-family="Inter" font-weight="600" text-anchor="middle">execute_query</text>
+      <text x="75" y="84" font-size="10" fill="#94a3b8" font-family="Inter" text-anchor="middle">Returns error JSON</text>
+      <!-- Arrow -->
+      <path d="M 140 70 L 175 70" stroke="#f59e0b" stroke-width="2" marker-end="url(#ah2)"/>
+      <!-- Step 2 -->
+      <rect x="180" y="40" width="120" height="60" rx="10" fill="rgba(239,68,68,.12)" stroke="#ef4444"/>
+      <text x="240" y="62" font-size="11" fill="#fca5a5" font-family="Inter" font-weight="600" text-anchor="middle">Classify Error</text>
+      <text x="240" y="78" font-size="9" fill="#94a3b8" font-family="Inter" text-anchor="middle">SCHEMA_DRIFT</text>
+      <text x="240" y="90" font-size="9" fill="#94a3b8" font-family="Inter" text-anchor="middle">SYNTAX / PARTITION / COST</text>
+      <!-- Arrow -->
+      <path d="M 300 70 L 335 70" stroke="#f59e0b" stroke-width="2" marker-end="url(#ah2)"/>
+      <!-- Step 3 -->
+      <rect x="340" y="40" width="120" height="60" rx="10" fill="rgba(139,92,246,.12)" stroke="#a855f7"/>
+      <text x="400" y="62" font-size="11" fill="#c4b5fd" font-family="Inter" font-weight="600" text-anchor="middle">Open Ticket</text>
+      <text x="400" y="80" font-size="9" fill="#94a3b8" font-family="Inter" text-anchor="middle">report_ticket()</text>
+      <!-- Arrow -->
+      <path d="M 460 70 L 495 70" stroke="#f59e0b" stroke-width="2" marker-end="url(#ah2)"/>
+      <!-- Step 4 -->
+      <rect x="500" y="30" width="140" height="80" rx="10" fill="rgba(245,158,11,.12)" stroke="#fbbf24"/>
+      <text x="570" y="56" font-size="12" fill="#fbbf24" font-family="Inter" font-weight="700" text-anchor="middle">query-fixer</text>
+      <text x="570" y="72" font-size="9" fill="#94a3b8" font-family="Inter" text-anchor="middle">Read schema + rules</text>
+      <text x="570" y="84" font-size="9" fill="#94a3b8" font-family="Inter" text-anchor="middle">Diagnose error class</text>
+      <text x="570" y="96" font-size="9" fill="#94a3b8" font-family="Inter" text-anchor="middle">Propose SQL v2</text>
+      <!-- Arrow -->
+      <path d="M 640 70 L 675 70" stroke="#f59e0b" stroke-width="2" marker-end="url(#ah2)"/>
+      <!-- Step 5 -->
+      <rect x="680" y="40" width="120" height="60" rx="10" fill="var(--surface2)" stroke="var(--border)"/>
+      <text x="740" y="62" font-size="11" fill="var(--text)" font-family="Inter" font-weight="600" text-anchor="middle">Re-execute</text>
+      <text x="740" y="80" font-size="9" fill="#94a3b8" font-family="Inter" text-anchor="middle">SQL v2 via MCP</text>
+      <!-- Retry loop arrow -->
+      <path d="M 740 100 Q 740 150 570 150 Q 400 150 400 110" stroke="#f59e0b" stroke-width="1.5" fill="none" stroke-dasharray="6 3" marker-end="url(#ah2)"/>
+      <text x="570" y="168" font-size="10" fill="#fbbf24" font-family="Inter" font-weight="500" text-anchor="middle">Retry (max 3x)</text>
+      <!-- Arrow to success -->
+      <path d="M 800 70 L 835 70" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arrowGreen)"/>
+      <!-- Success -->
+      <rect x="840" y="40" width="100" height="60" rx="10" fill="rgba(16,185,129,.12)" stroke="#10b981"/>
+      <text x="890" y="66" font-size="12" fill="#6ee7b7" font-family="Inter" font-weight="700" text-anchor="middle">Success</text>
+      <text x="890" y="82" font-size="9" fill="#94a3b8" font-family="Inter" text-anchor="middle">close_ticket()</text>
+      <!-- Or escalate -->
+      <path d="M 570 110 L 570 140 Q 570 150 580 150 L 950 150 Q 960 150 960 140 L 960 100" stroke="#ef4444" stroke-width="1.5" fill="none" marker-end="url(#arrowRed)"/>
+      <rect x="940" y="40" width="110" height="60" rx="10" fill="rgba(239,68,68,.12)" stroke="#ef4444"/>
+      <text x="995" y="64" font-size="11" fill="#fca5a5" font-family="Inter" font-weight="700" text-anchor="middle">Escalate</text>
+      <text x="995" y="80" font-size="9" fill="#94a3b8" font-family="Inter" text-anchor="middle">After 3 failures</text>
+      <text x="995" y="92" font-size="9" fill="#94a3b8" font-family="Inter" text-anchor="middle">or give_up</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ============ SYSTEM LOOP — SYMPTOMS ============ -->
+<div class="section">
+  <div class="section-title">System Self-Healing Loop <span class="badge" style="background:rgba(239,68,68,.15);color:var(--red)">Loop 2</span></div>
+  <div class="section-sub">The system-doctor agent handles 9 infrastructure symptoms with the DETECT &rarr; DIAGNOSE &rarr; HEAL &rarr; VERIFY cycle</div>
+  <div class="flow-wrapper" style="padding:20px; overflow-x:auto;">
+    <table class="symptom-table">
+      <thead>
+        <tr>
+          <th>Symptom</th>
+          <th>Detection</th>
+          <th>Auto-Fix</th>
+          <th>Fallback</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>connection_failed</code></td>
+          <td>curl /health returns non-200</td>
+          <td class="fix-auto">Retry after 10s</td>
+          <td class="fix-user">Tell user to check internet</td>
+        </tr>
+        <tr>
+          <td><code>user_env_missing</code></td>
+          <td>~/.claude/taleemabad-data-mcp.env not found</td>
+          <td class="fix-auto">Recover email from audit log</td>
+          <td class="fix-user">Ask user for email &rarr; /taleemabad-setup</td>
+        </tr>
+        <tr>
+          <td><code>user_env_unexpanded</code></td>
+          <td>Header contains literal ${TALEEMABAD_USER}</td>
+          <td class="fix-auto">setx (Win) / shell rc (Linux)</td>
+          <td class="fix-user">Tell user to restart terminal</td>
+        </tr>
+        <tr>
+          <td><code>rules_path_missing</code></td>
+          <td>~/.claude/taleemabad-rules-path gone or stale</td>
+          <td class="fix-auto">Re-run update.py hook</td>
+          <td class="fix-escalate">Suggest reinstall after 2 failures</td>
+        </tr>
+        <tr>
+          <td><code>rules_stale</code></td>
+          <td>Local version 2+ behind latest git tag</td>
+          <td class="fix-auto">Force refresh via hook</td>
+          <td>&mdash;</td>
+        </tr>
+        <tr>
+          <td><code>plugin_not_installed</code></td>
+          <td>claude plugin list missing taleemabad-data</td>
+          <td>&mdash;</td>
+          <td class="fix-user">Print install commands</td>
+        </tr>
+        <tr>
+          <td><code>plugin_outdated</code></td>
+          <td>Local plugin 2+ minor behind</td>
+          <td>&mdash;</td>
+          <td class="fix-user">Offer claude plugin update</td>
+        </tr>
+        <tr>
+          <td><code>mcp_handshake_fail</code></td>
+          <td>Server up but /mcp disconnected</td>
+          <td class="fix-auto">Retry once</td>
+          <td class="fix-escalate">Escalate to GitHub</td>
+        </tr>
+        <tr>
+          <td><code>hook_crashed</code></td>
+          <td>bash.exe.stackdump found or hook log errors</td>
+          <td class="fix-auto">Switch to Python hook</td>
+          <td>&mdash;</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============ TICKET LIFECYCLE ============ -->
+<div class="section">
+  <div class="section-title">Ticket Lifecycle <span class="badge" style="background:rgba(168,85,247,.15);color:var(--purple)">Tracking</span></div>
+  <div class="section-sub">Every self-healing action is tracked as a ticket (TKT-YYYYMMDD-hex) with JSONL persistence</div>
+  <div class="flow-wrapper" style="padding: 30px 10px;">
+    <div class="lifecycle">
+      <div class="lc-step">
+        <div class="lc-dot" style="border-color:var(--blue);color:var(--blue);background:rgba(59,130,246,.1)">1</div>
+        <div class="lc-label" style="color:var(--blue)">Open</div>
+        <div class="lc-sub">report_ticket()</div>
+      </div>
+      <div class="lc-arrow">&rarr;</div>
+      <div class="lc-step">
+        <div class="lc-dot" style="border-color:var(--cyan);color:var(--cyan);background:rgba(6,182,212,.1)">2</div>
+        <div class="lc-label" style="color:var(--cyan)">Diagnosing</div>
+        <div class="lc-sub">Match symptom to handler</div>
+      </div>
+      <div class="lc-arrow">&rarr;</div>
+      <div class="lc-step">
+        <div class="lc-dot" style="border-color:var(--amber);color:var(--amber);background:rgba(245,158,11,.1)">3</div>
+        <div class="lc-label" style="color:var(--amber)">Heal</div>
+        <div class="lc-sub">Apply fix (max 2 attempts)</div>
+      </div>
+      <div class="lc-arrow">&rarr;</div>
+      <div class="lc-step">
+        <div class="lc-dot" style="border-color:var(--teal);color:var(--teal);background:rgba(20,184,166,.1)">4</div>
+        <div class="lc-label" style="color:var(--teal)">Verify</div>
+        <div class="lc-sub">Re-run failing check</div>
+      </div>
+      <div class="lc-arrow">&rarr;</div>
+      <div class="lc-step">
+        <div class="lc-dot pulse" style="border-color:var(--green);color:var(--green);background:rgba(16,185,129,.1)">&#10003;</div>
+        <div class="lc-label" style="color:var(--green)">Auto-Fixed</div>
+        <div class="lc-sub">close_ticket()</div>
+      </div>
+      <div class="lc-step" style="margin-left: 10px;">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px">or</div>
+      </div>
+      <div class="lc-step">
+        <div class="lc-dot" style="border-color:var(--red);color:var(--red);background:rgba(239,68,68,.1)">!</div>
+        <div class="lc-label" style="color:var(--red)">Escalated</div>
+        <div class="lc-sub">GitHub issue filed</div>
+      </div>
+      <div class="lc-step" style="margin-left: 10px;">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px">or</div>
+      </div>
+      <div class="lc-step">
+        <div class="lc-dot" style="border-color:var(--amber);color:var(--amber);background:rgba(245,158,11,.1)">&#9997;</div>
+        <div class="lc-label" style="color:var(--amber)">User Action</div>
+        <div class="lc-sub">Manual step needed</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MCP TOOLS ============ -->
+<div class="section">
+  <div class="section-title">MCP Tools <span class="badge" style="background:rgba(20,184,166,.15);color:var(--teal)">12 Tools</span></div>
+  <div class="section-sub">Server-side tools running on Railway that agents and Claude Code use automatically</div>
+  <div class="tools-grid">
+    <div class="tool-card">
+      <div class="name">execute_query</div>
+      <div class="desc">Run governed SQL against BigQuery with cost guardrails and audit logging. Returns structured JSON.</div>
+      <span class="category" style="background:rgba(59,130,246,.12);color:var(--blue)">Query</span>
+    </div>
+    <div class="tool-card">
+      <div class="name">list_datasets</div>
+      <div class="desc">Auto-discover and browse all accessible BigQuery datasets and tables.</div>
+      <span class="category" style="background:rgba(59,130,246,.12);color:var(--blue)">Discovery</span>
+    </div>
+    <div class="tool-card">
+      <div class="name">get_table_schema</div>
+      <div class="desc">Get columns, types, and row count for a specific table.</div>
+      <span class="category" style="background:rgba(59,130,246,.12);color:var(--blue)">Discovery</span>
+    </div>
+    <div class="tool-card">
+      <div class="name">check_table_freshness</div>
+      <div class="desc">Check when a table was last modified, including partition info.</div>
+      <span class="category" style="background:rgba(6,182,212,.12);color:var(--cyan)">Monitoring</span>
+    </div>
+    <div class="tool-card">
+      <div class="name">preview_table</div>
+      <div class="desc">Quick peek at table data (max 50 rows, SQL injection protected).</div>
+      <span class="category" style="background:rgba(59,130,246,.12);color:var(--blue)">Discovery</span>
+    </div>
+    <div class="tool-card">
+      <div class="name">describe_data</div>
+      <div class="desc">Descriptive statistics — count, mean, min, max, unique values.</div>
+      <span class="category" style="background:rgba(59,130,246,.12);color:var(--blue)">Query</span>
+    </div>
+    <div class="tool-card">
+      <div class="name">save_query_results</div>
+      <div class="desc">Export governed query results to CSV or JSON with metadata.</div>
+      <span class="category" style="background:rgba(16,185,129,.12);color:var(--green)">Export</span>
+    </div>
+    <div class="tool-card">
+      <div class="name">submit_feedback</div>
+      <div class="desc">Submit thumbs up/down on a query result for quality tracking.</div>
+      <span class="category" style="background:rgba(6,182,212,.12);color:var(--cyan)">Feedback</span>
+    </div>
+    <div class="tool-card">
+      <div class="name">get_version</div>
+      <div class="desc">Check installed version, user identity, project, and datasets.</div>
+      <span class="category" style="background:rgba(6,182,212,.12);color:var(--cyan)">Monitoring</span>
+    </div>
+    <div class="tool-card">
+      <div class="name">report_ticket</div>
+      <div class="desc">Open a self-healing ticket for query or system issues.</div>
+      <span class="category" style="background:rgba(168,85,247,.12);color:var(--purple)">Tickets</span>
+    </div>
+    <div class="tool-card">
+      <div class="name">update_ticket</div>
+      <div class="desc">Log fix attempts, diagnosis, and status changes on a ticket.</div>
+      <span class="category" style="background:rgba(168,85,247,.12);color:var(--purple)">Tickets</span>
+    </div>
+    <div class="tool-card">
+      <div class="name">close_ticket</div>
+      <div class="desc">Close a ticket with final status: auto_fixed, escalated, or user_action.</div>
+      <span class="category" style="background:rgba(168,85,247,.12);color:var(--purple)">Tickets</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ERROR CLASSES ============ -->
+<div class="section">
+  <div class="section-title">Error Classification <span class="badge" style="background:rgba(239,68,68,.15);color:var(--red)">8 Classes</span></div>
+  <div class="section-sub">execute_query returns structured JSON errors that drive fix routing</div>
+  <div class="flow-wrapper" style="padding:20px; overflow-x:auto;">
+    <table class="symptom-table">
+      <thead>
+        <tr><th>Error Class</th><th>Trigger</th><th>Routed To</th><th>Ticket Category</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>SCHEMA_DRIFT</code></td>
+          <td>Column renamed/removed, table not found</td>
+          <td class="fix-auto">query-fixer</td>
+          <td>schema</td>
+        </tr>
+        <tr>
+          <td><code>MISSING_PARTITION</code></td>
+          <td>Query lacks required date filter</td>
+          <td class="fix-auto">query-fixer</td>
+          <td>partition</td>
+        </tr>
+        <tr>
+          <td><code>SYNTAX_ERROR</code></td>
+          <td>SQL syntax or semantic error</td>
+          <td class="fix-auto">query-fixer</td>
+          <td>syntax</td>
+        </tr>
+        <tr>
+          <td><code>COST_EXCEEDED</code></td>
+          <td>Query exceeds bytes_billed limit</td>
+          <td class="fix-auto">query-fixer</td>
+          <td>cost</td>
+        </tr>
+        <tr>
+          <td><code>PERMISSION_DENIED</code></td>
+          <td>Insufficient table/dataset permissions</td>
+          <td class="fix-escalate">system-doctor</td>
+          <td>connection</td>
+        </tr>
+        <tr>
+          <td><code>TIMEOUT</code></td>
+          <td>Query deadline exceeded</td>
+          <td class="fix-escalate">system-doctor</td>
+          <td>connection</td>
+        </tr>
+        <tr>
+          <td><code>BIGQUERY_UNAVAILABLE</code></td>
+          <td>503 / service unavailable</td>
+          <td class="fix-escalate">system-doctor</td>
+          <td>connection</td>
+        </tr>
+        <tr>
+          <td><code>OTHER</code></td>
+          <td>Unrecognized exception</td>
+          <td class="fix-user">Manual diagnosis</td>
+          <td>other</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="footer">
+  Taleemabad Data MCP &middot; v0.18.0 &middot; <a href="https://github.com/Orenda-Project/taleemabad-data-mcp">GitHub</a>
+  <br>4 Agents &middot; 12 Tools &middot; 5 Regions &middot; 6 Datasets &middot; Built with &#10084; by Orenda Project
+</div>
+
+</body>
+</html>
