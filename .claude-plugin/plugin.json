@@ -1,6 +1,6 @@
 {
   "name": "taleemabad-data",
-  "version": "0.17.15",
+  "version": "0.18.0",
   "description": "Governed BigQuery analytics for Taleemabad \u2014 four agents (data-analyst, data-admin, query-fixer, system-doctor) with self-healing query loop, auto-updating governance rules, ticket-tracked infrastructure recovery, and full audit trail",
   "author": {
     "name": "Orenda Project",

@@ -62,11 +62,6 @@ When adding, editing, or removing governance rules, also update:
 5. **`docs/INSTALL.md`** — update if setup flow changed
 6. **Dashboard** — `projects.yaml` drives the Governance page; new datasets appear automatically
 7. **Agent descriptions** — update `agents/data-analyst.md` description if new region or domain added
-8. **Plugin manifest** — update `.claude-plugin/plugin.json` and `marketplace.json` if agents, commands, or tools changed
-9. **Quick setup** — update `docs/quick-setup.md` if user-facing workflow changed
-
-**Agents:** `data-analyst` (governed queries + retry loop), `data-admin` (diagnostics), `query-fixer` (auto-fix failed SQL), `system-doctor` (infrastructure health).
-**Commands:** `/taleemabad-setup` (email config), `/taleemabad-doctor` (system health).
 
 Rules are NOT placed in `~/.claude/rules/` — that bypasses the agent's governance flow.
 Rules live only in the plugin's `rules/` directory, read by the data-analyst subagent.
