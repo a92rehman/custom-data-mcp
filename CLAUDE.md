@@ -20,6 +20,11 @@ Do NOT generate SQL yourself. Do NOT call `execute_query` without the agent's go
 - **Governance rules live in the plugin's `rules/` directory** — read by the data-analyst subagent
 - **Two server modes:** stdio (local) or streamable-http (remote Railway deployment)
 - **Remote deployment:** MCP server runs on Railway, plugin connects via URL
+- **Self-healing loops** — two automated recovery systems:
+  - **Query loop:** `execute_query` returns structured JSON errors. `data-analyst` Phase 4 dispatches `query-fixer` subagent (max 3 attempts), opens a ticket, and escalates if unfixable.
+  - **System loop:** `system-doctor` agent detects and fixes infrastructure issues (MCP connectivity, env config, rules sync, hook crashes). Auto-triggered via sentinel file from session-start hook, or manually via `/taleemabad-doctor`.
+- **Ticket system** — all self-healing actions tracked as tickets (JSONL + BigQuery). Dashboard page at `7_Tickets.py`.
+- **Session-start hook is Python-first** — `hooks/session-start/update.py` handles Windows paths natively, falls back to bash. Writes `~/.claude/taleemabad-doctor-needed` sentinel when health checks fail.
 
 ## Tech Stack
 - **Language:** Python 3.11+
@@ -62,17 +67,19 @@ src/taleemabad_data_mcp/        # Python MCP server package
   __init__.py                   # Package version (__version__)
   __main__.py                   # Entry point (routes to CLI)
   cli.py                        # CLI: setup, bump, serve, serve-remote, dashboard, uninstall
-  server.py                     # FastMCP instance, 9 MCP tools
+  server.py                     # FastMCP instance, 12 MCP tools
   config.py                     # Configuration management (env vars)
   rules/                        # SOURCE OF TRUTH — governance rules
-  engine/                       # Audit, cost estimation, domain classification
-  models/                       # Pydantic models
-  dashboard/                    # Streamlit observability dashboard
+  engine/                       # Audit, cost estimation, domain classification, errors, tickets
+  models/                       # Pydantic models (audit, feedback, ticket)
+  dashboard/                    # Streamlit observability dashboard (incl. Tickets page)
 agents/                         # Plugin agents (loaded by Claude Code plugin system)
-  data-analyst.md               # Primary — reads rules, asks clarifications, generates governed SQL
+  data-analyst.md               # Primary — reads rules, asks clarifications, generates governed SQL, retry loop
   data-admin.md                 # Diagnostics — schema, freshness, audit, troubleshooting
+  query-fixer.md                # Subagent — diagnoses failed SQL, proposes corrected query
+  system-doctor.md              # Infrastructure — detects/fixes MCP, env, rules, hook issues
 commands/                       # Plugin slash commands
-hooks/                          # Plugin hooks (session-start: auto-download latest rules)
+hooks/                          # Plugin hooks (session-start: Python-first, bash fallback)
 rules/                          # DERIVED COPY — synced from src/ by bump command
 tests/
 docs/
@@ -81,7 +88,7 @@ docs/
 ## MCP Tools
 | Tool | Purpose |
 |------|---------|
-| `execute_query` | Run governed SQL against BigQuery (cost guardrails + audit) |
+| `execute_query` | Run governed SQL against BigQuery (structured JSON response, cost guardrails + audit). Supports `legacy_format=True` for backward compat. |
 | `list_datasets` | Auto-discover and browse all BigQuery datasets and tables |
 | `get_table_schema` | Get columns and types for a table |
 | `check_table_freshness` | Check when a table was last modified |
@@ -90,6 +97,9 @@ docs/
 | `preview_table` | Quick peek at table data (SQL injection protected) |
 | `save_query_results` | Export governed query results to CSV or JSON with metadata |
 | `describe_data` | Descriptive statistics on query results |
+| `report_ticket` | Open a self-healing ticket (query or system loop) |
+| `update_ticket` | Add actions/diagnosis to an existing ticket |
+| `close_ticket` | Close a ticket with final status and resolution notes |
 
 ## Distribution
 Teams install via Claude Code plugin system:

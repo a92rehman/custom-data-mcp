@@ -139,6 +139,7 @@ The data-analyst agent reads governance rules, asks mandatory clarification ques
 | Command | What It Does |
 |---------|-------------|
 | `/taleemabad-setup` | Save your email for audit logging (one-time) |
+| `/taleemabad-doctor` | Run system health checks and auto-fix common issues |
 | `/mcp` | Check MCP connection status |
 
 ---
@@ -202,11 +203,11 @@ This removes the plugin, agents, rules, and MCP connection. Your email config at
 
 ## Tools
 
-The MCP server provides 9 tools that Claude Code uses automatically:
+The MCP server provides 12 tools that Claude Code uses automatically:
 
 | Tool | Purpose |
 |------|---------|
-| `execute_query` | Run a governed SQL query against BigQuery (cost guardrails + audit) |
+| `execute_query` | Run a governed SQL query against BigQuery (structured JSON response, cost guardrails + audit) |
 | `list_datasets` | Browse all BigQuery datasets and their tables (auto-discovered) |
 | `get_table_schema` | Get columns and types for a specific table |
 | `check_table_freshness` | Check when a table was last modified |
@@ -215,8 +216,22 @@ The MCP server provides 9 tools that Claude Code uses automatically:
 | `preview_table` | Quick peek at table data (10 rows, SQL injection protected) |
 | `save_query_results` | Export governed query results to CSV or JSON |
 | `describe_data` | Descriptive statistics on governed query results |
+| `report_ticket` | Open a self-healing ticket (query fix or system issue) |
+| `update_ticket` | Log fix attempts and diagnosis against a ticket |
+| `close_ticket` | Close a ticket with resolution status |
 
 You don't call these directly — Claude Code picks the right tool based on your question.
+
+## Agents
+
+The plugin includes four agents that handle different responsibilities:
+
+| Agent | Role | When It's Used |
+|-------|------|---------------|
+| `data-analyst` | Reads governance rules, asks clarification questions, generates governed SQL, retries on error | Any data question — LP rates, teacher counts, FICO scores, training progress |
+| `data-admin` | Schema browsing, table freshness, audit logs, cost analysis, troubleshooting | "What tables exist?", "When was X updated?", "Show audit logs" |
+| `query-fixer` | Diagnoses failed SQL by error class, proposes corrected queries | Auto-dispatched when a query fails (schema drift, missing partition, syntax error, cost exceeded) |
+| `system-doctor` | Detects and fixes infrastructure issues — MCP connectivity, env config, rules sync, hook crashes | Auto-triggered on session start if issues detected, or manually via `/taleemabad-doctor` |
 
 ---
 
@@ -241,21 +256,39 @@ User's Machine                              Railway (Cloud)
 | Claude Code              |-------------->| MCP Server           |
 |  +- Plugin (cached)      |              |  +- FastMCP (HTTP)    |
 |  |   +- agents/          |              |  +- BigQuery client   |
-|  |   +- rules/           |              |  +- Audit logger      |
-|  |   +- commands/        |              |  +- Cost estimator    |
-|  |   +- hooks/           |              |  +- Feedback logger   |
-|  |   +- .mcp.json (URL)  |              +----------------------+
-|  +- ~/.claude/            |                        |
-|  |   +- taleemabad-       |                        v
-|  |   |  rules-path (ptr)  |              Google BigQuery
-|  |   +- email config      |              (niete-bq-prod)
+|  |   |  +- data-analyst  |              |  +- Audit logger      |
+|  |   |  +- data-admin    |              |  +- Cost estimator    |
+|  |   |  +- query-fixer   |              |  +- Feedback logger   |
+|  |   |  +- system-doctor |              |  +- Ticket logger     |
+|  |   +- rules/           |              +----------------------+
+|  |   +- commands/        |                        |
+|  |   +- hooks/           |                        v
+|  |   +- .mcp.json (URL)  |              Google BigQuery
+|  +- ~/.claude/            |              (niete-bq-prod)
+|  |   +- taleemabad-       |
+|  |   |  rules-path (ptr)  |
+|  |   +- email config      |
+|  |   +- tickets.jsonl     |
 +--------------------------+
 ```
 
 - **Plugin** runs locally: agents read governance rules from the plugin cache and generate correct SQL
-- **Session-start hook** writes `~/.claude/taleemabad-rules-path` so agents can locate rules regardless of working directory
-- **MCP server** runs on Railway: executes queries, enforces cost guardrails, logs audits
+- **Session-start hook** (Python-first) writes `~/.claude/taleemabad-rules-path` so agents can locate rules regardless of working directory; runs health checks and writes sentinel for system-doctor
+- **MCP server** runs on Railway: executes queries, enforces cost guardrails, logs audits, manages tickets
+- **Self-healing loops**: query-fixer auto-retries failed SQL (max 3 attempts); system-doctor fixes infrastructure issues with ticket tracking
 - **No local dependencies** needed — no Python, no credentials file, no BigQuery access
+
+---
+
+## Self-Healing
+
+The plugin includes two automated recovery loops:
+
+**Query loop** — When a governed query fails (wrong column, missing partition filter, cost exceeded), the `data-analyst` agent automatically dispatches a `query-fixer` subagent that reads the table schema and rule file, proposes corrected SQL, and retries up to 3 times. If unfixable, a ticket is opened and the user is told to run `/taleemabad-doctor`.
+
+**System loop** — The `system-doctor` agent detects and fixes common infrastructure issues: MCP connection failures, missing env configuration, stale governance rules, broken session-start hooks. It runs automatically when the session-start hook detects problems, or manually via `/taleemabad-doctor`.
+
+All recovery actions are tracked as tickets (viewable in the dashboard's Tickets page). Unresolvable issues are escalated to GitHub.
 
 ---
 
@@ -278,6 +311,7 @@ Run `/taleemabad-setup` and enter your work email.
 You must use a work email ending with `@taleemabad.com`, `@niete.edu.pk`, or `@niete.pk`.
 
 ### MCP shows "failed" or "disconnected" in /mcp
+- Run `/taleemabad-doctor` — the system-doctor agent will diagnose and attempt to fix the issue automatically
 - Check your internet connection
 - The remote server may be restarting — wait a minute and try again
 - Run `/mcp` to see the connection status
@@ -287,9 +321,10 @@ The repository is private. Ask IT to add your GitHub account to the [Orenda-Proj
 
 ### Agent not reading rules / generating ad-hoc SQL
 The data-analyst agent needs `~/.claude/taleemabad-rules-path` to find governance rules. This file is created automatically by the session-start hook. If it's missing:
-1. Start a new Claude Code session (triggers the hook)
-2. If still missing, check that the plugin is installed: `claude plugin list`
-3. Reinstall if needed (see "Reinstall" section below)
+1. Run `/taleemabad-doctor` — it will detect and fix rules path issues automatically
+2. Or start a new Claude Code session (triggers the hook)
+3. If still missing, check that the plugin is installed: `claude plugin list`
+4. Reinstall if needed (see "Reinstall" section below)
 
 ### Windows: "directory locked" during update
 Close all Claude Code windows and terminals, then retry. The plugin directory gets locked by running processes.
@@ -306,7 +341,9 @@ Previous versions required a credentials file and local Python. These are no lon
 
 A live Streamlit dashboard tracks MCP usage, quality, and cost. Deployed on Railway — ask the data team for the URL.
 
-Pages: Overview, Query Analytics, Feedback, Cost, Errors, Data Freshness, Governance.
+Pages: Overview, Query Analytics, Feedback, Cost, Errors, Data Freshness, Governance, Tickets.
+
+The **Tickets** page shows self-healing activity: open/auto-fixed/escalated tickets, auto-fix success rate, top recurring symptoms, and a filterable detail table. It reads from local JSONL — no BigQuery credentials needed.
 
 ---
 

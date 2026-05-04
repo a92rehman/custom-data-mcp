@@ -37,6 +37,10 @@ Once connected, just ask questions in plain English:
 - *"What's the LP adoption rate this month?"*
 - *"Show me FICO Section B scores for Q1 2026"*
 
+## Something Not Working?
+
+Run `/taleemabad-doctor` in Claude Code — the system-doctor agent will automatically diagnose and fix common issues (missing config, stale rules, connection problems).
+
 ## Need Help?
 
 **Abdurrehman Siddique** can help with prerequisites (Node.js, Claude Code, Anthropic subscription, GitHub access) and any installation issues.

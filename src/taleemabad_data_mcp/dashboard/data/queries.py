@@ -179,6 +179,62 @@ def get_table_freshness(days: int = 30) -> pd.DataFrame:
     return pd.DataFrame(columns=["dataset", "table_name", "last_modified"])
 
 
+@st.cache_data(ttl=300)
+def query_tickets(days: int = 30) -> pd.DataFrame:
+    """Fetch system tickets from BigQuery, falling back to local JSONL.
+
+    Returns DataFrame with ticket columns. Returns empty DataFrame if
+    both sources are unavailable (never crashes).
+    """
+    cols = [
+        "ticket_id", "created_at", "updated_at", "user_email", "hostname",
+        "loop", "category", "symptom", "severity", "status",
+        "diagnosis", "resolution_notes", "escalated_to", "related_event_id",
+    ]
+    try:
+        client = get_bq_client()
+        cfg = get_config()
+        table = f"`{cfg['project']}.{cfg['audit_dataset']}.system_tickets`"
+        sql = f"""
+            SELECT {', '.join(cols)}
+            FROM {table}
+            WHERE created_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL {days} DAY)
+            ORDER BY created_at DESC
+        """
+        return client.query(sql).to_dataframe()
+    except Exception:
+        pass
+
+    # Fallback: read from local JSONL
+    try:
+        from pathlib import Path
+        local_file = Path.home() / ".claude" / "taleemabad-logs" / "tickets.jsonl"
+        if local_file.exists():
+            import json
+            from datetime import UTC, datetime, timedelta
+            cutoff = datetime.now(UTC) - timedelta(days=days)
+            rows = []
+            seen: set[str] = set()
+            ticket_map: dict[str, dict] = {}
+            for line in local_file.read_text(encoding="utf-8").strip().split("\n"):
+                if not line:
+                    continue
+                t = json.loads(line)
+                ticket_map[t["ticket_id"]] = t  # keep latest version
+
+            for t in ticket_map.values():
+                created = pd.Timestamp(t.get("created_at", ""))
+                if pd.notna(created) and created.tz_localize(None) >= pd.Timestamp(cutoff.replace(tzinfo=None)):
+                    rows.append({c: t.get(c) for c in cols})
+
+            if rows:
+                return pd.DataFrame(rows)
+    except Exception:
+        pass
+
+    return pd.DataFrame(columns=cols)
+
+
 @st.cache_data(ttl=600)
 def get_dataset_freshness() -> pd.DataFrame:
     """Get dataset-level freshness: earliest and latest table modification per dataset.

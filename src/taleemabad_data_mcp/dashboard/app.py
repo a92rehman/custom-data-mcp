@@ -51,6 +51,7 @@ pg = st.navigation([
     st.Page(pages_dir / "4_errors.py", title="Errors", icon=":material/error:"),
     st.Page(pages_dir / "5_freshness.py", title="Freshness", icon=":material/update:"),
     st.Page(pages_dir / "6_Governance.py", title="Governance", icon=":material/shield:"),
+    st.Page(pages_dir / "7_Tickets.py", title="Tickets", icon=":material/confirmation_number:"),
 ])
 
 pg.run()

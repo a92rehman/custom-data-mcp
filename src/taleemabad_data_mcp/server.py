@@ -25,7 +25,13 @@ from taleemabad_data_mcp.config import ServerConfig
 from taleemabad_data_mcp.engine.audit_logger import AuditLogger
 from taleemabad_data_mcp.engine.cost_estimator import CostEstimator
 from taleemabad_data_mcp.engine.domain_classifier import classify_domain
+from taleemabad_data_mcp.engine.errors import (
+    classify_bigquery_error,
+    format_error_response,
+    format_success_response,
+)
 from taleemabad_data_mcp.engine.feedback_logger import FeedbackLogger
+from taleemabad_data_mcp.engine.ticket_logger import TicketLogger
 
 logger = structlog.get_logger()
 
@@ -123,6 +129,7 @@ class AppContext:
     audit_logger: AuditLogger | None
     cost_estimator: CostEstimator | None
     feedback_logger: FeedbackLogger | None
+    ticket_logger: TicketLogger | None = None
     remote_mode: bool = False
 
 
@@ -184,6 +191,7 @@ async def app_lifespan(server: FastMCP):
     audit_logger = None
     cost_estimator = None
     feedback_logger = None
+    ticket_logger = None
 
     try:
         if config.google_application_credentials:
@@ -211,6 +219,13 @@ async def app_lifespan(server: FastMCP):
             feedback_table="query_feedback",
             user_name=config.taleemabad_user,
         )
+        ticket_logger = TicketLogger(
+            bq_client=bq_client,
+            project=config.bigquery_project,
+            audit_dataset=config.audit_dataset,
+            user_email=config.taleemabad_user if config.taleemabad_user != "unknown" else None,
+            hostname=config.taleemabad_hostname,
+        )
 
         logger.info(
             "server_started",
@@ -232,6 +247,7 @@ async def app_lifespan(server: FastMCP):
             audit_logger=audit_logger,
             cost_estimator=cost_estimator,
             feedback_logger=feedback_logger,
+            ticket_logger=ticket_logger,
             remote_mode=remote_mode,
         )
     finally:
@@ -262,11 +278,15 @@ async def execute_query(
     sql: str,
     question: str = "",
     dry_run: bool = False,
+    legacy_format: bool = False,
 ) -> str:
     """Execute a validated SQL query against BigQuery.
 
     Use this tool ONLY after reading the governance rules to determine the correct
     query. Never generate ad-hoc SQL — always follow the governed metric definitions.
+
+    Returns structured JSON by default. Set legacy_format=True for the old
+    plain-text format (deprecated — will be removed in v0.20.0).
 
     Args:
         sql: The SQL query to execute. Must be a governed query from the rule files.
@@ -274,6 +294,8 @@ async def execute_query(
             as they asked it. This is logged for audit and activity tracking.
             Always pass this parameter.
         dry_run: If true, only estimate cost without executing.
+        legacy_format: If true, return plain text instead of structured JSON.
+            Deprecated — use structured JSON for new integrations.
     """
     ctx = mcp.get_context()
     app: AppContext = ctx.request_context.lifespan_context
@@ -286,9 +308,12 @@ async def execute_query(
     audit = app.audit_logger
     user_email = _get_audit_email(app)
 
+    if legacy_format:
+        logger.info("legacy_format_deprecation", hint="legacy_format=True is deprecated, use structured JSON")
+
     if dry_run:
         estimate = app.cost_estimator.estimate(sql)
-        audit.log(
+        entry = audit.log(
             query_text=question or sql,
             generated_sql=sql,
             result_cached=False,
@@ -296,11 +321,20 @@ async def execute_query(
             domain=classify_domain([], sql),
             user_email=user_email,
         )
-        return (
-            f"Estimated bytes: {estimate.bytes_processed:,}\n"
-            f"Estimated cost: ${estimate.cost_usd:.4f}\n"
-            f"Needs confirmation: {estimate.needs_confirmation}"
-        )
+        if legacy_format:
+            return (
+                f"Estimated bytes: {estimate.bytes_processed:,}\n"
+                f"Estimated cost: ${estimate.cost_usd:.4f}\n"
+                f"Needs confirmation: {estimate.needs_confirmation}"
+            )
+        return json.dumps({
+            "status": "ok",
+            "dry_run": True,
+            "event_id": entry.event_id,
+            "bytes_processed": estimate.bytes_processed,
+            "cost_usd": round(estimate.cost_usd, 6),
+            "needs_confirmation": estimate.needs_confirmation,
+        }, default=str)
 
     try:
         job_config = bigquery.QueryJobConfig(
@@ -316,7 +350,7 @@ async def execute_query(
         tables = list({ref.table_id for ref in query_job.referenced_tables})
         domain = classify_domain(tables, sql)
 
-        audit.log(
+        entry = audit.log(
             query_text=question or sql,
             generated_sql=sql,
             tables_accessed=tables,
@@ -330,13 +364,20 @@ async def execute_query(
             user_email=user_email,
         )
 
-        if not rows:
-            return "Query returned 0 rows."
+        if legacy_format:
+            if not rows:
+                return "Query returned 0 rows."
+            return json.dumps(rows[:100], indent=2, default=str)
 
-        return json.dumps(rows[:100], indent=2, default=str)
+        truncated = rows[:100]
+        return json.dumps(
+            format_success_response(truncated, entry.event_id, cost_usd, tables),
+            indent=2,
+            default=str,
+        )
 
     except Exception as e:
-        audit.log(
+        entry = audit.log(
             query_text=question or sql,
             generated_sql=sql,
             error_type=type(e).__name__,
@@ -344,7 +385,16 @@ async def execute_query(
             domain=classify_domain([], sql),
             user_email=user_email,
         )
-        return f"Query failed: {type(e).__name__}: {e}"
+
+        if legacy_format:
+            return f"Query failed: {type(e).__name__}: {e}"
+
+        error_class, hints = classify_bigquery_error(e, sql)
+        return json.dumps(
+            format_error_response(error_class, e, entry.event_id, **hints),
+            indent=2,
+            default=str,
+        )
 
 
 @mcp.tool()
@@ -846,3 +896,137 @@ async def describe_data(
 
     except Exception as e:
         return f"Describe failed: {type(e).__name__}: {e}"
+
+
+# --- Ticket management tools ---
+
+
+@mcp.tool()
+async def report_ticket(
+    loop: str,
+    category: str,
+    symptom: str,
+    severity: str = "warning",
+    evidence: dict | None = None,
+    diagnosis: str | None = None,
+    related_event_id: str | None = None,
+) -> str:
+    """Open a ticket for a problem the agent detected.
+
+    Use this when a query fails and the agent is attempting auto-fix,
+    or when system-doctor detects an infrastructure issue.
+
+    Args:
+        loop: Which loop detected the problem — "query" or "system".
+        category: Problem category — connection, identity, rules, plugin,
+            schema, syntax, partition, cost, or other.
+        symptom: Short identifier for the problem (e.g., "rules_path_missing").
+        severity: info, warning, error, or critical.
+        evidence: Arbitrary JSON evidence (sanitize before GitHub escalation).
+        diagnosis: Initial diagnosis if known.
+        related_event_id: Audit event_id of the failed query (for query-loop tickets).
+    """
+    ctx = mcp.get_context()
+    app: AppContext = ctx.request_context.lifespan_context
+
+    tl = app.ticket_logger
+    if tl is None:
+        tl = TicketLogger(hostname=app.config.taleemabad_hostname)
+
+    ticket = tl.open_ticket(
+        loop=loop,
+        category=category,
+        symptom=symptom,
+        severity=severity,
+        evidence=evidence or {},
+        diagnosis=diagnosis,
+        related_event_id=related_event_id,
+    )
+    return json.dumps({
+        "ticket_id": ticket.ticket_id,
+        "status": ticket.status,
+        "message": f"Ticket {ticket.ticket_id} opened for {symptom}",
+    })
+
+
+@mcp.tool()
+async def update_ticket(
+    ticket_id: str,
+    action: dict | None = None,
+    diagnosis: str | None = None,
+    status: str | None = None,
+) -> str:
+    """Update an existing ticket with new actions or status.
+
+    Args:
+        ticket_id: The ticket ID to update (e.g., TKT-20260504-abc123).
+        action: An action record: {action, result, timestamp}.
+        diagnosis: Updated diagnosis string.
+        status: New status — open, diagnosing, auto_fixed,
+            user_action_required, escalated, abandoned.
+    """
+    ctx = mcp.get_context()
+    app: AppContext = ctx.request_context.lifespan_context
+
+    tl = app.ticket_logger
+    if tl is None:
+        tl = TicketLogger(hostname=app.config.taleemabad_hostname)
+
+    ticket = tl.update_ticket(
+        ticket_id=ticket_id,
+        action=action,
+        diagnosis=diagnosis,
+        status=status,
+    )
+    if ticket is None:
+        return json.dumps({
+            "error": f"Ticket {ticket_id} not found",
+            "ticket_id": ticket_id,
+        })
+    return json.dumps({
+        "ticket_id": ticket.ticket_id,
+        "status": ticket.status,
+        "actions_count": len(ticket.actions_attempted),
+        "message": f"Ticket {ticket.ticket_id} updated",
+    })
+
+
+@mcp.tool()
+async def close_ticket(
+    ticket_id: str,
+    status: str,
+    resolution_notes: str | None = None,
+    escalated_to: str | None = None,
+) -> str:
+    """Close a ticket with a final status.
+
+    Args:
+        ticket_id: The ticket ID to close.
+        status: Final status — auto_fixed, escalated, abandoned, or user_action_required.
+        resolution_notes: What was done to resolve (or why it was abandoned).
+        escalated_to: GitHub issue URL if escalated.
+    """
+    ctx = mcp.get_context()
+    app: AppContext = ctx.request_context.lifespan_context
+
+    tl = app.ticket_logger
+    if tl is None:
+        tl = TicketLogger(hostname=app.config.taleemabad_hostname)
+
+    ticket = tl.close_ticket(
+        ticket_id=ticket_id,
+        status=status,
+        resolution_notes=resolution_notes,
+        escalated_to=escalated_to,
+    )
+    if ticket is None:
+        return json.dumps({
+            "error": f"Ticket {ticket_id} not found",
+            "ticket_id": ticket_id,
+        })
+    return json.dumps({
+        "ticket_id": ticket.ticket_id,
+        "status": ticket.status,
+        "resolution_notes": ticket.resolution_notes,
+        "message": f"Ticket {ticket.ticket_id} closed as {status}",
+    })

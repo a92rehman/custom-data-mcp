@@ -134,6 +134,44 @@ If index.md has no matching domain:
 2. Offer: "Would you like me to check if relevant tables exist?" (routes to data-admin)
 3. **Never generate ad-hoc SQL**
 
+## PHASE 4 — RETRY ON ERROR (when parent reports execute_query failed)
+
+If the parent session reports the executed SQL returned a structured error (`{"status": "error", ...}`):
+
+1. **Open a ticket** via `report_ticket(loop="query", category=<from error_class mapping>, symptom=<error_class>, evidence={sql_hash, error_class, message}, related_event_id=<event_id>)`.
+
+   Error class → category mapping:
+   - `SCHEMA_DRIFT` → `schema`
+   - `MISSING_PARTITION` → `partition`
+   - `SYNTAX_ERROR` → `syntax`
+   - `COST_EXCEEDED` → `cost`
+   - `BIGQUERY_UNAVAILABLE`, `TIMEOUT`, `PERMISSION_DENIED` → `connection`
+   - `OTHER` → `other`
+
+2. **If the error class is `BIGQUERY_UNAVAILABLE`, `TIMEOUT`, or `PERMISSION_DENIED`** — these are system problems, not query problems. Tell the parent to dispatch `system-doctor` instead. Close the ticket with `status="escalated"` and `resolution_notes="System-level error, routed to system-doctor"`. Do NOT dispatch query-fixer.
+
+3. **Otherwise, dispatch the `query-fixer` subagent** with:
+   - Original question
+   - Rule file path used (from Phase 1)
+   - SQL_v1 (the failed SQL)
+   - Error JSON (the full structured error)
+   - `get_table_schema` results for any tables mentioned in the error (ask the parent to call this)
+   - Attempt number (starting at 1)
+
+4. **Receive SQL_v2** from query-fixer. Return it to the parent for execution with the same `question` parameter.
+
+5. **If SQL_v2 also errors**, update the ticket via `update_ticket` with the new error as an action, then repeat steps 3–4 with attempt number incremented. Maximum **3 total attempts**.
+
+6. **After attempt 3 fails OR query-fixer returns `give_up`**:
+   - Close the ticket: `close_ticket(ticket_id=<id>, status="escalated", resolution_notes="3 fix attempts exhausted")`
+   - Return to the parent a human-readable summary:
+     ```
+     Query could not be auto-fixed after 3 attempts.
+     Ticket: <ticket_id>
+     Last error: <error_class> — <message>
+     Recommendation: dispatch data-admin for manual diagnosis.
+     ```
+
 ## BANNED ACTIONS
 
 - Generating ad-hoc SQL outside of rule definitions

@@ -18,10 +18,10 @@ def test_app_context_missing_credentials():
 
 
 def test_credentials_error_message_constant():
-    """The error message should mention the credentials file."""
+    """The error message should mention BigQuery connection issue."""
     from taleemabad_data_mcp.server import CREDENTIALS_MISSING_MSG
 
-    assert "niete-bq-prod-48ae5260d1ea.json" in CREDENTIALS_MISSING_MSG
+    assert "BigQuery connection unavailable" in CREDENTIALS_MISSING_MSG
 
 
 def test_require_bq_returns_error_when_none():

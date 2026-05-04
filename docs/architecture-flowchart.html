@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taleemabad Data MCP — Architecture</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0f1e;--surface:#111827;--card:#1a2234;--card2:#1e293b;
+  --border:#2a3550;--border2:#334155;
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+  --blue:#3b82f6;--sky:#0ea5e9;--cyan:#06b6d4;--teal:#14b8a6;
+  --green:#10b981;--amber:#f59e0b;--orange:#f97316;
+  --red:#ef4444;--purple:#8b5cf6;--pink:#ec4899;--indigo:#6366f1;
+}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:100;background:rgba(10,15,30,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 24px}
+.nav-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;height:52px;gap:20px;overflow-x:auto}
+.nav-brand{font-weight:800;font-size:14px;white-space:nowrap;background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.nav a{color:var(--text3);font-size:12px;font-weight:500;text-decoration:none;white-space:nowrap;transition:color .2s}
+.nav a:hover{color:var(--text)}
+
+/* HERO */
+.hero{text-align:center;padding:50px 24px 30px;position:relative}
+.hero::before{content:'';position:absolute;top:-200px;left:50%;transform:translateX(-50%);width:1200px;height:800px;background:radial-gradient(ellipse,rgba(59,130,246,.06) 0%,rgba(139,92,246,.03) 40%,transparent 70%);pointer-events:none}
+.hero h1{font-size:44px;font-weight:900;background:linear-gradient(135deg,#60a5fa,#06b6d4,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px}
+.hero .sub{color:var(--text2);font-size:16px}
+.pills{display:flex;justify-content:center;gap:8px;margin-top:18px;flex-wrap:wrap}
+.pill{background:var(--card);border:1px solid var(--border);padding:5px 14px;border-radius:100px;font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px}
+.pill .d{width:7px;height:7px;border-radius:50%}
+
+/* ==================== */
+/* THE FLOWCHART        */
+/* ==================== */
+.flowchart-section{max-width:1400px;margin:40px auto 0;padding:0 24px}
+.flowchart-wrap{background:linear-gradient(145deg,#0d1525,#111d32);border:1px solid var(--border);border-radius:20px;padding:40px 20px;position:relative;overflow:hidden}
+.flowchart-wrap::before{content:'';position:absolute;top:0;right:0;width:500px;height:500px;background:radial-gradient(circle,rgba(59,130,246,.04),transparent 70%);pointer-events:none}
+.flowchart-wrap::after{content:'';position:absolute;bottom:0;left:0;width:400px;height:400px;background:radial-gradient(circle,rgba(139,92,246,.04),transparent 70%);pointer-events:none}
+
+/* Node styles */
+.fc{position:relative;width:100%;max-width:1300px;margin:0 auto}
+.fc svg{display:block;width:100%;height:auto}
+
+/* Animated dashes */
+@keyframes dash{to{stroke-dashoffset:-24}}
+.anim-dash{stroke-dasharray:10 6;animation:dash 1.2s linear infinite}
+
+/* Glow pulse on success node */
+@keyframes glowPulse{0%,100%{filter:drop-shadow(0 0 4px rgba(16,185,129,.3))}50%{filter:drop-shadow(0 0 12px rgba(16,185,129,.5))}}
+.glow-green{animation:glowPulse 2s ease-in-out infinite}
+
+/* Tooltip on hover */
+.node-group{cursor:default;transition:filter .15s}
+.node-group:hover{filter:brightness(1.15)}
+
+/* Section divider + layout */
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:50px auto;max-width:1300px}
+.section{max-width:1200px;margin:0 auto;padding:50px 24px 0}
+.sec-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+.sec-title{font-size:28px;font-weight:800;margin-bottom:6px}
+.sec-desc{color:var(--text2);font-size:14px;margin-bottom:30px;max-width:660px}
+
+/* Split panels */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:860px){.split{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.panel-head{padding:20px 24px 0}
+.panel-head h3{font-size:18px;font-weight:800;margin-bottom:2px}
+.panel-head p{color:var(--text2);font-size:12px;margin-bottom:12px}
+.psteps{padding:0 24px 20px}
+.ps{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid rgba(42,53,80,.4)}
+.ps:last-child{border-bottom:none}
+.ps-n{min-width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.ps-t{font-size:12px;color:var(--text2)}
+.ps-t b{color:var(--text)}
+
+/* Agent grid */
+.ag-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+@media(max-width:860px){.ag-grid{grid-template-columns:1fr}}
+.ag{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;position:relative;overflow:hidden;transition:border-color .2s}
+.ag:hover{border-color:var(--border2)}
+.ag .bar{position:absolute;top:0;left:0;right:0;height:3px}
+.ag h3{font-size:16px;font-weight:800;margin-bottom:2px}
+.ag .role{color:var(--text2);font-size:12px;margin-bottom:12px}
+.ag .lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;margin-top:10px}
+.ag ul{list-style:none;padding:0}
+.ag li{font-size:12px;color:var(--text2);padding:2px 0 2px 16px;position:relative}
+.ag li::before{content:'';position:absolute;left:0;top:9px;width:6px;height:6px;border-radius:2px;background:var(--border2)}
+.ag .trow{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
+.ag .tt{background:rgba(255,255,255,.04);border:1px solid var(--border);padding:2px 8px;border-radius:5px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text3)}
+
+/* Symptom table */
+.mtx{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--border)}
+.mtx th{background:var(--card2);padding:12px 16px;text-align:left;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);border-bottom:1px solid var(--border)}
+.mtx td{padding:11px 16px;border-bottom:1px solid rgba(42,53,80,.35);vertical-align:top}
+.mtx tr:last-child td{border-bottom:none}
+.mtx code{background:rgba(6,182,212,.08);color:var(--cyan);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px}
+.a-g{color:var(--green);font-weight:600}
+.a-u{color:var(--amber);font-weight:600}
+.a-e{color:var(--red);font-weight:600}
+
+/* Error grid */
+.eg{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.ec{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;transition:border-color .2s}
+.ec:hover{border-color:var(--border2)}
+.ec .cn{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;margin-bottom:4px}
+.ec .tr{font-size:11px;color:var(--text2);margin-bottom:8px}
+.ec .rt{font-size:11px;font-weight:600}
+
+/* Ticket flow */
+.tf{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:16px 0;justify-content:center;flex-wrap:wrap}
+.tn{display:flex;flex-direction:column;align-items:center;padding:14px 12px;min-width:100px;text-align:center}
+.ti{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:8px;border:2px solid;transition:transform .2s}
+.tn:hover .ti{transform:scale(1.1)}
+.tn-nm{font-size:12px;font-weight:700;margin-bottom:1px}
+.tn-ds{font-size:10px;color:var(--text2);max-width:100px}
+.ta{display:flex;align-items:center;color:var(--border2);font-size:24px;padding:0 2px;margin-top:-14px}
+.tor{font-size:10px;color:var(--text3);font-weight:600;padding:0 6px;display:flex;align-items:center}
+
+/* Tools grid */
+.tg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.tc{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;transition:border-color .2s}
+.tc:hover{border-color:var(--cyan)}
+.tc .nm{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;margin-bottom:3px}
+.tc .ds{font-size:11px;color:var(--text2)}
+.tc .cat{display:inline-block;margin-top:8px;padding:2px 8px;border-radius:100px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+
+.footer{text-align:center;padding:50px 24px 70px;color:var(--text3);font-size:12px}
+.footer a{color:var(--blue);text-decoration:none}
+</style>
+</head>
+<body>
+
+<div class="nav"><div class="nav-inner">
+  <div class="nav-brand">Taleemabad Data MCP</div>
+  <a href="#flowchart">Flowchart</a>
+  <a href="#loops">Self-Healing</a>
+  <a href="#agents">Agents</a>
+  <a href="#symptoms">Symptoms</a>
+  <a href="#errors">Errors</a>
+  <a href="#tickets">Tickets</a>
+  <a href="#tools">Tools</a>
+</div></div>
+
+<div class="hero">
+  <h1>Architecture Overview</h1>
+  <div class="sub">The complete self-healing governed analytics pipeline</div>
+  <div class="pills">
+    <div class="pill"><div class="d" style="background:var(--blue)"></div>4 Agents</div>
+    <div class="pill"><div class="d" style="background:var(--cyan)"></div>12 Tools</div>
+    <div class="pill"><div class="d" style="background:var(--amber)"></div>Query Loop</div>
+    <div class="pill"><div class="d" style="background:var(--red)"></div>System Loop</div>
+    <div class="pill"><div class="d" style="background:var(--purple)"></div>Tickets</div>
+  </div>
+</div>
+
+<!-- ============================= -->
+<!-- GIANT FLOWCHART               -->
+<!-- ============================= -->
+<div id="flowchart" class="flowchart-section">
+<div class="flowchart-wrap">
+<div class="fc">
+<svg viewBox="0 0 1260 780" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="ar" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#475569"/></marker>
+  <marker id="arG" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#10b981"/></marker>
+  <marker id="arR" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#ef4444"/></marker>
+  <marker id="arA" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#f59e0b"/></marker>
+  <marker id="arP" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#8b5cf6"/></marker>
+  <linearGradient id="gU" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#818cf8"/></linearGradient>
+  <linearGradient id="gA" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#2563eb"/><stop offset="100%" stop-color="#0ea5e9"/></linearGradient>
+  <linearGradient id="gM" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0d9488"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient>
+  <linearGradient id="gB" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4338ca"/><stop offset="100%" stop-color="#6366f1"/></linearGradient>
+  <linearGradient id="gF" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#b45309"/><stop offset="100%" stop-color="#f59e0b"/></linearGradient>
+  <linearGradient id="gD" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#b91c1c"/><stop offset="100%" stop-color="#ef4444"/></linearGradient>
+  <linearGradient id="gT" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#a855f7"/></linearGradient>
+  <filter id="shadow"><feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity=".15"/></filter>
+  <filter id="glow-g"><feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#10b981" flood-opacity=".4"/></filter>
+</defs>
+
+<!-- ========== ROW 1: HAPPY PATH ========== -->
+
+<!-- LABEL -->
+<text x="630" y="28" text-anchor="middle" font-size="11" fill="#64748b" font-family="Inter" font-weight="600" letter-spacing="1.5">HAPPY PATH — WHEN EVERYTHING WORKS</text>
+
+<!-- 1. USER -->
+<g class="node-group" filter="url(#shadow)">
+  <rect x="30" y="50" width="160" height="80" rx="14" fill="url(#gU)" stroke="#818cf8" stroke-width="1.5"/>
+  <text x="110" y="78" text-anchor="middle" font-size="22" fill="white" font-family="Inter">&#128100;</text>
+  <text x="110" y="100" text-anchor="middle" font-size="13" fill="white" font-family="Inter" font-weight="700">You</text>
+  <text x="110" y="116" text-anchor="middle" font-size="10" fill="#c7d2fe" font-family="Inter">"How many teachers...?"</text>
+</g>
+
+<!-- Arrow 1→2 -->
+<path d="M 190 90 L 242 90" stroke="#475569" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+<text x="216" y="82" text-anchor="middle" font-size="9" fill="#64748b" font-family="Inter" font-weight="500">ask</text>
+
+<!-- 2. DATA-ANALYST -->
+<g class="node-group" filter="url(#shadow)">
+  <rect x="248" y="44" width="200" height="92" rx="14" fill="url(#gA)" stroke="#60a5fa" stroke-width="1.5"/>
+  <text x="348" y="70" text-anchor="middle" font-size="14" fill="white" font-family="Inter" font-weight="800">data-analyst</text>
+  <text x="348" y="87" text-anchor="middle" font-size="10" fill="#bfdbfe" font-family="Inter">1. Read rules</text>
+  <text x="348" y="100" text-anchor="middle" font-size="10" fill="#bfdbfe" font-family="Inter">2. Ask clarifications</text>
+  <text x="348" y="113" text-anchor="middle" font-size="10" fill="#bfdbfe" font-family="Inter">3. Generate governed SQL</text>
+  <text x="348" y="126" text-anchor="middle" font-size="10" fill="#93c5fd" font-family="Inter" font-weight="600">4. Retry on error &#8635;</text>
+</g>
+
+<!-- Arrow 2→3 -->
+<path d="M 448 90 L 510 90" stroke="#475569" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+<text x="479" y="82" text-anchor="middle" font-size="9" fill="#64748b" font-family="Inter" font-weight="500">SQL</text>
+
+<!-- 3. MCP SERVER -->
+<g class="node-group" filter="url(#shadow)">
+  <rect x="516" y="46" width="210" height="88" rx="14" fill="url(#gM)" stroke="#2dd4bf" stroke-width="1.5"/>
+  <text x="621" y="72" text-anchor="middle" font-size="14" fill="white" font-family="Inter" font-weight="800">MCP Server</text>
+  <text x="621" y="89" text-anchor="middle" font-size="10" fill="#99f6e4" font-family="Inter">execute_query + 11 more tools</text>
+  <text x="621" y="103" text-anchor="middle" font-size="10" fill="#99f6e4" font-family="Inter">Cost guardrails &bull; Audit logging</text>
+  <text x="621" y="117" text-anchor="middle" font-size="9" fill="#5eead4" font-family="Inter">Railway &bull; Structured JSON responses</text>
+</g>
+
+<!-- Arrow 3→4 -->
+<path d="M 726 90 L 798 90" stroke="#475569" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+
+<!-- 4. BIGQUERY -->
+<g class="node-group" filter="url(#shadow)">
+  <rect x="804" y="50" width="190" height="80" rx="14" fill="url(#gB)" stroke="#818cf8" stroke-width="1.5"/>
+  <text x="899" y="78" text-anchor="middle" font-size="14" fill="white" font-family="Inter" font-weight="800">Google BigQuery</text>
+  <text x="899" y="95" text-anchor="middle" font-size="10" fill="#c7d2fe" font-family="Inter">niete-bq-prod</text>
+  <text x="899" y="109" text-anchor="middle" font-size="10" fill="#a5b4fc" font-family="Inter">6 datasets &bull; 700+ tables</text>
+</g>
+
+<!-- Return arrow: BQ → MCP (results) -->
+<path d="M 804 125 Q 764 155 726 125" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arG)"/>
+<text x="765" y="150" text-anchor="middle" font-size="10" fill="#6ee7b7" font-family="Inter" font-weight="600">rows</text>
+
+<!-- Return arrow: MCP → User (success) -->
+<g class="glow-green">
+  <path d="M 516 52 Q 340 0 190 52" stroke="#10b981" stroke-width="2.5" fill="none" marker-end="url(#arG)"/>
+</g>
+<rect x="300" y="6" width="130" height="22" rx="11" fill="rgba(16,185,129,.12)" stroke="rgba(16,185,129,.3)" stroke-width="1"/>
+<text x="365" y="21" text-anchor="middle" font-size="10" fill="#6ee7b7" font-family="Inter" font-weight="700">&#10003; Results to you</text>
+
+<!-- ========== DIVIDER LINE ========== -->
+<line x1="30" y1="175" x2="1230" y2="175" stroke="#1e293b" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="630" y="198" text-anchor="middle" font-size="11" fill="#64748b" font-family="Inter" font-weight="600" letter-spacing="1.5">WHEN A QUERY FAILS — SELF-HEALING LOOP 1</text>
+
+<!-- ========== ROW 2: QUERY LOOP ========== -->
+
+<!-- Error box -->
+<g class="node-group">
+  <rect x="500" y="218" width="240" height="50" rx="12" fill="rgba(239,68,68,.08)" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="620" y="240" text-anchor="middle" font-size="12" fill="#fca5a5" font-family="Inter" font-weight="700">&#9888; Query Failed</text>
+  <text x="620" y="256" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="Inter">Structured error: {"error_class":"SCHEMA_DRIFT",...}</text>
+</g>
+
+<!-- Arrow: MCP down to error -->
+<path d="M 621 134 L 621 218" stroke="#ef4444" stroke-width="2" fill="none" marker-end="url(#arR)"/>
+
+<!-- Classify box -->
+<g class="node-group" filter="url(#shadow)">
+  <rect x="500" y="300" width="240" height="62" rx="12" fill="var(--card)" stroke="var(--border)" stroke-width="1.5"/>
+  <text x="620" y="322" text-anchor="middle" font-size="12" fill="var(--text)" font-family="Inter" font-weight="700">Classify Error</text>
+  <text x="620" y="338" text-anchor="middle" font-size="9" fill="#94a3b8" font-family="Inter">SCHEMA_DRIFT &bull; SYNTAX_ERROR &bull; MISSING_PARTITION</text>
+  <text x="620" y="350" text-anchor="middle" font-size="9" fill="#94a3b8" font-family="Inter">COST_EXCEEDED &bull; TIMEOUT &bull; PERMISSION_DENIED</text>
+</g>
+<path d="M 620 268 L 620 300" stroke="#ef4444" stroke-width="1.5" fill="none" marker-end="url(#arR)"/>
+
+<!-- Branch: Query errors go LEFT to fixer -->
+<path d="M 500 331 L 420 331" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arA)"/>
+<text x="460" y="322" text-anchor="middle" font-size="9" fill="#fbbf24" font-family="Inter" font-weight="600">query error</text>
+
+<!-- Branch: System errors go RIGHT to doctor -->
+<path d="M 740 331 L 820 331" stroke="#ef4444" stroke-width="2" fill="none" marker-end="url(#arR)"/>
+<text x="780" y="322" text-anchor="middle" font-size="9" fill="#fca5a5" font-family="Inter" font-weight="600">system error</text>
+
+<!-- QUERY FIXER -->
+<g class="node-group" filter="url(#shadow)">
+  <rect x="210" y="296" width="204" height="72" rx="14" fill="url(#gF)" stroke="#fbbf24" stroke-width="1.5"/>
+  <text x="312" y="322" text-anchor="middle" font-size="14" fill="white" font-family="Inter" font-weight="800">&#128295; query-fixer</text>
+  <text x="312" y="339" text-anchor="middle" font-size="10" fill="#fef3c7" font-family="Inter">Read schema + rules</text>
+  <text x="312" y="352" text-anchor="middle" font-size="10" fill="#fde68a" font-family="Inter">Propose corrected SQL v2</text>
+</g>
+
+<!-- Arrow: fixer → MCP (retry) -->
+<path d="M 312 296 Q 312 250 440 215 Q 530 190 590 175 Q 610 168 621 155" stroke="#f59e0b" stroke-width="2" fill="none" stroke-dasharray="8 4" class="anim-dash" marker-end="url(#arA)"/>
+<rect x="380" y="225" width="70" height="20" rx="10" fill="rgba(245,158,11,.12)" stroke="rgba(245,158,11,.3)" stroke-width="1"/>
+<text x="415" y="239" text-anchor="middle" font-size="9" fill="#fbbf24" font-family="Inter" font-weight="700">retry &#8635;</text>
+
+<!-- Retry counter -->
+<rect x="216" y="376" width="192" height="34" rx="8" fill="rgba(245,158,11,.06)" stroke="rgba(245,158,11,.2)" stroke-width="1"/>
+<text x="312" y="397" text-anchor="middle" font-size="10" fill="#fbbf24" font-family="Inter" font-weight="600">Max 3 attempts &rarr; then escalate</text>
+
+<!-- SYSTEM DOCTOR (right side) -->
+<g class="node-group" filter="url(#shadow)">
+  <rect x="826" y="296" width="204" height="72" rx="14" fill="url(#gD)" stroke="#f87171" stroke-width="1.5"/>
+  <text x="928" y="322" text-anchor="middle" font-size="14" fill="white" font-family="Inter" font-weight="800">&#9889; system-doctor</text>
+  <text x="928" y="339" text-anchor="middle" font-size="10" fill="#fecaca" font-family="Inter">TIMEOUT / UNAVAILABLE / PERMISSION</text>
+  <text x="928" y="352" text-anchor="middle" font-size="10" fill="#fecaca" font-family="Inter">Routed here (not query-fixer)</text>
+</g>
+
+<!-- ========== DIVIDER ========== -->
+<line x1="30" y1="440" x2="1230" y2="440" stroke="#1e293b" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="630" y="463" text-anchor="middle" font-size="11" fill="#64748b" font-family="Inter" font-weight="600" letter-spacing="1.5">INFRASTRUCTURE ISSUES — SELF-HEALING LOOP 2</text>
+
+<!-- ========== ROW 3: SYSTEM LOOP ========== -->
+
+<!-- Session Hook -->
+<g class="node-group" filter="url(#shadow)">
+  <rect x="30" y="486" width="180" height="70" rx="14" fill="var(--card)" stroke="var(--border)" stroke-width="1.5"/>
+  <text x="120" y="512" text-anchor="middle" font-size="13" fill="var(--text)" font-family="Inter" font-weight="700">&#9881; Session Hook</text>
+  <text x="120" y="528" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="Inter">update.py runs on start</text>
+  <text x="120" y="542" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="Inter">Syncs rules + health check</text>
+</g>
+
+<!-- Arrow: Hook → Sentinel -->
+<path d="M 210 521 L 270 521" stroke="#ef4444" stroke-width="2" fill="none" marker-end="url(#arR)"/>
+<text x="240" y="513" text-anchor="middle" font-size="9" fill="#fca5a5" font-family="Inter">issues?</text>
+
+<!-- Sentinel file -->
+<g class="node-group">
+  <rect x="276" y="496" width="170" height="50" rx="10" fill="rgba(239,68,68,.06)" stroke="rgba(239,68,68,.3)" stroke-width="1"/>
+  <text x="361" y="517" text-anchor="middle" font-size="11" fill="#fca5a5" font-family="Inter" font-weight="600">&#128196; Sentinel File</text>
+  <text x="361" y="533" text-anchor="middle" font-size="9" fill="#94a3b8" font-family="Inter">~/.claude/taleemabad-doctor-needed</text>
+</g>
+
+<!-- Arrow: Sentinel → Doctor -->
+<path d="M 446 521 L 510 521" stroke="#ef4444" stroke-width="2" fill="none" marker-end="url(#arR)"/>
+
+<!-- Or manual trigger -->
+<text x="478" y="510" text-anchor="middle" font-size="8" fill="#64748b" font-family="Inter">auto</text>
+
+<!-- SYSTEM DOCTOR (big) -->
+<g class="node-group" filter="url(#shadow)">
+  <rect x="516" y="480" width="260" height="82" rx="14" fill="url(#gD)" stroke="#f87171" stroke-width="1.5"/>
+  <text x="646" y="508" text-anchor="middle" font-size="15" fill="white" font-family="Inter" font-weight="800">&#9889; system-doctor</text>
+  <text x="646" y="525" text-anchor="middle" font-size="10" fill="#fecaca" font-family="Inter">9 symptom handlers</text>
+  <text x="646" y="540" text-anchor="middle" font-size="10" fill="#fecaca" font-family="Inter">DETECT &rarr; DIAGNOSE &rarr; HEAL &rarr; VERIFY</text>
+  <text x="646" y="554" text-anchor="middle" font-size="9" fill="#fca5a5" font-family="Inter">Max 2 heal attempts per symptom</text>
+</g>
+
+<!-- Manual trigger label -->
+<rect x="556" y="568" width="180" height="22" rx="11" fill="rgba(239,68,68,.08)" stroke="rgba(239,68,68,.2)" stroke-width="1"/>
+<text x="646" y="583" text-anchor="middle" font-size="10" fill="#fca5a5" font-family="Inter" font-weight="500">or manually: /taleemabad-doctor</text>
+
+<!-- Symptoms list (right of doctor) -->
+<g class="node-group">
+  <rect x="820" y="478" width="200" height="186" rx="12" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
+  <text x="920" y="500" text-anchor="middle" font-size="11" fill="var(--text)" font-family="Inter" font-weight="700">9 Symptoms</text>
+  <text x="840" y="518" font-size="10" fill="#94a3b8" font-family="JetBrains Mono">connection_failed</text>
+  <text x="840" y="534" font-size="10" fill="#94a3b8" font-family="JetBrains Mono">user_env_missing</text>
+  <text x="840" y="550" font-size="10" fill="#94a3b8" font-family="JetBrains Mono">user_env_unexpanded</text>
+  <text x="840" y="566" font-size="10" fill="#94a3b8" font-family="JetBrains Mono">rules_path_missing</text>
+  <text x="840" y="582" font-size="10" fill="#94a3b8" font-family="JetBrains Mono">rules_stale</text>
+  <text x="840" y="598" font-size="10" fill="#94a3b8" font-family="JetBrains Mono">plugin_not_installed</text>
+  <text x="840" y="614" font-size="10" fill="#94a3b8" font-family="JetBrains Mono">plugin_outdated</text>
+  <text x="840" y="630" font-size="10" fill="#94a3b8" font-family="JetBrains Mono">mcp_handshake_fail</text>
+  <text x="840" y="646" font-size="10" fill="#94a3b8" font-family="JetBrains Mono">hook_crashed</text>
+</g>
+<path d="M 776 521 L 820 521" stroke="#475569" stroke-width="1.5" fill="none" marker-end="url(#ar)"/>
+
+<!-- Arrow: Doctor → Outcomes -->
+<path d="M 646 562 L 646 620" stroke="#475569" stroke-width="1.5" fill="none" marker-end="url(#ar)"/>
+
+<!-- Outcomes row -->
+<g class="node-group">
+  <rect x="460" y="626" width="110" height="44" rx="10" fill="rgba(16,185,129,.08)" stroke="#10b981" stroke-width="1.5"/>
+  <text x="515" y="648" text-anchor="middle" font-size="11" fill="#6ee7b7" font-family="Inter" font-weight="700">&#10003; Auto-Fixed</text>
+  <text x="515" y="662" text-anchor="middle" font-size="9" fill="#94a3b8" font-family="Inter">close_ticket()</text>
+</g>
+<g class="node-group">
+  <rect x="590" y="626" width="110" height="44" rx="10" fill="rgba(239,68,68,.08)" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="645" y="648" text-anchor="middle" font-size="11" fill="#fca5a5" font-family="Inter" font-weight="700">&#9888; Escalated</text>
+  <text x="645" y="662" text-anchor="middle" font-size="9" fill="#94a3b8" font-family="Inter">GitHub issue</text>
+</g>
+<g class="node-group">
+  <rect x="720" y="626" width="110" height="44" rx="10" fill="rgba(245,158,11,.08)" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="775" y="648" text-anchor="middle" font-size="11" fill="#fbbf24" font-family="Inter" font-weight="700">&#9997; User Action</text>
+  <text x="775" y="662" text-anchor="middle" font-size="9" fill="#94a3b8" font-family="Inter">manual step</text>
+</g>
+
+<!-- ========== TICKET SYSTEM (bottom) ========== -->
+<line x1="30" y1="700" x2="1230" y2="700" stroke="#1e293b" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="630" y="722" text-anchor="middle" font-size="11" fill="#64748b" font-family="Inter" font-weight="600" letter-spacing="1.5">ALL ACTIONS TRACKED AS TICKETS</text>
+
+<!-- Ticket bar -->
+<g class="node-group" filter="url(#shadow)">
+  <rect x="180" y="738" width="900" height="36" rx="18" fill="url(#gT)" stroke="#a855f7" stroke-width="1.5"/>
+  <text x="630" y="761" text-anchor="middle" font-size="12" fill="white" font-family="Inter" font-weight="700">&#127915; Ticket System &mdash; TKT-YYYYMMDD-hex &mdash; JSONL + BigQuery &mdash; Dashboard Tickets Page</text>
+</g>
+
+<!-- Arrows from both loops to ticket bar -->
+<path d="M 312 410 Q 312 450 400 680 Q 420 730 460 738" stroke="#8b5cf6" stroke-width="1.5" fill="none" stroke-dasharray="6 4" marker-end="url(#arP)"/>
+<path d="M 646 670 L 646 738" stroke="#8b5cf6" stroke-width="1.5" fill="none" stroke-dasharray="6 4" marker-end="url(#arP)"/>
+
+<!-- DATA-ADMIN (floating) -->
+<g class="node-group" filter="url(#shadow)">
+  <rect x="1050" y="78" width="176" height="56" rx="12" fill="var(--card)" stroke="var(--border)" stroke-width="1.5"/>
+  <text x="1138" y="102" text-anchor="middle" font-size="13" fill="#94a3b8" font-family="Inter" font-weight="700">&#128736; data-admin</text>
+  <text x="1138" y="118" text-anchor="middle" font-size="10" fill="#64748b" font-family="Inter">Schema &bull; Freshness &bull; Audit</text>
+</g>
+<path d="M 994 106 L 1050 106" stroke="#475569" stroke-width="1" fill="none" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+<text x="1022" y="98" text-anchor="middle" font-size="8" fill="#475569" font-family="Inter">"check schema"</text>
+
+<!-- ========== LEGEND ========== -->
+<rect x="30" y="700" width="130" height="74" rx="10" fill="rgba(26,34,52,.9)" stroke="var(--border)" stroke-width="1"/>
+<text x="45" y="718" font-size="9" fill="#64748b" font-family="Inter" font-weight="700">LEGEND</text>
+<line x1="45" y1="732" x2="65" y2="732" stroke="#10b981" stroke-width="2"/>
+<text x="72" y="736" font-size="9" fill="#94a3b8" font-family="Inter">Success</text>
+<line x1="45" y1="748" x2="65" y2="748" stroke="#ef4444" stroke-width="2"/>
+<text x="72" y="752" font-size="9" fill="#94a3b8" font-family="Inter">Error</text>
+<line x1="45" y1="764" x2="65" y2="764" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5 3"/>
+<text x="72" y="768" font-size="9" fill="#94a3b8" font-family="Inter">Retry loop</text>
+
+</svg>
+</div>
+</div>
+</div>
+
+<!-- ============================================ -->
+<!-- DETAIL SECTIONS BELOW                       -->
+<!-- ============================================ -->
+
+<div class="divider"></div>
+
+<!-- LOOPS DETAIL -->
+<div id="loops" class="section">
+  <div class="sec-label" style="color:var(--amber)">Self-Healing Detail</div>
+  <div class="sec-title">What happens step by step when something breaks</div>
+  <div class="sec-desc">Two parallel recovery systems — one for query errors, one for infrastructure.</div>
+  <div class="split">
+    <div class="panel" style="border-top:3px solid var(--amber)">
+      <div class="panel-head"><h3 style="color:var(--amber)">&#128295; Loop 1: Query Self-Healing</h3><p>A governed SQL query fails at BigQuery</p></div>
+      <div class="psteps">
+        <div class="ps"><div class="ps-n" style="background:rgba(239,68,68,.1);color:var(--red)">1</div><div class="ps-t"><b>execute_query returns error JSON</b> — includes error_class, message, table/column referenced, event_id</div></div>
+        <div class="ps"><div class="ps-n" style="background:rgba(139,92,246,.1);color:var(--purple)">2</div><div class="ps-t"><b>data-analyst opens a ticket</b> — report_ticket(loop="query", category=schema/syntax/partition/cost)</div></div>
+        <div class="ps"><div class="ps-n" style="background:rgba(245,158,11,.1);color:var(--amber)">3</div><div class="ps-t"><b>Dispatches query-fixer</b> with: original question, failed SQL, error JSON, table schema, rule file path</div></div>
+        <div class="ps"><div class="ps-n" style="background:rgba(245,158,11,.1);color:var(--amber)">4</div><div class="ps-t"><b>query-fixer reads actual schema + rules</b> — diagnoses the problem (renamed column? missing filter? syntax typo?)</div></div>
+        <div class="ps"><div class="ps-n" style="background:rgba(6,182,212,.1);color:var(--cyan)">5</div><div class="ps-t"><b>Proposes corrected SQL v2</b> — must be different from v1. Parent re-executes via MCP.</div></div>
+        <div class="ps"><div class="ps-n" style="background:rgba(16,185,129,.1);color:var(--green)">6</div><div class="ps-t"><b>Success?</b> Ticket closed as auto_fixed. <b>Still fails?</b> Retry up to 3 total. After 3: escalate.</div></div>
+      </div>
+    </div>
+    <div class="panel" style="border-top:3px solid var(--red)">
+      <div class="panel-head"><h3 style="color:var(--red)">&#9889; Loop 2: System Self-Healing</h3><p>Infrastructure issue detected by hook or during query</p></div>
+      <div class="psteps">
+        <div class="ps"><div class="ps-n" style="background:rgba(59,130,246,.1);color:var(--blue)">1</div><div class="ps-t"><b>Session hook runs update.py</b> — syncs rules from latest git tag, then runs health checks</div></div>
+        <div class="ps"><div class="ps-n" style="background:rgba(239,68,68,.1);color:var(--red)">2</div><div class="ps-t"><b>Health check fails?</b> Writes symptom IDs to sentinel file (~/.claude/taleemabad-doctor-needed)</div></div>
+        <div class="ps"><div class="ps-n" style="background:rgba(239,68,68,.1);color:var(--red)">3</div><div class="ps-t"><b>system-doctor activates</b> — reads sentinel (auto) or user runs /taleemabad-doctor (manual)</div></div>
+        <div class="ps"><div class="ps-n" style="background:rgba(245,158,11,.1);color:var(--amber)">4</div><div class="ps-t"><b>For each symptom: DETECT → DIAGNOSE → HEAL</b> — applies auto-fix, logs action to ticket</div></div>
+        <div class="ps"><div class="ps-n" style="background:rgba(20,184,166,.1);color:var(--teal)">5</div><div class="ps-t"><b>VERIFY</b> — re-runs the failing check. If passed: ticket = auto_fixed.</div></div>
+        <div class="ps"><div class="ps-n" style="background:rgba(239,68,68,.1);color:var(--red)">6</div><div class="ps-t"><b>After 2 failed fixes: ESCALATE</b> — auto-files GitHub issue with sanitized evidence (rate limited: 1/symptom/day)</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- AGENTS -->
+<div id="agents" class="section">
+  <div class="sec-label" style="color:var(--cyan)">Agents</div>
+  <div class="sec-title">4 agents, each with a clear job</div>
+  <div class="sec-desc">They work together but never overlap. Each has specific tools and triggers.</div>
+  <div class="ag-grid">
+    <div class="ag"><div class="bar" style="background:linear-gradient(90deg,var(--blue),var(--cyan))"></div>
+      <h3 style="color:var(--blue)">&#128202; data-analyst</h3><div class="role">Primary — all data questions</div>
+      <div class="lbl">Triggers</div><ul><li>Any question about Taleemabad data</li><li>"How many teachers?", "LP rate?", "FICO scores?"</li></ul>
+      <div class="lbl">What it does</div><ul><li>Phase 1: Reads governance rules for the right region/domain</li><li>Phase 2: Asks mandatory clarification questions</li><li>Phase 3: Generates governed SQL (never ad-hoc)</li><li>Phase 4: On error, opens ticket + dispatches query-fixer</li></ul>
+      <div class="trow"><span class="tt">Read</span><span class="tt">Glob</span><span class="tt">Grep</span></div>
+    </div>
+    <div class="ag"><div class="bar" style="background:linear-gradient(90deg,#64748b,#94a3b8)"></div>
+      <h3 style="color:#94a3b8">&#128736; data-admin</h3><div class="role">Detective — infrastructure diagnostics</div>
+      <div class="lbl">Triggers</div><ul><li>"What tables are in RUMI_DB?"</li><li>"When was coaching_observation updated?"</li><li>"Show me audit logs" / "Query costs?"</li></ul>
+      <div class="lbl">What it does</div><ul><li>Browses schemas, checks table freshness</li><li>Queries audit logs for cost and error patterns</li><li>Compares actual schema to rule definitions</li></ul>
+      <div class="trow"><span class="tt">All MCP tools</span></div>
+    </div>
+    <div class="ag"><div class="bar" style="background:linear-gradient(90deg,var(--amber),#fbbf24)"></div>
+      <h3 style="color:var(--amber)">&#128295; query-fixer</h3><div class="role">Mechanic — fixes broken SQL</div>
+      <div class="lbl">Triggers</div><ul><li>Auto-dispatched by data-analyst Phase 4</li><li>Only for query-level errors (not system issues)</li><li>Never called directly by users</li></ul>
+      <div class="lbl">What it does</div><ul><li>SCHEMA_DRIFT: finds renamed columns from actual schema</li><li>MISSING_PARTITION: adds date filter from rule file</li><li>SYNTAX_ERROR: fixes typos, functions, backticks</li><li>COST_EXCEEDED: narrows date range or switches table</li><li>Gives up after 3 attempts (never returns same SQL)</li></ul>
+      <div class="trow"><span class="tt">Read</span><span class="tt">Glob</span><span class="tt">Grep</span></div>
+    </div>
+    <div class="ag"><div class="bar" style="background:linear-gradient(90deg,var(--red),#f87171)"></div>
+      <h3 style="color:var(--red)">&#9889; system-doctor</h3><div class="role">Healer — fixes infrastructure</div>
+      <div class="lbl">Triggers</div><ul><li>Auto: sentinel file from session hook</li><li>Manual: /taleemabad-doctor command</li><li>System-level errors from execute_query</li></ul>
+      <div class="lbl">What it does</div><ul><li>Checks MCP connectivity, env config, rules sync</li><li>Fixes: re-run hook, setx env var, delete stackdump</li><li>Verifies fixes worked, escalates if not</li><li>Files GitHub issues (rate limited, sanitized)</li></ul>
+      <div class="trow"><span class="tt">Read</span><span class="tt">Bash</span><span class="tt">Write</span><span class="tt">Glob</span><span class="tt">Grep</span><span class="tt">WebFetch</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- 9 SYMPTOMS -->
+<div id="symptoms" class="section">
+  <div class="sec-label" style="color:var(--red)">System Doctor Symptoms</div>
+  <div class="sec-title">9 issues it knows how to detect and fix</div>
+  <table class="mtx">
+    <thead><tr><th>Symptom</th><th>Detection</th><th>Auto-Fix</th><th>Fallback</th></tr></thead>
+    <tbody>
+      <tr><td><code>connection_failed</code></td><td>curl /health returns non-200</td><td class="a-g">Retry after 10s</td><td class="a-u">Tell user: check internet</td></tr>
+      <tr><td><code>user_env_missing</code></td><td>~/.claude/taleemabad-data-mcp.env missing</td><td class="a-g">Recover email from audit log</td><td class="a-u">Ask user &rarr; /taleemabad-setup</td></tr>
+      <tr><td><code>user_env_unexpanded</code></td><td>Literal ${TALEEMABAD_USER} in headers</td><td class="a-g">setx (Win) / shell rc (Linux)</td><td class="a-u">Restart terminal</td></tr>
+      <tr><td><code>rules_path_missing</code></td><td>Path file gone or points to empty dir</td><td class="a-g">Re-run update.py hook</td><td class="a-e">Suggest reinstall after 2 fails</td></tr>
+      <tr><td><code>rules_stale</code></td><td>Local version 2+ behind latest tag</td><td class="a-g">Force refresh via hook</td><td>—</td></tr>
+      <tr><td><code>plugin_not_installed</code></td><td>claude plugin list missing it</td><td>—</td><td class="a-u">Print install commands</td></tr>
+      <tr><td><code>plugin_outdated</code></td><td>2+ minor versions behind</td><td>—</td><td class="a-u">Suggest plugin update</td></tr>
+      <tr><td><code>mcp_handshake_fail</code></td><td>Server up but MCP protocol fails</td><td class="a-g">Retry once</td><td class="a-e">Escalate to GitHub</td></tr>
+      <tr><td><code>hook_crashed</code></td><td>bash.exe.stackdump or log errors</td><td class="a-g">Switch to Python hook</td><td>—</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="divider"></div>
+
+<!-- ERROR CLASSES -->
+<div id="errors" class="section">
+  <div class="sec-label" style="color:var(--orange)">Error Classification</div>
+  <div class="sec-title">8 error classes drive the fix strategy</div>
+  <div class="sec-desc">Query errors go to query-fixer. System errors go to system-doctor. Each opens a ticket.</div>
+  <div class="eg">
+    <div class="ec" style="border-left:3px solid var(--amber)"><div class="cn" style="color:var(--amber)">SCHEMA_DRIFT</div><div class="tr">Column renamed/removed, table not found</div><div class="rt" style="color:var(--amber)">&rarr; query-fixer reads schema, finds replacement</div></div>
+    <div class="ec" style="border-left:3px solid var(--amber)"><div class="cn" style="color:var(--amber)">MISSING_PARTITION</div><div class="tr">Query on partitioned table without date filter</div><div class="rt" style="color:var(--amber)">&rarr; query-fixer adds filter from rule file</div></div>
+    <div class="ec" style="border-left:3px solid var(--amber)"><div class="cn" style="color:var(--amber)">SYNTAX_ERROR</div><div class="tr">SQL typo, wrong function, mismatched parens</div><div class="rt" style="color:var(--amber)">&rarr; query-fixer corrects syntax</div></div>
+    <div class="ec" style="border-left:3px solid var(--amber)"><div class="cn" style="color:var(--amber)">COST_EXCEEDED</div><div class="tr">Query scans more bytes than limit</div><div class="rt" style="color:var(--amber)">&rarr; query-fixer narrows range or switches table</div></div>
+    <div class="ec" style="border-left:3px solid var(--red)"><div class="cn" style="color:var(--red)">PERMISSION_DENIED</div><div class="tr">No access to table or dataset</div><div class="rt" style="color:var(--red)">&rarr; system-doctor (not a query problem)</div></div>
+    <div class="ec" style="border-left:3px solid var(--red)"><div class="cn" style="color:var(--red)">TIMEOUT</div><div class="tr">Query deadline exceeded</div><div class="rt" style="color:var(--red)">&rarr; system-doctor (infrastructure issue)</div></div>
+    <div class="ec" style="border-left:3px solid var(--red)"><div class="cn" style="color:var(--red)">BIGQUERY_UNAVAILABLE</div><div class="tr">503 / service down</div><div class="rt" style="color:var(--red)">&rarr; system-doctor (service outage)</div></div>
+    <div class="ec" style="border-left:3px solid var(--text3)"><div class="cn" style="color:var(--text3)">OTHER</div><div class="tr">Unrecognized exception</div><div class="rt" style="color:var(--text2)">&rarr; Manual diagnosis needed</div></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- TICKET LIFECYCLE -->
+<div id="tickets" class="section">
+  <div class="sec-label" style="color:var(--purple)">Ticket Lifecycle</div>
+  <div class="sec-title">Every fix attempt is tracked</div>
+  <div class="sec-desc">Tickets (TKT-YYYYMMDD-hex) are saved to local JSONL + BigQuery. Visible in dashboard.</div>
+  <div class="panel" style="padding:20px">
+    <div class="tf">
+      <div class="tn"><div class="ti" style="border-color:var(--blue);color:var(--blue);background:rgba(59,130,246,.06)">&#128196;</div><div class="tn-nm" style="color:var(--blue)">Open</div><div class="tn-ds">report_ticket()</div></div>
+      <div class="ta">&rarr;</div>
+      <div class="tn"><div class="ti" style="border-color:var(--cyan);color:var(--cyan);background:rgba(6,182,212,.06)">&#128269;</div><div class="tn-nm" style="color:var(--cyan)">Diagnosing</div><div class="tn-ds">Investigate root cause</div></div>
+      <div class="ta">&rarr;</div>
+      <div class="tn"><div class="ti" style="border-color:var(--amber);color:var(--amber);background:rgba(245,158,11,.06)">&#9881;</div><div class="tn-nm" style="color:var(--amber)">Healing</div><div class="tn-ds">Apply fix, log via update_ticket()</div></div>
+      <div class="ta">&rarr;</div>
+      <div class="tn"><div class="ti" style="border-color:var(--teal);color:var(--teal);background:rgba(20,184,166,.06)">&#10004;</div><div class="tn-nm" style="color:var(--teal)">Verify</div><div class="tn-ds">Re-run failing check</div></div>
+      <div class="ta">&rarr;</div>
+      <div class="tn"><div class="ti" style="border-color:var(--green);color:var(--green);background:rgba(16,185,129,.06)">&#10003;</div><div class="tn-nm" style="color:var(--green)">Auto-Fixed</div><div class="tn-ds">close_ticket()</div></div>
+      <div class="tor">or</div>
+      <div class="tn"><div class="ti" style="border-color:var(--red);color:var(--red);background:rgba(239,68,68,.06)">&#9888;</div><div class="tn-nm" style="color:var(--red)">Escalated</div><div class="tn-ds">GitHub issue filed</div></div>
+      <div class="tor">or</div>
+      <div class="tn"><div class="ti" style="border-color:var(--amber);color:var(--amber);background:rgba(245,158,11,.06)">&#9997;</div><div class="tn-nm" style="color:var(--amber)">User Action</div><div class="tn-ds">Manual step needed</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- 12 TOOLS -->
+<div id="tools" class="section">
+  <div class="sec-label" style="color:var(--teal)">MCP Server</div>
+  <div class="sec-title">12 Tools on Railway</div>
+  <div class="sec-desc">Agents call these automatically. You never need to use them directly.</div>
+  <div class="tg">
+    <div class="tc"><div class="nm" style="color:var(--blue)">execute_query</div><div class="ds">Run governed SQL. Structured JSON response with rows, cost, event ID.</div><span class="cat" style="background:rgba(59,130,246,.1);color:var(--blue)">Query</span></div>
+    <div class="tc"><div class="nm" style="color:var(--blue)">list_datasets</div><div class="ds">Auto-discover all BigQuery datasets and tables.</div><span class="cat" style="background:rgba(59,130,246,.1);color:var(--blue)">Discovery</span></div>
+    <div class="tc"><div class="nm" style="color:var(--blue)">get_table_schema</div><div class="ds">Get columns, types, row count for a table.</div><span class="cat" style="background:rgba(59,130,246,.1);color:var(--blue)">Discovery</span></div>
+    <div class="tc"><div class="nm" style="color:var(--cyan)">check_table_freshness</div><div class="ds">When was a table last modified.</div><span class="cat" style="background:rgba(6,182,212,.1);color:var(--cyan)">Monitor</span></div>
+    <div class="tc"><div class="nm" style="color:var(--blue)">preview_table</div><div class="ds">Quick peek at rows. SQL injection protected.</div><span class="cat" style="background:rgba(59,130,246,.1);color:var(--blue)">Discovery</span></div>
+    <div class="tc"><div class="nm" style="color:var(--blue)">describe_data</div><div class="ds">Descriptive stats: mean, min, max, unique values.</div><span class="cat" style="background:rgba(59,130,246,.1);color:var(--blue)">Query</span></div>
+    <div class="tc"><div class="nm" style="color:var(--green)">save_query_results</div><div class="ds">Export to CSV or JSON with metadata.</div><span class="cat" style="background:rgba(16,185,129,.1);color:var(--green)">Export</span></div>
+    <div class="tc"><div class="nm" style="color:var(--cyan)">submit_feedback</div><div class="ds">Thumbs up/down on query results.</div><span class="cat" style="background:rgba(6,182,212,.1);color:var(--cyan)">Feedback</span></div>
+    <div class="tc"><div class="nm" style="color:var(--cyan)">get_version</div><div class="ds">Version, user, project, datasets.</div><span class="cat" style="background:rgba(6,182,212,.1);color:var(--cyan)">Identity</span></div>
+    <div class="tc"><div class="nm" style="color:var(--purple)">report_ticket</div><div class="ds">Open a self-healing ticket.</div><span class="cat" style="background:rgba(139,92,246,.1);color:var(--purple)">Tickets</span></div>
+    <div class="tc"><div class="nm" style="color:var(--purple)">update_ticket</div><div class="ds">Log fix attempts and diagnosis.</div><span class="cat" style="background:rgba(139,92,246,.1);color:var(--purple)">Tickets</span></div>
+    <div class="tc"><div class="nm" style="color:var(--purple)">close_ticket</div><div class="ds">Close with status and resolution.</div><span class="cat" style="background:rgba(139,92,246,.1);color:var(--purple)">Tickets</span></div>
+  </div>
+</div>
+
+<div class="footer">
+  <strong>Taleemabad Data MCP</strong> v0.18.0 &middot; 4 Agents &middot; 12 Tools &middot; 5 Regions &middot; 6 Datasets<br>
+  <a href="https://github.com/Orenda-Project/taleemabad-data-mcp">GitHub</a> &middot; Orenda Project
+</div>
+
+<script>
+document.querySelectorAll('.nav a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',e=>{e.preventDefault();document.querySelector(a.getAttribute('href')).scrollIntoView({behavior:'smooth',block:'start'})});
+});
+</script>
+</body>
+</html>
