@@ -18,9 +18,12 @@
   ],
   "agents": [
     "./agents/data-analyst.md",
-    "./agents/data-admin.md"
+    "./agents/data-admin.md",
+    "./agents/query-fixer.md",
+    "./agents/system-doctor.md"
   ],
   "commands": [
-    "./commands/setup.md"
+    "./commands/setup.md",
+    "./commands/doctor.md"
   ]
 }

@@ -259,6 +259,18 @@ User's Machine                              Railway (Cloud)
 
 ---
 
+## Self-Healing
+
+The plugin includes two automated recovery loops:
+
+**Query loop** — When a governed query fails (wrong column, missing partition filter, cost exceeded), the `data-analyst` agent automatically dispatches a `query-fixer` subagent that reads the table schema and rule file, proposes corrected SQL, and retries up to 3 times. If unfixable, a ticket is opened and the user is told to run `/taleemabad-doctor`.
+
+**System loop** — The `system-doctor` agent detects and fixes common infrastructure issues: MCP connection failures, missing env configuration, stale governance rules, broken session-start hooks. It runs automatically when the session-start hook detects problems, or manually via `/taleemabad-doctor`.
+
+All recovery actions are tracked as tickets (viewable in the dashboard's Tickets page). Unresolvable issues are escalated to GitHub.
+
+---
+
 ## Troubleshooting
 
 ### Plugin not found after install
