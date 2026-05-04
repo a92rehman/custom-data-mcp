@@ -139,7 +139,6 @@ The data-analyst agent reads governance rules, asks mandatory clarification ques
 | Command | What It Does |
 |---------|-------------|
 | `/taleemabad-setup` | Save your email for audit logging (one-time) |
-| `/taleemabad-doctor` | Run system health checks and auto-fix common issues |
 | `/mcp` | Check MCP connection status |
 
 ---
@@ -282,13 +281,15 @@ User's Machine                              Railway (Cloud)
 
 ## Self-Healing
 
-The plugin includes two automated recovery loops:
+The plugin fixes problems automatically — you never need to do anything.
 
-**Query loop** — When a governed query fails (wrong column, missing partition filter, cost exceeded), the `data-analyst` agent automatically dispatches a `query-fixer` subagent that reads the table schema and rule file, proposes corrected SQL, and retries up to 3 times. If unfixable, a ticket is opened and the user is told to run `/taleemabad-doctor`.
+**Session start** — Every time you open Claude Code, the session hook silently checks and fixes: missing env config (recovers from audit log), broken rules path, unexpanded environment variables, crashed hook files, and outdated plugin manifests. All invisible.
 
-**System loop** — The `system-doctor` agent detects and fixes common infrastructure issues: MCP connection failures, missing env configuration, stale governance rules, broken session-start hooks. It runs automatically when the session-start hook detects problems, or manually via `/taleemabad-doctor`.
+**Query errors** — When a query fails (wrong column, missing partition filter, syntax error, cost exceeded), the `data-analyst` agent automatically dispatches `query-fixer` to read the actual table schema, diagnose the problem, and retry with corrected SQL — up to 3 times. You just see the results.
 
-All recovery actions are tracked as tickets (viewable in the dashboard's Tickets page). Unresolvable issues are escalated to GitHub.
+**Infrastructure errors** — If a query fails due to system issues (BigQuery unavailable, timeout, permissions), the `system-doctor` agent is dispatched automatically to diagnose the infrastructure. No manual commands needed.
+
+All recovery actions are tracked as tickets (viewable in the dashboard's Tickets page). Unresolvable issues are escalated to GitHub automatically.
 
 ---
 
@@ -311,7 +312,7 @@ Run `/taleemabad-setup` and enter your work email.
 You must use a work email ending with `@taleemabad.com`, `@niete.edu.pk`, or `@niete.pk`.
 
 ### MCP shows "failed" or "disconnected" in /mcp
-- Run `/taleemabad-doctor` — the system-doctor agent will diagnose and attempt to fix the issue automatically
+- Close and reopen Claude Code — the session hook will automatically detect and fix common issues
 - Check your internet connection
 - The remote server may be restarting — wait a minute and try again
 - Run `/mcp` to see the connection status
@@ -320,11 +321,10 @@ You must use a work email ending with `@taleemabad.com`, `@niete.edu.pk`, or `@n
 The repository is private. Ask IT to add your GitHub account to the [Orenda-Project](https://github.com/Orenda-Project) organization.
 
 ### Agent not reading rules / generating ad-hoc SQL
-The data-analyst agent needs `~/.claude/taleemabad-rules-path` to find governance rules. This file is created automatically by the session-start hook. If it's missing:
-1. Run `/taleemabad-doctor` — it will detect and fix rules path issues automatically
-2. Or start a new Claude Code session (triggers the hook)
-3. If still missing, check that the plugin is installed: `claude plugin list`
-4. Reinstall if needed (see "Reinstall" section below)
+The data-analyst agent needs `~/.claude/taleemabad-rules-path` to find governance rules. This file is created and repaired automatically by the session-start hook. If it's missing:
+1. Close and reopen Claude Code (triggers the hook which auto-fixes this)
+2. If still missing, check that the plugin is installed: `claude plugin list`
+3. Reinstall if needed (see "Reinstall" section below)
 
 ### Windows: "directory locked" during update
 Close all Claude Code windows and terminals, then retry. The plugin directory gets locked by running processes.

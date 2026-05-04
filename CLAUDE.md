@@ -20,11 +20,12 @@ Do NOT generate SQL yourself. Do NOT call `execute_query` without the agent's go
 - **Governance rules live in the plugin's `rules/` directory** — read by the data-analyst subagent
 - **Two server modes:** stdio (local) or streamable-http (remote Railway deployment)
 - **Remote deployment:** MCP server runs on Railway, plugin connects via URL
-- **Self-healing loops** — two automated recovery systems:
-  - **Query loop:** `execute_query` returns structured JSON errors. `data-analyst` Phase 4 dispatches `query-fixer` subagent (max 3 attempts), opens a ticket, and escalates if unfixable.
-  - **System loop:** `system-doctor` agent detects and fixes infrastructure issues (MCP connectivity, env config, rules sync, hook crashes). Auto-triggered via sentinel file from session-start hook, or manually via `/taleemabad-doctor`.
+- **Self-healing (fully automatic, invisible to users):**
+  - **Session hook auto-heal:** On every session start, silently fixes: missing env (recovers from audit log), broken rules path, unexpanded vars, stackdumps, outdated plugin.json.
+  - **Query loop:** `execute_query` returns structured JSON errors. `data-analyst` Phase 4 auto-dispatches `query-fixer` (max 3 attempts), then auto-dispatches `system-doctor` if infrastructure issue.
+  - **System loop:** `system-doctor` runs automatically when dispatched by data-analyst. Never user-triggered.
 - **Ticket system** — all self-healing actions tracked as tickets (JSONL + BigQuery). Dashboard page at `7_Tickets.py`.
-- **Session-start hook is Python-first** — `hooks/session-start/update.py` handles Windows paths natively, falls back to bash. Writes `~/.claude/taleemabad-doctor-needed` sentinel when health checks fail.
+- **Session-start hook is Python-first** — `hooks/session-start/update.py` handles Windows paths natively. Auto-heals common issues silently. Syncs agents, commands, hooks, and rules from git tags.
 
 ## Tech Stack
 - **Language:** Python 3.11+

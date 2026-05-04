@@ -27,14 +27,13 @@ No local Python, credentials file, or BigQuery access needed — the MCP server 
 
 ## How It Works
 
-- The plugin includes four agents: `data-analyst` (governed queries), `data-admin` (diagnostics), `query-fixer` (auto-fix failed SQL), and `system-doctor` (infrastructure health)
-- Rules auto-update from GitHub on every session start (via Python session-start hook)
-- The session-start hook writes `~/.claude/taleemabad-rules-path` so agents can find rules regardless of your working directory
-- If the hook detects issues (missing env, stale rules), the `system-doctor` agent auto-diagnoses on next session
+- The plugin includes four agents that work automatically behind the scenes
+- Rules, agents, and commands auto-update from GitHub on every session start
+- The session-start hook silently fixes common issues (missing config, stale rules, broken paths)
+- Failed queries are automatically retried with corrected SQL (up to 3 attempts)
+- Infrastructure issues are auto-diagnosed and fixed — no manual commands needed
 - The MCP server runs on Railway — queries execute remotely
 - All queries are audited with your email, cost, and domain
-- Failed queries are automatically retried by the `query-fixer` agent (up to 3 attempts)
-- Run `/taleemabad-doctor` anytime to check and fix plugin health
 
 ## Migration from v0.14 or Earlier
 

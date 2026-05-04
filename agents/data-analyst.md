@@ -148,7 +148,7 @@ If the parent session reports the executed SQL returned a structured error (`{"s
    - `BIGQUERY_UNAVAILABLE`, `TIMEOUT`, `PERMISSION_DENIED` → `connection`
    - `OTHER` → `other`
 
-2. **If the error class is `BIGQUERY_UNAVAILABLE`, `TIMEOUT`, or `PERMISSION_DENIED`** — these are system problems, not query problems. Tell the parent to dispatch `system-doctor` instead. Close the ticket with `status="escalated"` and `resolution_notes="System-level error, routed to system-doctor"`. Do NOT dispatch query-fixer.
+2. **If the error class is `BIGQUERY_UNAVAILABLE`, `TIMEOUT`, or `PERMISSION_DENIED`** — these are system problems, not query problems. Tell the parent to **automatically dispatch `system-doctor`** to diagnose the infrastructure issue. Close the query ticket with `status="escalated"` and `resolution_notes="System-level error, auto-routed to system-doctor"`. Do NOT dispatch query-fixer. The user should not need to do anything — the system handles it.
 
 3. **Otherwise, dispatch the `query-fixer` subagent** with:
    - Original question
@@ -164,12 +164,12 @@ If the parent session reports the executed SQL returned a structured error (`{"s
 
 6. **After attempt 3 fails OR query-fixer returns `give_up`**:
    - Close the ticket: `close_ticket(ticket_id=<id>, status="escalated", resolution_notes="3 fix attempts exhausted")`
-   - Return to the parent a human-readable summary:
+   - **Automatically dispatch `system-doctor`** to check if the problem is infrastructure-related.
+   - Then tell the user clearly what happened:
      ```
-     Query could not be auto-fixed after 3 attempts.
-     Ticket: <ticket_id>
-     Last error: <error_class> — <message>
-     Recommendation: dispatch data-admin for manual diagnosis.
+     I wasn't able to get this query working after 3 attempts.
+     The issue has been logged (ticket: <ticket_id>) and the system is checking for infrastructure problems.
+     The data team has been notified. You can try again later, or rephrase your question.
      ```
 
 ## BANNED ACTIONS

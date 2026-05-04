@@ -39,7 +39,7 @@ Once connected, just ask questions in plain English:
 
 ## Something Not Working?
 
-Run `/taleemabad-doctor` in Claude Code — the system-doctor agent will automatically diagnose and fix common issues (missing config, stale rules, connection problems).
+Close and reopen Claude Code — the plugin automatically detects and fixes common issues (missing config, stale rules, connection problems) on every session start. If the problem persists, try reinstalling: `claude plugin update taleemabad-data@Orenda-Project`.
 
 ## Need Help?
 

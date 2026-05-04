@@ -23,7 +23,6 @@
     "./agents/system-doctor.md"
   ],
   "commands": [
-    "./commands/setup.md",
-    "./commands/doctor.md"
+    "./commands/setup.md"
   ]
 }
