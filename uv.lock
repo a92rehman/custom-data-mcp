@@ -2261,7 +2261,7 @@ wheels = [
 
 [[package]]
 name = "taleemabad-data-mcp"
-version = "0.17.15"
+version = "0.18.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
