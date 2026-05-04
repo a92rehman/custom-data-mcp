@@ -130,9 +130,12 @@ download_rules() {
     return 1
   fi
 
-  if ! git -C "${tmp_dir}/repo" checkout "$tag" -- rules/ 2>/dev/null; then
-    rm -rf "$tmp_dir"
-    return 1
+  if ! git -C "${tmp_dir}/repo" checkout "$tag" -- rules/ agents/ commands/ hooks/ 2>/dev/null; then
+    # Fallback: at minimum sync rules/ (older tags may not have all dirs)
+    if ! git -C "${tmp_dir}/repo" checkout "$tag" -- rules/ 2>/dev/null; then
+      rm -rf "$tmp_dir"
+      return 1
+    fi
   fi
 
   if [ ! -f "${tmp_dir}/repo/rules/index.md" ]; then
@@ -143,6 +146,24 @@ download_rules() {
   # Replace plugin's rules/ directory with downloaded version
   rm -rf "$RULES_DEST"
   cp -r "${tmp_dir}/repo/rules" "$RULES_DEST"
+
+  # Sync agents/ (new agents like query-fixer, system-doctor)
+  if [ -d "${tmp_dir}/repo/agents" ]; then
+    rm -rf "${PLUGIN_DIR}/agents"
+    cp -r "${tmp_dir}/repo/agents" "${PLUGIN_DIR}/agents"
+  fi
+
+  # Sync commands/ (new commands like doctor.md)
+  if [ -d "${tmp_dir}/repo/commands" ]; then
+    rm -rf "${PLUGIN_DIR}/commands"
+    cp -r "${tmp_dir}/repo/commands" "${PLUGIN_DIR}/commands"
+  fi
+
+  # Sync hooks/ (copy new files, skip locked ones)
+  if [ -d "${tmp_dir}/repo/hooks" ]; then
+    cp -r "${tmp_dir}/repo/hooks/"* "${PLUGIN_DIR}/hooks/" 2>/dev/null || true
+  fi
+
   echo "$tag" > "$VERSION_FILE"
 
   rm -rf "$tmp_dir"
@@ -163,6 +184,13 @@ touch_version() {
 # Respect version pin
 if [ -n "$TALEEMABAD_PIN_VERSION" ]; then
   exit 0
+fi
+
+# Force re-download if agents/ dir is missing (migration from pre-v0.18.0)
+# Old hook only synced rules/. New hook syncs agents/, commands/, hooks/ too.
+# This ensures existing users get new agents on their next session.
+if [ ! -f "${PLUGIN_DIR}/agents/query-fixer.md" ] && [ -f "$VERSION_FILE" ]; then
+  rm -f "$VERSION_FILE"
 fi
 
 # If rules exist and were checked recently, skip network call

@@ -131,11 +131,16 @@ def _get_latest_tag() -> str | None:
 
 
 def _download_rules(tag: str, dest: Path) -> bool:
-    """Download rules/ from a specific tag into dest."""
+    """Download rules/, agents/, commands/, and hooks/ from a specific tag.
+
+    Syncs all plugin-distributed directories so users get new agents,
+    commands, and hook updates automatically — not just rule files.
+    """
     import shutil
     import tempfile
 
     tmp_dir = Path(tempfile.mkdtemp(prefix="taleemabad-"))
+    plugin_dir = dest.parent  # dest is plugin_dir/rules
     try:
         repo_dir = tmp_dir / "repo"
         result = _run_git([
@@ -145,21 +150,63 @@ def _download_rules(tag: str, dest: Path) -> bool:
         if result is None or result.returncode != 0:
             return False
 
+        # Checkout all plugin-distributed directories
         result = _run_git(
-            ["-C", str(repo_dir), "checkout", tag, "--", "rules/"],
+            ["-C", str(repo_dir), "checkout", tag, "--",
+             "rules/", "agents/", "commands/", "hooks/"],
             timeout=10,
         )
         if result is None or result.returncode != 0:
-            return False
+            # Fallback: at minimum sync rules/ (older tags may not have all dirs)
+            result = _run_git(
+                ["-C", str(repo_dir), "checkout", tag, "--", "rules/"],
+                timeout=10,
+            )
+            if result is None or result.returncode != 0:
+                return False
 
         src_rules = repo_dir / "rules"
         if not (src_rules / "index.md").exists():
             return False
 
-        # Replace dest rules/ with downloaded version
+        # Sync rules/
         if dest.exists():
             shutil.rmtree(dest)
         shutil.copytree(str(src_rules), str(dest))
+
+        # Sync agents/ (new agents like query-fixer, system-doctor)
+        src_agents = repo_dir / "agents"
+        if src_agents.is_dir():
+            dst_agents = plugin_dir / "agents"
+            if dst_agents.exists():
+                shutil.rmtree(dst_agents)
+            shutil.copytree(str(src_agents), str(dst_agents))
+            log.info("Agents synced from %s", tag)
+
+        # Sync commands/ (new commands like doctor.md)
+        src_commands = repo_dir / "commands"
+        if src_commands.is_dir():
+            dst_commands = plugin_dir / "commands"
+            if dst_commands.exists():
+                shutil.rmtree(dst_commands)
+            shutil.copytree(str(src_commands), str(dst_commands))
+            log.info("Commands synced from %s", tag)
+
+        # Sync hooks/ (but don't overwrite the currently running hook)
+        src_hooks = repo_dir / "hooks"
+        if src_hooks.is_dir():
+            dst_hooks = plugin_dir / "hooks"
+            for src_file in src_hooks.rglob("*"):
+                if src_file.is_file():
+                    rel = src_file.relative_to(src_hooks)
+                    dst_file = dst_hooks / rel
+                    dst_file.parent.mkdir(parents=True, exist_ok=True)
+                    try:
+                        shutil.copy2(str(src_file), str(dst_file))
+                    except (PermissionError, OSError):
+                        # File may be locked (currently running) — skip
+                        log.info("Skipped locked hook file: %s", rel)
+            log.info("Hooks synced from %s", tag)
 
         VERSION_FILE.parent.mkdir(parents=True, exist_ok=True)
         VERSION_FILE.write_text(tag, encoding="utf-8")
