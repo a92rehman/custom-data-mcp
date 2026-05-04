@@ -254,29 +254,139 @@ def _cleanup_old_global_rules() -> None:
             pass
 
 
-def _check_health(plugin_dir: Path, rules_dest: Path) -> list[str]:
-    """Check for common issues and return list of symptom IDs."""
-    symptoms: list[str] = []
+def _auto_heal(plugin_dir: Path, rules_dest: Path) -> None:
+    """Silently detect and fix common issues. User sees nothing.
 
+    This replaces the old "write sentinel and wait for agent" approach.
+    The hook runs every session — it should FIX problems, not just report them.
+    """
+    fixed: list[str] = []
+
+    # --- Fix 1: rules_path_missing ---
+    # If the pointer file is missing or stale, rewrite it now
+    if not RULES_PATH_FILE.exists() or not Path(
+        RULES_PATH_FILE.read_text(encoding="utf-8").strip()
+    ).is_dir():
+        if (rules_dest / "index.md").exists():
+            _write_rules_path(rules_dest)
+            fixed.append("rules_path_missing")
+            log.info("Auto-healed: rewrote rules path pointer")
+
+    # --- Fix 2: user_env_missing ---
+    # If env file is missing, try to recover email from audit log
     if not ENV_FILE.exists():
-        symptoms.append("user_env_missing")
-    elif ENV_FILE.exists():
+        recovered_email = _recover_email_from_audit_log()
+        if recovered_email:
+            try:
+                ENV_FILE.parent.mkdir(parents=True, exist_ok=True)
+                ENV_FILE.write_text(
+                    f"TALEEMABAD_USER={recovered_email}\n", encoding="utf-8"
+                )
+                os.environ["TALEEMABAD_USER"] = recovered_email
+                fixed.append("user_env_missing")
+                log.info("Auto-healed: recovered email %s from audit log", recovered_email)
+            except Exception as e:
+                log.warning("Could not write env file: %s", e)
+
+    # --- Fix 3: user_env_unexpanded ---
+    # If env file has literal ${...}, the actual email is the VALUE, not the placeholder
+    if ENV_FILE.exists():
         content = ENV_FILE.read_text(encoding="utf-8")
         if "${" in content:
-            symptoms.append("user_env_unexpanded")
+            # The env file itself has the placeholder — try to find real value
+            # from audit log or existing env var
+            real_email = os.environ.get("TALEEMABAD_USER", "")
+            if not real_email or real_email.startswith("${"):
+                real_email = _recover_email_from_audit_log()
+            if real_email and "@" in real_email:
+                try:
+                    ENV_FILE.write_text(
+                        f"TALEEMABAD_USER={real_email}\n", encoding="utf-8"
+                    )
+                    os.environ["TALEEMABAD_USER"] = real_email
+                    fixed.append("user_env_unexpanded")
+                    log.info("Auto-healed: fixed unexpanded env var")
+                except Exception:
+                    pass
 
-    if not RULES_PATH_FILE.exists():
-        symptoms.append("rules_path_missing")
-    elif RULES_PATH_FILE.exists():
-        rp = RULES_PATH_FILE.read_text(encoding="utf-8").strip()
-        if not Path(rp).is_dir():
-            symptoms.append("rules_path_missing")
+    # --- Fix 4: hook_crashed ---
+    # Clean up bash.exe.stackdump files that indicate the old bash hook crashed
+    for search_dir in [plugin_dir, plugin_dir.parent]:
+        stackdump = search_dir / "bash.exe.stackdump"
+        if stackdump.exists():
+            try:
+                stackdump.unlink()
+                fixed.append("hook_crashed")
+                log.info("Auto-healed: deleted %s", stackdump)
+            except Exception:
+                pass
 
-    return symptoms
+    # --- Fix 5: plugin.json missing new agents ---
+    # If plugin.json exists but doesn't reference new agents, update it
+    plugin_json = plugin_dir / ".claude-plugin" / "plugin.json"
+    if plugin_json.exists() and (plugin_dir / "agents" / "query-fixer.md").exists():
+        try:
+            import json
+            pj = json.loads(plugin_json.read_text(encoding="utf-8"))
+            agents = pj.get("agents", [])
+            agent_names = [a.split("/")[-1] for a in agents]
+            needs_update = False
+
+            if "query-fixer.md" not in agent_names:
+                agents.append("./agents/query-fixer.md")
+                needs_update = True
+            if "system-doctor.md" not in agent_names:
+                agents.append("./agents/system-doctor.md")
+                needs_update = True
+
+            commands = pj.get("commands", [])
+            cmd_names = [c.split("/")[-1] for c in commands]
+            if "doctor.md" not in cmd_names:
+                commands.append("./commands/doctor.md")
+                needs_update = True
+
+            if needs_update:
+                pj["agents"] = agents
+                pj["commands"] = commands
+                plugin_json.write_text(
+                    json.dumps(pj, indent=2, ensure_ascii=False) + "\n",
+                    encoding="utf-8",
+                )
+                fixed.append("plugin_json_updated")
+                log.info("Auto-healed: registered new agents/commands in plugin.json")
+        except Exception as e:
+            log.warning("Could not update plugin.json: %s", e)
+
+    if fixed:
+        log.info("Auto-healed %d issues: %s", len(fixed), fixed)
+
+
+def _recover_email_from_audit_log() -> str | None:
+    """Try to find the user's email from the local audit log."""
+    audit_file = CLAUDE_DIR / "taleemabad-logs" / "activity.jsonl"
+    if not audit_file.exists():
+        return None
+    try:
+        import json
+        # Read last 20 lines (most recent entries)
+        lines = audit_file.read_text(encoding="utf-8").strip().split("\n")
+        for line in reversed(lines[-20:]):
+            if not line:
+                continue
+            entry = json.loads(line)
+            email = entry.get("user_email")
+            if email and "@" in email and not email.startswith("${"):
+                return email
+            name = entry.get("user_name")
+            if name and "@" in name and not name.startswith("${"):
+                return name
+    except Exception:
+        pass
+    return None
 
 
 def main() -> None:
-    """Main hook logic."""
+    """Main hook logic. Runs silently — user sees nothing unless rules update."""
     try:
         log.info("Session-start hook running")
 
@@ -295,27 +405,16 @@ def main() -> None:
         # Clean up old global rules
         _cleanup_old_global_rules()
 
-        # Respect version pin — skip network update but still run health checks
+        # Respect version pin — skip network update but still auto-heal
         if os.environ.get("TALEEMABAD_PIN_VERSION"):
             log.info("Version pinned, skipping update")
-            symptoms = _check_health(plugin_dir, rules_dest)
-            if symptoms:
-                DOCTOR_SENTINEL.parent.mkdir(parents=True, exist_ok=True)
-                DOCTOR_SENTINEL.write_text("\n".join(symptoms), encoding="utf-8")
-                log.warning("Health issues detected: %s", symptoms)
-            elif DOCTOR_SENTINEL.exists():
-                DOCTOR_SENTINEL.unlink(missing_ok=True)
+            _auto_heal(plugin_dir, rules_dest)
             return
 
-        # Skip if recently checked and rules exist
+        # Skip network if recently checked and rules exist
         if (rules_dest / "index.md").exists() and _is_recently_checked():
             log.info("Rules fresh, skipping network check")
-            # Still run health checks
-            symptoms = _check_health(plugin_dir, rules_dest)
-            if symptoms:
-                DOCTOR_SENTINEL.parent.mkdir(parents=True, exist_ok=True)
-                DOCTOR_SENTINEL.write_text("\n".join(symptoms), encoding="utf-8")
-                log.warning("Health issues detected: %s", symptoms)
+            _auto_heal(plugin_dir, rules_dest)
             return
 
         current = VERSION_FILE.read_text(encoding="utf-8").strip() if VERSION_FILE.exists() else "none"
@@ -324,7 +423,7 @@ def main() -> None:
         if latest and latest != current:
             if _download_rules(latest, rules_dest):
                 log.info("Rules updated to %s", latest)
-                print(f"[Taleemabad Data] Rules updated to {latest}")
+                print(f"[Taleemabad Data] Updated to {latest}")
             else:
                 _touch_version()
         elif latest:
@@ -337,16 +436,9 @@ def main() -> None:
 
         if not (rules_dest / "index.md").exists():
             log.warning("Governance rules not available in %s", rules_dest)
-            print(f"[Taleemabad Data] WARNING: Governance rules not available in {rules_dest}")
 
-        # Health check — write sentinel for system-doctor
-        symptoms = _check_health(plugin_dir, rules_dest)
-        if symptoms:
-            DOCTOR_SENTINEL.parent.mkdir(parents=True, exist_ok=True)
-            DOCTOR_SENTINEL.write_text("\n".join(symptoms), encoding="utf-8")
-            log.warning("Health issues detected: %s", symptoms)
-        elif DOCTOR_SENTINEL.exists():
-            DOCTOR_SENTINEL.unlink(missing_ok=True)
+        # Silent auto-heal — fix problems without user seeing anything
+        _auto_heal(plugin_dir, rules_dest)
 
         log.info("Session-start hook completed")
 

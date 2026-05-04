@@ -90,32 +90,79 @@ def test_write_rules_path_no_index(tmp_path, monkeypatch):
     assert not path_file.exists()
 
 
-def test_check_health_missing_env(tmp_path, monkeypatch):
-    """Should detect missing env file."""
+def test_auto_heal_fixes_rules_path(tmp_path, monkeypatch):
+    """Auto-heal should rewrite rules path when missing."""
     mod = _import_hook()
-    monkeypatch.setattr(mod, "ENV_FILE", tmp_path / "nonexistent.env")
-    monkeypatch.setattr(mod, "RULES_PATH_FILE", tmp_path / "nonexistent-path")
+    rules_dir = tmp_path / "rules"
+    rules_dir.mkdir()
+    (rules_dir / "index.md").write_text("# Rules")
 
-    symptoms = mod._check_health(tmp_path, tmp_path / "rules")
-    assert "user_env_missing" in symptoms
-    assert "rules_path_missing" in symptoms
+    path_file = tmp_path / "rules-path"
+    monkeypatch.setattr(mod, "RULES_PATH_FILE", path_file)
+    monkeypatch.setattr(mod, "ENV_FILE", tmp_path / "env")
+    monkeypatch.setattr(mod, "CLAUDE_DIR", tmp_path)
+
+    mod._auto_heal(tmp_path, rules_dir)
+    assert path_file.exists()
+    assert path_file.read_text() == str(rules_dir)
 
 
-def test_check_health_unexpanded_env(tmp_path, monkeypatch):
-    """Should detect unexpanded env var placeholder."""
+def test_auto_heal_recovers_email(tmp_path, monkeypatch):
+    """Auto-heal should recover email from audit log when env missing."""
     mod = _import_hook()
+    rules_dir = tmp_path / "rules"
+    rules_dir.mkdir()
+    (rules_dir / "index.md").write_text("# Rules")
+
+    audit_dir = tmp_path / "taleemabad-logs"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "activity.jsonl").write_text(
+        '{"user_email":"test@taleemabad.com","query_text":"test"}\n'
+    )
+
+    env_file = tmp_path / "env"
+    monkeypatch.setattr(mod, "ENV_FILE", env_file)
+    monkeypatch.setattr(mod, "RULES_PATH_FILE", tmp_path / "rp")
+    monkeypatch.setattr(mod, "CLAUDE_DIR", tmp_path)
+
+    mod._auto_heal(tmp_path, rules_dir)
+    assert env_file.exists()
+    assert "test@taleemabad.com" in env_file.read_text()
+
+
+def test_auto_heal_fixes_unexpanded_env(tmp_path, monkeypatch):
+    """Auto-heal should fix literal ${TALEEMABAD_USER} in env file."""
+    mod = _import_hook()
+    rules_dir = tmp_path / "rules"
+    rules_dir.mkdir()
+
     env_file = tmp_path / "env"
     env_file.write_text("TALEEMABAD_USER=${TALEEMABAD_USER}\n")
     monkeypatch.setattr(mod, "ENV_FILE", env_file)
+    monkeypatch.setattr(mod, "RULES_PATH_FILE", tmp_path / "rp")
+    monkeypatch.setattr(mod, "CLAUDE_DIR", tmp_path)
+    monkeypatch.setenv("TALEEMABAD_USER", "real@taleemabad.com")
 
-    rules_path_file = tmp_path / "rp"
+    mod._auto_heal(tmp_path, rules_dir)
+    content = env_file.read_text()
+    assert "${" not in content
+    assert "real@taleemabad.com" in content
+
+
+def test_auto_heal_deletes_stackdump(tmp_path, monkeypatch):
+    """Auto-heal should silently delete bash.exe.stackdump."""
+    mod = _import_hook()
     rules_dir = tmp_path / "rules"
     rules_dir.mkdir()
-    rules_path_file.write_text(str(rules_dir))
-    monkeypatch.setattr(mod, "RULES_PATH_FILE", rules_path_file)
+    stackdump = tmp_path / "bash.exe.stackdump"
+    stackdump.write_text("crash data")
 
-    symptoms = mod._check_health(tmp_path, rules_dir)
-    assert "user_env_unexpanded" in symptoms
+    monkeypatch.setattr(mod, "ENV_FILE", tmp_path / "env")
+    monkeypatch.setattr(mod, "RULES_PATH_FILE", tmp_path / "rp")
+    monkeypatch.setattr(mod, "CLAUDE_DIR", tmp_path)
+
+    mod._auto_heal(tmp_path, rules_dir)
+    assert not stackdump.exists()
 
 
 def test_touch_version(tmp_path, monkeypatch):
@@ -141,14 +188,13 @@ def test_main_no_plugin_dir(tmp_path, monkeypatch):
     mod.main()
 
 
-def test_sentinel_written_on_health_failure(tmp_path, monkeypatch):
-    """Sentinel file should be written when health checks fail."""
+def test_auto_heal_runs_in_main(tmp_path, monkeypatch):
+    """Main should run auto-heal silently when version is pinned."""
     mod = _import_hook()
 
     claude_dir = tmp_path / ".claude"
     claude_dir.mkdir()
 
-    # Set up a plugin dir with rules
     plugin_dir = tmp_path / "plugin"
     plugin_dir.mkdir()
     (plugin_dir / ".claude-plugin").mkdir()
@@ -156,9 +202,12 @@ def test_sentinel_written_on_health_failure(tmp_path, monkeypatch):
     rules_dir.mkdir()
     (rules_dir / "index.md").write_text("# Rules")
 
-    # Monkeypatch all paths
+    # Create stackdump to verify auto-heal runs
+    stackdump = plugin_dir / "bash.exe.stackdump"
+    stackdump.write_text("crash")
+
     monkeypatch.setattr(mod, "CLAUDE_DIR", claude_dir)
-    monkeypatch.setattr(mod, "ENV_FILE", tmp_path / "nonexistent.env")  # missing env
+    monkeypatch.setattr(mod, "ENV_FILE", tmp_path / "nonexistent.env")
     monkeypatch.setattr(mod, "VERSION_FILE", claude_dir / "version")
     monkeypatch.setattr(mod, "RULES_PATH_FILE", claude_dir / "rules-path")
     monkeypatch.setattr(mod, "HOOK_LOG", claude_dir / "hook.log")
@@ -168,7 +217,7 @@ def test_sentinel_written_on_health_failure(tmp_path, monkeypatch):
 
     mod.main()
 
-    sentinel = claude_dir / "doctor-needed"
-    assert sentinel.exists()
-    content = sentinel.read_text()
-    assert "user_env_missing" in content
+    # Auto-heal should have deleted the stackdump
+    assert not stackdump.exists()
+    # Auto-heal should have fixed the rules path
+    assert (claude_dir / "rules-path").exists()
