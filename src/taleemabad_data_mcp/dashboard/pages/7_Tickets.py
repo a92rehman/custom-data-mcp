@@ -1,7 +1,14 @@
-"""Tickets — system health tickets from self-healing loops."""
+"""Tickets — system health tickets from self-healing loops.
 
+This page reads from local JSONL only — no BigQuery credentials required.
+It avoids importing the BQ client chain so it works on machines without GCP setup.
+"""
+
+import json
 import sys as _sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path as _Path
+
 _src = str(_Path(__file__).parent.parent.parent.parent)
 if _src not in _sys.path:
     _sys.path.insert(0, _src)
@@ -10,11 +17,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from taleemabad_data_mcp.dashboard.components.auto_refresh import (
-    clear_cache_if_needed,
-    inject_auto_refresh,
-)
-from taleemabad_data_mcp.dashboard.components.filters import get_refresh_seconds
+# Import only styles (no filters — those pull in BQ client)
 from taleemabad_data_mcp.dashboard.components.styles import (
     CHART_H,
     CHART_H_SM,
@@ -23,18 +26,47 @@ from taleemabad_data_mcp.dashboard.components.styles import (
     page_header,
     section_header,
 )
-from taleemabad_data_mcp.dashboard.data.queries import query_tickets
 
 inject_page_css()
 
 page_header("System Tickets", "Self-healing loop tickets — query fixes and infrastructure issues")
 
-inject_auto_refresh(get_refresh_seconds())
-clear_cache_if_needed(get_refresh_seconds())
+
+def _load_tickets_from_jsonl(days: int = 30) -> pd.DataFrame:
+    """Load tickets from local JSONL file. No BigQuery needed."""
+    cols = [
+        "ticket_id", "created_at", "updated_at", "user_email", "hostname",
+        "loop", "category", "symptom", "severity", "status",
+        "diagnosis", "resolution_notes", "escalated_to", "related_event_id",
+    ]
+    local_file = _Path.home() / ".claude" / "taleemabad-logs" / "tickets.jsonl"
+    if not local_file.exists():
+        return pd.DataFrame(columns=cols)
+
+    cutoff = datetime.now(UTC) - timedelta(days=days)
+    ticket_map: dict[str, dict] = {}
+    try:
+        for line in local_file.read_text(encoding="utf-8").strip().split("\n"):
+            if not line:
+                continue
+            t = json.loads(line)
+            ticket_map[t["ticket_id"]] = t  # keep latest version per ticket
+    except Exception:
+        return pd.DataFrame(columns=cols)
+
+    rows = []
+    for t in ticket_map.values():
+        created = pd.Timestamp(t.get("created_at", ""))
+        if pd.notna(created):
+            if created.tz_localize(None) >= pd.Timestamp(cutoff.replace(tzinfo=None)):
+                rows.append({c: t.get(c) for c in cols})
+
+    return pd.DataFrame(rows) if rows else pd.DataFrame(columns=cols)
+
 
 # Sidebar: date range
 days = st.sidebar.slider("Days", 7, 90, 30, key="ticket_days")
-df = query_tickets(days=days)
+df = _load_tickets_from_jsonl(days=days)
 
 if df.empty:
     st.info("No tickets found. The self-healing system has not opened any tickets yet.")
