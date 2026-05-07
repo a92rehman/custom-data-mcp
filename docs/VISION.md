@@ -158,7 +158,7 @@ Two automated recovery systems ensure the MCP stays operational without manual i
 
 **Query Loop** — When `execute_query` returns a structured error (schema drift, missing partition, syntax error, cost exceeded), the `data-analyst` agent dispatches a `query-fixer` subagent that reads the actual table schema and governance rules, diagnoses the failure, and proposes corrected SQL. Up to 3 fix attempts before escalation via ticket system.
 
-**System Loop** — The `system-doctor` agent handles infrastructure failures: MCP connectivity, user identity configuration, governance rules sync, and session-start hook health. Triggered automatically by the session-start hook's sentinel file, or manually via `/taleemabad-doctor`. Each issue follows a strict DETECT → DIAGNOSE → HEAL → VERIFY → CLOSE cycle with max 2 heal attempts before GitHub escalation.
+**System Loop** — The `system-doctor` agent handles infrastructure failures: MCP connectivity, user identity configuration, governance rules sync, and session-start hook health. Auto-dispatched by the data-analyst when system-level errors occur (BIGQUERY_UNAVAILABLE, TIMEOUT, PERMISSION_DENIED) or after 3 failed query fix attempts. Each issue follows a strict DETECT → DIAGNOSE → HEAL → VERIFY → CLOSE cycle with max 2 heal attempts before GitHub escalation.
 
 **Ticket Tracking** — All self-healing actions create tickets (TKT-YYYYMMDD-hex) persisted to local JSONL and best-effort to BigQuery `mcp_audit.system_tickets`. Tickets track: symptom, diagnosis, actions attempted, resolution status. Visible in the dashboard's Tickets page.
 

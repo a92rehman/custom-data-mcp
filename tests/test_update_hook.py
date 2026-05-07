@@ -211,7 +211,6 @@ def test_auto_heal_runs_in_main(tmp_path, monkeypatch):
     monkeypatch.setattr(mod, "VERSION_FILE", claude_dir / "version")
     monkeypatch.setattr(mod, "RULES_PATH_FILE", claude_dir / "rules-path")
     monkeypatch.setattr(mod, "HOOK_LOG", claude_dir / "hook.log")
-    monkeypatch.setattr(mod, "DOCTOR_SENTINEL", claude_dir / "doctor-needed")
     monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(plugin_dir))
     monkeypatch.setenv("TALEEMABAD_PIN_VERSION", "v0.0.1")  # skip network
 

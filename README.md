@@ -230,7 +230,7 @@ The plugin includes four agents that handle different responsibilities:
 | `data-analyst` | Reads governance rules, asks clarification questions, generates governed SQL, retries on error | Any data question — LP rates, teacher counts, FICO scores, training progress |
 | `data-admin` | Schema browsing, table freshness, audit logs, cost analysis, troubleshooting | "What tables exist?", "When was X updated?", "Show audit logs" |
 | `query-fixer` | Diagnoses failed SQL by error class, proposes corrected queries | Auto-dispatched when a query fails (schema drift, missing partition, syntax error, cost exceeded) |
-| `system-doctor` | Detects and fixes infrastructure issues — MCP connectivity, env config, rules sync, hook crashes | Auto-triggered on session start if issues detected, or manually via `/taleemabad-doctor` |
+| `system-doctor` | Detects and fixes infrastructure issues — MCP connectivity, env config, rules sync, hook crashes | Auto-dispatched by data-analyst on system-level errors or after 3 failed query fixes |
 
 ---
 
@@ -272,7 +272,7 @@ User's Machine                              Railway (Cloud)
 ```
 
 - **Plugin** runs locally: agents read governance rules from the plugin cache and generate correct SQL
-- **Session-start hook** (Python-first) writes `~/.claude/taleemabad-rules-path` so agents can locate rules regardless of working directory; runs health checks and writes sentinel for system-doctor
+- **Session-start hook** (Python-first) writes `~/.claude/taleemabad-rules-path` so agents can locate rules regardless of working directory; silently auto-heals common issues (missing env, broken paths, stale plugin.json)
 - **MCP server** runs on Railway: executes queries, enforces cost guardrails, logs audits, manages tickets
 - **Self-healing loops**: query-fixer auto-retries failed SQL (max 3 attempts); system-doctor fixes infrastructure issues with ticket tracking
 - **No local dependencies** needed — no Python, no credentials file, no BigQuery access

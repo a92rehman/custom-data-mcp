@@ -33,7 +33,6 @@ VERSION_FILE = CLAUDE_DIR / "taleemabad-rules-version"
 ENV_FILE = CLAUDE_DIR / "taleemabad-data-mcp.env"
 RULES_PATH_FILE = CLAUDE_DIR / "taleemabad-rules-path"
 HOOK_LOG = CLAUDE_DIR / "taleemabad-hook.log"
-DOCTOR_SENTINEL = CLAUDE_DIR / "taleemabad-doctor-needed"
 
 # Set up file logging (never stdout — hooks are fire-and-forget)
 logging.basicConfig(
@@ -257,7 +256,6 @@ def _cleanup_old_global_rules() -> None:
 def _auto_heal(plugin_dir: Path, rules_dest: Path) -> None:
     """Silently detect and fix common issues. User sees nothing.
 
-    This replaces the old "write sentinel and wait for agent" approach.
     The hook runs every session — it should FIX problems, not just report them.
     """
     fixed: list[str] = []
@@ -273,18 +271,18 @@ def _auto_heal(plugin_dir: Path, rules_dest: Path) -> None:
             log.info("Auto-healed: rewrote rules path pointer")
 
     # --- Fix 2: user_env_missing ---
-    # If env file is missing, try to recover email from audit log
+    # If env file is missing, try to recover user identity from audit log
     if not ENV_FILE.exists():
-        recovered_email = _recover_email_from_audit_log()
-        if recovered_email:
+        recovered_user = _recover_user_from_audit_log()
+        if recovered_user:
             try:
                 ENV_FILE.parent.mkdir(parents=True, exist_ok=True)
                 ENV_FILE.write_text(
-                    f"TALEEMABAD_USER={recovered_email}\n", encoding="utf-8"
+                    f"TALEEMABAD_USER={recovered_user}\n", encoding="utf-8"
                 )
-                os.environ["TALEEMABAD_USER"] = recovered_email
+                os.environ["TALEEMABAD_USER"] = recovered_user
                 fixed.append("user_env_missing")
-                log.info("Auto-healed: recovered email %s from audit log", recovered_email)
+                log.info("Auto-healed: recovered user '%s' from audit log", recovered_user)
             except Exception as e:
                 log.warning("Could not write env file: %s", e)
 
@@ -295,15 +293,15 @@ def _auto_heal(plugin_dir: Path, rules_dest: Path) -> None:
         if "${" in content:
             # The env file itself has the placeholder — try to find real value
             # from audit log or existing env var
-            real_email = os.environ.get("TALEEMABAD_USER", "")
-            if not real_email or real_email.startswith("${"):
-                real_email = _recover_email_from_audit_log()
-            if real_email and "@" in real_email:
+            real_user = os.environ.get("TALEEMABAD_USER", "")
+            if not real_user or real_user.startswith("${"):
+                real_user = _recover_user_from_audit_log()
+            if real_user and not real_user.startswith("${"):
                 try:
                     ENV_FILE.write_text(
-                        f"TALEEMABAD_USER={real_email}\n", encoding="utf-8"
+                        f"TALEEMABAD_USER={real_user}\n", encoding="utf-8"
                     )
-                    os.environ["TALEEMABAD_USER"] = real_email
+                    os.environ["TALEEMABAD_USER"] = real_user
                     fixed.append("user_env_unexpanded")
                     log.info("Auto-healed: fixed unexpanded env var")
                 except Exception:
@@ -361,8 +359,12 @@ def _auto_heal(plugin_dir: Path, rules_dest: Path) -> None:
         log.info("Auto-healed %d issues: %s", len(fixed), fixed)
 
 
-def _recover_email_from_audit_log() -> str | None:
-    """Try to find the user's email from the local audit log."""
+def _recover_user_from_audit_log() -> str | None:
+    """Try to find the user's identity from the local audit log.
+
+    Checks user_email first (prefer email), then falls back to user_name.
+    Accepts any non-empty, non-placeholder value — not just emails.
+    """
     audit_file = CLAUDE_DIR / "taleemabad-logs" / "activity.jsonl"
     if not audit_file.exists():
         return None
@@ -374,12 +376,14 @@ def _recover_email_from_audit_log() -> str | None:
             if not line:
                 continue
             entry = json.loads(line)
+            # Prefer email if available
             email = entry.get("user_email")
-            if email and "@" in email and not email.startswith("${"):
-                return email
+            if email and isinstance(email, str) and email.strip() and not email.startswith("${"):
+                return email.strip()
+            # Fall back to username (may not be an email)
             name = entry.get("user_name")
-            if name and "@" in name and not name.startswith("${"):
-                return name
+            if name and isinstance(name, str) and name.strip() and not name.startswith("${"):
+                return name.strip()
     except Exception:
         pass
     return None

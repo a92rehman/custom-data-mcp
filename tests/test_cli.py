@@ -18,26 +18,25 @@ def _mock_patches(monkeypatch, claude_dir):
     claude_dir.mkdir(parents=True, exist_ok=True)
 
 
-def test_setup_copies_rules_and_saves_config(tmp_path, monkeypatch):
-    """Setup should copy rules and save user config."""
+def test_setup_saves_email_and_cleans_old_rules(tmp_path, monkeypatch):
+    """Setup should save email config and remove old global rules."""
     claude_dir = tmp_path / ".claude"
     _mock_patches(monkeypatch, claude_dir)
 
     runner = CliRunner()
-    result = runner.invoke(main, ["setup", "--user", "Test User"])
+    result = runner.invoke(main, ["setup", "--email", "test@taleemabad.com"])
     assert result.exit_code == 0, result.output
 
-    # Rules were copied
+    # Old global rules should NOT exist (setup removes them, doesn't create them)
     rules_dir = claude_dir / "rules" / "taleemabad"
-    assert rules_dir.exists()
-    assert (rules_dir / "index.md").exists()
-    assert (rules_dir / "bigquery.md").exists()
-    teacher_rules = rules_dir / "ict-islamabad" / "dimensions" / "teachers"
-    assert (teacher_rules / "teacher-query-rules.md").exists()
+    assert not rules_dir.exists()
 
-    # Env file was created
+    # Env file was created with email
     env_content = (claude_dir / "taleemabad-data-mcp.env").read_text()
-    assert "TALEEMABAD_USER=Test User" in env_content
+    assert "TALEEMABAD_USER=test@taleemabad.com" in env_content
+
+    # Setup message mentions rules are managed by plugin
+    assert "managed by the plugin" in result.output
 
 
 def test_uninstall_removes_rules_and_env(tmp_path, monkeypatch):
@@ -85,7 +84,7 @@ def test_setup_warns_about_old_artifacts(tmp_path, monkeypatch):
     old_mcp.write_text('{"mcpServers": {"taleemabad-data": {}}}')
 
     runner = CliRunner()
-    result = runner.invoke(main, ["setup", "--user", "Ali"])
+    result = runner.invoke(main, ["setup", "--email", "ali@taleemabad.com"])
     assert result.exit_code == 0, result.output
     assert "Old venv found" in result.output
     assert "Old .mcp.json found" in result.output

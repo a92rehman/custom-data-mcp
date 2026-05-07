@@ -317,22 +317,22 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   <text x="120" y="542" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="Inter">Syncs rules + health check</text>
 </g>
 
-<!-- Arrow: Hook → Sentinel -->
+<!-- Arrow: Hook → Auto-heal -->
 <path d="M 210 521 L 270 521" stroke="#ef4444" stroke-width="2" fill="none" marker-end="url(#arR)"/>
 <text x="240" y="513" text-anchor="middle" font-size="9" fill="#fca5a5" font-family="Inter">issues?</text>
 
-<!-- Sentinel file -->
+<!-- Auto-heal box -->
 <g class="node-group">
   <rect x="276" y="496" width="170" height="50" rx="10" fill="rgba(239,68,68,.06)" stroke="rgba(239,68,68,.3)" stroke-width="1"/>
-  <text x="361" y="517" text-anchor="middle" font-size="11" fill="#fca5a5" font-family="Inter" font-weight="600">&#128196; Sentinel File</text>
-  <text x="361" y="533" text-anchor="middle" font-size="9" fill="#94a3b8" font-family="Inter">~/.claude/taleemabad-doctor-needed</text>
+  <text x="361" y="517" text-anchor="middle" font-size="11" fill="#fca5a5" font-family="Inter" font-weight="600">&#128295; Silent Auto-Heal</text>
+  <text x="361" y="533" text-anchor="middle" font-size="9" fill="#94a3b8" font-family="Inter">fixes env, paths, plugin.json</text>
 </g>
 
-<!-- Arrow: Sentinel → Doctor -->
+<!-- Arrow: Auto-heal → Doctor (via data-analyst) -->
 <path d="M 446 521 L 510 521" stroke="#ef4444" stroke-width="2" fill="none" marker-end="url(#arR)"/>
 
-<!-- Or manual trigger -->
-<text x="478" y="510" text-anchor="middle" font-size="8" fill="#64748b" font-family="Inter">auto</text>
+<!-- Dispatch path -->
+<text x="478" y="510" text-anchor="middle" font-size="8" fill="#64748b" font-family="Inter">escalate</text>
 
 <!-- SYSTEM DOCTOR (big) -->
 <g class="node-group" filter="url(#shadow)">
@@ -447,9 +447,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     <div class="panel" style="border-top:3px solid var(--red)">
       <div class="panel-head"><h3 style="color:var(--red)">&#9889; Loop 2: System Self-Healing</h3><p>Infrastructure issue detected by hook or during query</p></div>
       <div class="psteps">
-        <div class="ps"><div class="ps-n" style="background:rgba(59,130,246,.1);color:var(--blue)">1</div><div class="ps-t"><b>Session hook runs update.py</b> — syncs rules from latest git tag, then runs health checks</div></div>
-        <div class="ps"><div class="ps-n" style="background:rgba(239,68,68,.1);color:var(--red)">2</div><div class="ps-t"><b>Health check fails?</b> Writes symptom IDs to sentinel file (~/.claude/taleemabad-doctor-needed)</div></div>
-        <div class="ps"><div class="ps-n" style="background:rgba(239,68,68,.1);color:var(--red)">3</div><div class="ps-t"><b>system-doctor activates</b> — reads sentinel (auto) or user runs /taleemabad-doctor (manual)</div></div>
+        <div class="ps"><div class="ps-n" style="background:rgba(59,130,246,.1);color:var(--blue)">1</div><div class="ps-t"><b>Session hook runs update.py</b> — syncs rules from latest git tag, then runs silent auto-heal</div></div>
+        <div class="ps"><div class="ps-n" style="background:rgba(239,68,68,.1);color:var(--red)">2</div><div class="ps-t"><b>Auto-heal fixes what it can</b> — missing env (recovers from audit log), broken paths, stale plugin.json, stackdumps</div></div>
+        <div class="ps"><div class="ps-n" style="background:rgba(239,68,68,.1);color:var(--red)">3</div><div class="ps-t"><b>system-doctor activates</b> — auto-dispatched by data-analyst on system-level errors or after 3 failed query fixes</div></div>
         <div class="ps"><div class="ps-n" style="background:rgba(245,158,11,.1);color:var(--amber)">4</div><div class="ps-t"><b>For each symptom: DETECT → DIAGNOSE → HEAL</b> — applies auto-fix, logs action to ticket</div></div>
         <div class="ps"><div class="ps-n" style="background:rgba(20,184,166,.1);color:var(--teal)">5</div><div class="ps-t"><b>VERIFY</b> — re-runs the failing check. If passed: ticket = auto_fixed.</div></div>
         <div class="ps"><div class="ps-n" style="background:rgba(239,68,68,.1);color:var(--red)">6</div><div class="ps-t"><b>After 2 failed fixes: ESCALATE</b> — auto-files GitHub issue with sanitized evidence (rate limited: 1/symptom/day)</div></div>
@@ -486,7 +486,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     </div>
     <div class="ag"><div class="bar" style="background:linear-gradient(90deg,var(--red),#f87171)"></div>
       <h3 style="color:var(--red)">&#9889; system-doctor</h3><div class="role">Healer — fixes infrastructure</div>
-      <div class="lbl">Triggers</div><ul><li>Auto: sentinel file from session hook</li><li>Manual: /taleemabad-doctor command</li><li>System-level errors from execute_query</li></ul>
+      <div class="lbl">Triggers</div><ul><li>Auto-dispatched by data-analyst on system-level errors</li><li>Auto-dispatched after 3 failed query fix attempts</li><li>Manual fallback: /taleemabad-doctor command</li></ul>
       <div class="lbl">What it does</div><ul><li>Checks MCP connectivity, env config, rules sync</li><li>Fixes: re-run hook, setx env var, delete stackdump</li><li>Verifies fixes worked, escalates if not</li><li>Files GitHub issues (rate limited, sanitized)</li></ul>
       <div class="trow"><span class="tt">Read</span><span class="tt">Bash</span><span class="tt">Write</span><span class="tt">Glob</span><span class="tt">Grep</span><span class="tt">WebFetch</span></div>
     </div>

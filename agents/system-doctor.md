@@ -126,14 +126,6 @@ When a symptom cannot be auto-fixed after 2 attempts:
 
 Update the ticket's `escalated_to` field with the GitHub issue URL when filed.
 
-## Sentinel File Integration
-
-The session-start hook writes `~/.claude/taleemabad-doctor-needed` when health checks fail. If this file exists when you are dispatched:
-
-1. Read its contents — each line is a symptom ID
-2. Run the corresponding checks from the matrix
-3. After processing, delete the sentinel file
-
 ## Output Format
 
 After processing all symptoms, return a summary:

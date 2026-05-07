@@ -36,7 +36,7 @@ This PR closes two gaps in the Taleemabad Data MCP plugin: (1) the advertised "s
 | `agents/data-analyst.md` | Added Phase 4 (retry on error) — append-only, Phases 1-3 byte-for-byte identical. |
 | `.claude-plugin/plugin.json` | Registered `query-fixer` and `system-doctor` agents, `/taleemabad-doctor` command. |
 | `hooks/run-hook.cmd` | Now tries Python before bash (avoids Windows bash crashes). |
-| `hooks/session-start/update.py` | Health checks run even when version is pinned; writes sentinel file. |
+| `hooks/session-start/update.py` | Silent auto-heal runs even when version is pinned; fixes env, paths, plugin.json. |
 | `src/taleemabad_data_mcp/dashboard/data/queries.py` | Added `query_tickets()` function with BQ + JSONL fallback. |
 | `tests/test_server.py` | Fixed pre-existing broken assertion on `CREDENTIALS_MISSING_MSG`. |
 | `CLAUDE.md` | Documented structured error format, ticket system, two-loop architecture, Python session hook, 3 new MCP tools. |
@@ -61,7 +61,7 @@ This PR closes two gaps in the Taleemabad Data MCP plugin: (1) the advertised "s
 | Agent | Trigger | Tools |
 |-------|---------|-------|
 | `query-fixer` | Dispatched by `data-analyst` Phase 4 when `execute_query` returns structured error | Read, Glob, Grep |
-| `system-doctor` | Auto: sentinel file from hook. Manual: `/taleemabad-doctor`. Connection errors from `execute_query`. | Read, Bash, Write, Glob, Grep, WebFetch |
+| `system-doctor` | Auto-dispatched by data-analyst on system-level errors or after 3 failed query fixes. Manual fallback: `/taleemabad-doctor`. | Read, Bash, Write, Glob, Grep, WebFetch |
 
 ## Backward Compatibility Flags
 
@@ -75,7 +75,7 @@ Old agents that don't pass `legacy_format` will get the new JSON format. The str
 
 - `system-doctor` GitHub issue filing requires `gh` CLI or `GITHUB_PAT` — falls back to local JSONL if neither available
 - `query_tickets()` dashboard function does BQ query first, JSONL fallback — no merge of both sources
-- `test_cli.py::test_setup_copies_rules_and_saves_config` was already broken before this PR (CLI `--user` flag removed in prior commit)
+- `test_cli.py` tests fixed: `--user` flag updated to `--email` to match current CLI
 - Ruff not available in the dev environment's shell PATH (Windows) — code follows existing codebase patterns
 - Version bump to v0.18.0 done on branch only — tag and push happen after merge
 

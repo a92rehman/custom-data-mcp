@@ -59,9 +59,8 @@ When adding, editing, or removing governance rules, also update:
 2. **`projects.yaml`** — add/update the project entry if a new region or dataset is involved
 3. **`README.md`** — update the Regions & Datasets table if a region changed
 4. **`CLAUDE.md`** — update if architecture or project structure changed
-5. **`docs/INSTALL.md`** — update if setup flow changed
-6. **Dashboard** — `projects.yaml` drives the Governance page; new datasets appear automatically
-7. **Agent descriptions** — update `agents/data-analyst.md` description if new region or domain added
+5. **Dashboard** — `projects.yaml` drives the Governance page; new datasets appear automatically
+6. **Agent descriptions** — update `agents/data-analyst.md` description if new region or domain added
 
 Rules are NOT placed in `~/.claude/rules/` — that bypasses the agent's governance flow.
 Rules live only in the plugin's `rules/` directory, read by the data-analyst subagent.
