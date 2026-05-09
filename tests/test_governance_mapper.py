@@ -1,7 +1,7 @@
 """Tests for the governance_mapper module."""
 
 import pytest
-from taleemabad_data_mcp.engine.governance_mapper import (
+from custom_data_mcp.engine.governance_mapper import (
     extract_tables_from_text,
     get_governance_map,
 )

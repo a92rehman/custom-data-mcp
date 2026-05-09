@@ -24,19 +24,19 @@ def test_hook_imports():
 
 
 def test_export_user_env(tmp_path, monkeypatch):
-    """Should read TALEEMABAD_USER from env file."""
+    """Should read CUSTOM_DATA_USER from env file."""
     mod = _import_hook()
     env_file = tmp_path / "custom-data-mcp.env"
-    env_file.write_text("TALEEMABAD_USER=test@taleemabad.com\n")
+    env_file.write_text("CUSTOM_DATA_USER=test@taleemabad.com\n")
     monkeypatch.setattr(mod, "ENV_FILE", env_file)
-    monkeypatch.delenv("TALEEMABAD_USER", raising=False)
+    monkeypatch.delenv("CUSTOM_DATA_USER", raising=False)
 
     mod._export_user_env()
     import os
-    assert os.environ.get("TALEEMABAD_USER") == "test@taleemabad.com"
+    assert os.environ.get("CUSTOM_DATA_USER") == "test@taleemabad.com"
 
     # Clean up
-    monkeypatch.delenv("TALEEMABAD_USER", raising=False)
+    monkeypatch.delenv("CUSTOM_DATA_USER", raising=False)
 
 
 def test_export_user_env_missing_file(tmp_path, monkeypatch):
@@ -114,7 +114,7 @@ def test_auto_heal_recovers_email(tmp_path, monkeypatch):
     rules_dir.mkdir()
     (rules_dir / "index.md").write_text("# Rules")
 
-    audit_dir = tmp_path / "taleemabad-logs"
+    audit_dir = tmp_path / "custom-data-logs"
     audit_dir.mkdir(parents=True)
     (audit_dir / "activity.jsonl").write_text(
         '{"user_email":"test@taleemabad.com","query_text":"test"}\n'
@@ -131,17 +131,17 @@ def test_auto_heal_recovers_email(tmp_path, monkeypatch):
 
 
 def test_auto_heal_fixes_unexpanded_env(tmp_path, monkeypatch):
-    """Auto-heal should fix literal ${TALEEMABAD_USER} in env file."""
+    """Auto-heal should fix literal ${CUSTOM_DATA_USER} in env file."""
     mod = _import_hook()
     rules_dir = tmp_path / "rules"
     rules_dir.mkdir()
 
     env_file = tmp_path / "env"
-    env_file.write_text("TALEEMABAD_USER=${TALEEMABAD_USER}\n")
+    env_file.write_text("CUSTOM_DATA_USER=${CUSTOM_DATA_USER}\n")
     monkeypatch.setattr(mod, "ENV_FILE", env_file)
     monkeypatch.setattr(mod, "RULES_PATH_FILE", tmp_path / "rp")
     monkeypatch.setattr(mod, "CLAUDE_DIR", tmp_path)
-    monkeypatch.setenv("TALEEMABAD_USER", "real@taleemabad.com")
+    monkeypatch.setenv("CUSTOM_DATA_USER", "real@taleemabad.com")
 
     mod._auto_heal(tmp_path, rules_dir)
     content = env_file.read_text()
@@ -212,7 +212,7 @@ def test_auto_heal_runs_in_main(tmp_path, monkeypatch):
     monkeypatch.setattr(mod, "RULES_PATH_FILE", claude_dir / "rules-path")
     monkeypatch.setattr(mod, "HOOK_LOG", claude_dir / "hook.log")
     monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", str(plugin_dir))
-    monkeypatch.setenv("TALEEMABAD_PIN_VERSION", "v0.0.1")  # skip network
+    monkeypatch.setenv("CUSTOM_DATA_PIN_VERSION", "v0.0.1")  # skip network
 
     mod.main()
 

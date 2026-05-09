@@ -1,6 +1,6 @@
 """Tests for domain classification."""
 
-from taleemabad_data_mcp.engine.domain_classifier import classify_domain
+from custom_data_mcp.engine.domain_classifier import classify_domain
 
 
 def test_observations_domain():

@@ -3,7 +3,7 @@
 import pandas as pd
 import streamlit as st
 
-from taleemabad_data_mcp.dashboard.data.client import get_bq_client, get_config
+from custom_data_mcp.dashboard.data.client import get_bq_client, get_config
 
 
 def _full_table(table_key: str) -> str:
@@ -208,7 +208,7 @@ def query_tickets(days: int = 30) -> pd.DataFrame:
     # Fallback: read from local JSONL
     try:
         from pathlib import Path
-        local_file = Path.home() / ".claude" / "taleemabad-logs" / "tickets.jsonl"
+        local_file = Path.home() / ".claude" / "custom-data-logs" / "tickets.jsonl"
         if local_file.exists():
             import json
             from datetime import UTC, datetime, timedelta

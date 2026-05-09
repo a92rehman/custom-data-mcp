@@ -1,14 +1,14 @@
 """Tests for feedback logging."""
 
-from taleemabad_data_mcp.engine.feedback_logger import FeedbackLogger
+from custom_data_mcp.engine.feedback_logger import FeedbackLogger
 
 
 def test_log_feedback_creates_entry(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.feedback_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.feedback_logger._LOCAL_LOG_DIR", tmp_path
     )
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.feedback_logger._LOCAL_LOG_FILE",
+        "custom_data_mcp.engine.feedback_logger._LOCAL_LOG_FILE",
         tmp_path / "feedback.jsonl",
     )
     fb_logger = FeedbackLogger(user_name="test-user")
@@ -21,10 +21,10 @@ def test_log_feedback_creates_entry(tmp_path, monkeypatch):
 
 def test_log_feedback_with_comment(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.feedback_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.feedback_logger._LOCAL_LOG_DIR", tmp_path
     )
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.feedback_logger._LOCAL_LOG_FILE",
+        "custom_data_mcp.engine.feedback_logger._LOCAL_LOG_FILE",
         tmp_path / "feedback.jsonl",
     )
     fb_logger = FeedbackLogger(user_name="test-user")
@@ -35,11 +35,11 @@ def test_log_feedback_with_comment(tmp_path, monkeypatch):
 
 def test_log_feedback_writes_local_file(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.feedback_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.feedback_logger._LOCAL_LOG_DIR", tmp_path
     )
     log_file = tmp_path / "feedback.jsonl"
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.feedback_logger._LOCAL_LOG_FILE", log_file
+        "custom_data_mcp.engine.feedback_logger._LOCAL_LOG_FILE", log_file
     )
     fb_logger = FeedbackLogger()
     fb_logger.log(event_id="evt-1", rating="up")

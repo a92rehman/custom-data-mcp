@@ -7,7 +7,7 @@ logic boundaries.
 
 import json
 
-from taleemabad_data_mcp.engine.errors import (
+from custom_data_mcp.engine.errors import (
     BIGQUERY_UNAVAILABLE,
     COST_EXCEEDED,
     MISSING_PARTITION,

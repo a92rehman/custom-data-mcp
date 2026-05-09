@@ -1,6 +1,6 @@
 """Tests for ticket model."""
 
-from taleemabad_data_mcp.models.ticket import Ticket, _make_ticket_id
+from custom_data_mcp.models.ticket import Ticket, _make_ticket_id
 
 
 def test_ticket_id_format():

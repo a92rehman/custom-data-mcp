@@ -9,7 +9,7 @@ from pathlib import Path
 
 import click
 
-RULES_DIR_NAME = "taleemabad"
+RULES_DIR_NAME = "custom-data"
 CREDENTIALS_FILENAME = "niete-bq-prod-48ae5260d1ea.json"
 
 
@@ -19,7 +19,7 @@ def _claude_dir() -> Path:
 
 
 def _rules_dest() -> Path:
-    """Return ~/.claude/rules/taleemabad/ path."""
+    """Return ~/.claude/rules/custom-data/ path."""
     return _claude_dir() / "rules" / RULES_DIR_NAME
 
 
@@ -35,13 +35,13 @@ def _bundled_rules_dir() -> Path:
 
 @click.group()
 def main() -> None:
-    """Taleemabad Data Navigator — governed semantic layer for BigQuery."""
+    """Custom Data Navigator — governed semantic layer for BigQuery."""
 
 
 @main.command(name="version")
 def show_version() -> None:
     """Show the installed version."""
-    from taleemabad_data_mcp import __version__
+    from custom_data_mcp import __version__
 
     click.echo(f"custom-data-mcp v{__version__}")
 
@@ -96,7 +96,7 @@ def bump_version(minor: bool = False) -> None:
 
     # Sync rules to all locations from the source
     if rules_source.exists():
-        # → src/taleemabad_data_mcp/rules/ (ships with Python package)
+        # → src/custom_data_mcp/rules/ (ships with Python package)
         if rules_source != src_rules_dir:
             if src_rules_dir.exists():
                 shutil.rmtree(src_rules_dir)
@@ -114,7 +114,7 @@ def bump_version(minor: bool = False) -> None:
             shutil.copytree(rules_source, claude_rules_dir)
 
         # Clean up old global rules (they bypass agent governance if loaded as context)
-        user_rules_dir = Path.home() / ".claude" / "rules" / "taleemabad"
+        user_rules_dir = Path.home() / ".claude" / "rules" / "custom-data"
         if user_rules_dir.exists():
             shutil.rmtree(user_rules_dir)
 
@@ -202,46 +202,46 @@ def setup(email: str) -> None:
     click.echo("Rules are managed by the plugin (auto-updated via session-start hook)")
 
     # 2. Save user config to env file
-    env_content = f"TALEEMABAD_USER={email}\n"
+    env_content = f"CUSTOM_DATA_USER={email}\n"
     env_path = _env_path()
     env_path.parent.mkdir(parents=True, exist_ok=True)
     env_path.write_text(env_content, encoding="utf-8")
     click.echo(f"User config saved to {env_path}")
 
-    # 3. Set TALEEMABAD_USER as persistent system environment variable
-    # so Claude Code can expand ${TALEEMABAD_USER} in .mcp.json headers
+    # 3. Set CUSTOM_DATA_USER as persistent system environment variable
+    # so Claude Code can expand ${CUSTOM_DATA_USER} in .mcp.json headers
     import platform
     if platform.system() == "Windows":
         import subprocess as sp
-        sp.run(["setx", "TALEEMABAD_USER", email], check=False, capture_output=True)
-        click.echo(f"Set TALEEMABAD_USER system variable to {email}")
+        sp.run(["setx", "CUSTOM_DATA_USER", email], check=False, capture_output=True)
+        click.echo(f"Set CUSTOM_DATA_USER system variable to {email}")
     else:
         # Add to shell profile for macOS/Linux
         shell_rc = Path.home() / ".zshrc"
         if not shell_rc.exists():
             shell_rc = Path.home() / ".bashrc"
-        export_line = f'export TALEEMABAD_USER="{email}"'
+        export_line = f'export CUSTOM_DATA_USER="{email}"'
         try:
             existing = shell_rc.read_text(encoding="utf-8") if shell_rc.exists() else ""
-            if "TALEEMABAD_USER" not in existing:
+            if "CUSTOM_DATA_USER" not in existing:
                 with shell_rc.open("a", encoding="utf-8") as f:
-                    f.write(f"\n# Taleemabad Data MCP\n{export_line}\n")
-                click.echo(f"Added TALEEMABAD_USER to {shell_rc}")
+                    f.write(f"\n# Custom Data MCP\n{export_line}\n")
+                click.echo(f"Added CUSTOM_DATA_USER to {shell_rc}")
             else:
                 # Update existing line
                 import re
                 updated = re.sub(
-                    r'export TALEEMABAD_USER="[^"]*"',
+                    r'export CUSTOM_DATA_USER="[^"]*"',
                     export_line,
                     existing,
                 )
                 shell_rc.write_text(updated, encoding="utf-8")
-                click.echo(f"Updated TALEEMABAD_USER in {shell_rc}")
+                click.echo(f"Updated CUSTOM_DATA_USER in {shell_rc}")
         except Exception:
-            click.echo(f"Note: Set TALEEMABAD_USER manually: {export_line}")
+            click.echo(f"Note: Set CUSTOM_DATA_USER manually: {export_line}")
 
     # 4. Cleanup old artifacts from previous versions
-    old_venv = _claude_dir() / "taleemabad-venv"
+    old_venv = _claude_dir() / "custom-data-venv"
     if old_venv.exists():
         click.echo(f"\nNote: Old venv found at {old_venv}")
         click.echo("It is no longer needed. You can delete it manually.")
@@ -258,8 +258,8 @@ def setup(email: str) -> None:
     if settings_path.exists():
         try:
             settings = json.loads(settings_path.read_text(encoding="utf-8"))
-            if "mcpServers" in settings and "taleemabad-data" in settings["mcpServers"]:
-                del settings["mcpServers"]["taleemabad-data"]
+            if "mcpServers" in settings and "custom-data" in settings["mcpServers"]:
+                del settings["mcpServers"]["custom-data"]
                 if not settings["mcpServers"]:
                     del settings["mcpServers"]
                 settings_path.write_text(
@@ -291,7 +291,7 @@ def uninstall() -> None:
         click.echo(f"User config removed from {env_path}")
 
     # 3. Note about old artifacts
-    old_venv = _claude_dir() / "taleemabad-venv"
+    old_venv = _claude_dir() / "custom-data-venv"
     if old_venv.exists():
         click.echo(f"\nNote: Old venv at {old_venv} can be deleted manually.")
 
@@ -301,7 +301,7 @@ def uninstall() -> None:
 @main.command()
 def serve() -> None:
     """Run the MCP server (stdio mode). Used by Claude Code automatically."""
-    from taleemabad_data_mcp.server import mcp
+    from custom_data_mcp.server import mcp
 
     mcp.run()
 
@@ -312,9 +312,9 @@ def serve_remote(port: int | None) -> None:
     """Run the MCP server with HTTP transport for Railway deployment."""
     import os
 
-    os.environ["TALEEMABAD_REMOTE_MODE"] = "true"
+    os.environ["CUSTOM_DATA_REMOTE_MODE"] = "true"
 
-    from taleemabad_data_mcp.server import mcp
+    from custom_data_mcp.server import mcp
 
     listen_port = port or int(os.environ.get("PORT", "8000"))
 

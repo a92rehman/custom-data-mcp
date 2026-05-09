@@ -12,14 +12,14 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 
-from taleemabad_data_mcp.models.ticket import Ticket
+from custom_data_mcp.models.ticket import Ticket
 
 if TYPE_CHECKING:
     from google.cloud import bigquery
 
 logger = structlog.get_logger()
 
-_LOCAL_LOG_DIR = Path.home() / ".claude" / "taleemabad-logs"
+_LOCAL_LOG_DIR = Path.home() / ".claude" / "custom-data-logs"
 _LOCAL_TICKET_FILE = _LOCAL_LOG_DIR / "tickets.jsonl"
 
 

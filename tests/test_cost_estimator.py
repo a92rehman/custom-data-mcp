@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock
 
-from taleemabad_data_mcp.engine.cost_estimator import CostEstimator
+from custom_data_mcp.engine.cost_estimator import CostEstimator
 
 
 def test_estimate_returns_bytes_and_cost():

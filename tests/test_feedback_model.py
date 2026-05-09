@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from taleemabad_data_mcp.models.feedback import FeedbackEntry
+from custom_data_mcp.models.feedback import FeedbackEntry
 
 
 def test_feedback_entry_defaults():

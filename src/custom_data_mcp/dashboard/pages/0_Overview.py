@@ -15,12 +15,12 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from taleemabad_data_mcp.dashboard.components.auto_refresh import (
+from custom_data_mcp.dashboard.components.auto_refresh import (
     clear_cache_if_needed,
     inject_auto_refresh,
 )
-from taleemabad_data_mcp.dashboard.components.filters import get_refresh_seconds, render_filters
-from taleemabad_data_mcp.dashboard.components.styles import (
+from custom_data_mcp.dashboard.components.filters import get_refresh_seconds, render_filters
+from custom_data_mcp.dashboard.components.styles import (
     CHART_H,
     COLORS,
     DOMAIN_COLORS,
@@ -29,12 +29,12 @@ from taleemabad_data_mcp.dashboard.components.styles import (
     page_header,
     section_header,
 )
-from taleemabad_data_mcp.dashboard.data.queries import (
+from custom_data_mcp.dashboard.data.queries import (
     get_activity_log,
     get_feedback,
     get_table_freshness,
 )
-from taleemabad_data_mcp.dashboard.data.projects import (
+from custom_data_mcp.dashboard.data.projects import (
     load_projects,
     get_dataset_stats,
     get_governance_coverage,
@@ -128,7 +128,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-page_header("Taleemabad MCP Observatory", "Governed data layer — adoption, quality, cost at a glance")
+page_header("Custom Data MCP Observatory", "Governed data layer — adoption, quality, cost at a glance")
 filters = render_filters()
 inject_auto_refresh(get_refresh_seconds())
 clear_cache_if_needed(get_refresh_seconds())
@@ -167,7 +167,7 @@ total_tables_all = sum(s["table_count"] for s in _ds_stats.values())
 # Count governed tables by cross-referencing actual BQ tables with governance map
 # Same logic as Governance page — only count tables that actually exist in BQ
 _gov_per_ds: dict[str, int] = {}
-from taleemabad_data_mcp.dashboard.data.projects import get_all_tables
+from custom_data_mcp.dashboard.data.projects import get_all_tables
 _all_tables_df = get_all_tables(_ds_to_q) if _ds_to_q else pd.DataFrame()
 if not _all_tables_df.empty:
     for _, _row in _all_tables_df.iterrows():

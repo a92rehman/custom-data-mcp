@@ -1,9 +1,9 @@
 {
-  "name": "taleemabad-data",
+  "name": "custom-data",
   "version": "0.18.4",
-  "description": "Governed BigQuery analytics for Taleemabad \u2014 four agents (data-analyst, data-admin, query-fixer, system-doctor) with self-healing query loop, auto-updating governance rules, ticket-tracked infrastructure recovery, and full audit trail",
+  "description": "Governed BigQuery analytics — four agents (data-analyst, data-admin, query-fixer, system-doctor) with self-healing query loop, auto-updating governance rules, ticket-tracked infrastructure recovery, and full audit trail",
   "author": {
-    "name": "Orenda Project",
+    "name": "a92rehman",
     "url": "https://github.com/a92rehman"
   },
   "homepage": "https://github.com/a92rehman/custom-data-mcp",
@@ -13,7 +13,7 @@
     "bigquery",
     "data-governance",
     "analytics",
-    "taleemabad",
+    "custom-data",
     "education"
   ],
   "agents": [

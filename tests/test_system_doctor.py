@@ -9,17 +9,17 @@ from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from taleemabad_data_mcp.engine.ticket_logger import TicketLogger
-from taleemabad_data_mcp.models.ticket import Ticket
+from custom_data_mcp.engine.ticket_logger import TicketLogger
+from custom_data_mcp.models.ticket import Ticket
 
 
 def _setup_ticket_logger(tmp_path, monkeypatch):
     """Create a TicketLogger with temp paths."""
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.ticket_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.ticket_logger._LOCAL_LOG_DIR", tmp_path
     )
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.ticket_logger._LOCAL_TICKET_FILE",
+        "custom_data_mcp.engine.ticket_logger._LOCAL_TICKET_FILE",
         tmp_path / "tickets.jsonl",
     )
     return TicketLogger(hostname="test-host", user_email="test@taleemabad.com")
@@ -54,7 +54,7 @@ class TestConnectionFailedSymptom:
 
 
 class TestUserEnvMissingSymptom:
-    """user_env_missing: no env file or TALEEMABAD_USER unset."""
+    """user_env_missing: no env file or CUSTOM_DATA_USER unset."""
 
     def test_opens_identity_ticket(self, tmp_path, monkeypatch):
         tl = _setup_ticket_logger(tmp_path, monkeypatch)
@@ -83,7 +83,7 @@ class TestUserEnvMissingSymptom:
 
 
 class TestUserEnvUnexpandedSymptom:
-    """user_env_unexpanded: literal ${TALEEMABAD_USER} in config."""
+    """user_env_unexpanded: literal ${CUSTOM_DATA_USER} in config."""
 
     def test_opens_identity_ticket(self, tmp_path, monkeypatch):
         tl = _setup_ticket_logger(tmp_path, monkeypatch)
@@ -91,7 +91,7 @@ class TestUserEnvUnexpandedSymptom:
             loop="system",
             category="identity",
             symptom="user_env_unexpanded",
-            evidence={"env_value": "${TALEEMABAD_USER}"},
+            evidence={"env_value": "${CUSTOM_DATA_USER}"},
         )
         assert ticket.symptom == "user_env_unexpanded"
 
@@ -139,7 +139,7 @@ class TestRulesStaleSymptom:
 
 
 class TestPluginNotInstalledSymptom:
-    """plugin_not_installed: claude plugin list doesn't include taleemabad-data."""
+    """plugin_not_installed: claude plugin list doesn't include custom-data."""
 
     def test_user_action_required(self, tmp_path, monkeypatch):
         tl = _setup_ticket_logger(tmp_path, monkeypatch)

@@ -6,8 +6,8 @@ import pandas as pd
 import streamlit as st
 import yaml
 
-from taleemabad_data_mcp.dashboard.data.client import get_bq_client, get_config
-from taleemabad_data_mcp.engine.governance_mapper import get_governance_map
+from custom_data_mcp.dashboard.data.client import get_bq_client, get_config
+from custom_data_mcp.engine.governance_mapper import get_governance_map
 
 # ---------------------------------------------------------------------------
 # Paths

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Taleemabad Data MCP — Architecture</title>
+<title>Custom Data MCP — Architecture</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
@@ -137,7 +137,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 <body>
 
 <div class="nav"><div class="nav-inner">
-  <div class="nav-brand">Taleemabad Data MCP</div>
+  <div class="nav-brand">Custom Data MCP</div>
   <a href="#flowchart">Flowchart</a>
   <a href="#loops">Self-Healing</a>
   <a href="#agents">Agents</a>
@@ -345,7 +345,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 
 <!-- Manual trigger label -->
 <rect x="556" y="568" width="180" height="22" rx="11" fill="rgba(239,68,68,.08)" stroke="rgba(239,68,68,.2)" stroke-width="1"/>
-<text x="646" y="583" text-anchor="middle" font-size="10" fill="#fca5a5" font-family="Inter" font-weight="500">or manually: /taleemabad-doctor</text>
+<text x="646" y="583" text-anchor="middle" font-size="10" fill="#fca5a5" font-family="Inter" font-weight="500">or manually: /custom-data-doctor</text>
 
 <!-- Symptoms list (right of doctor) -->
 <g class="node-group">
@@ -468,7 +468,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
   <div class="ag-grid">
     <div class="ag"><div class="bar" style="background:linear-gradient(90deg,var(--blue),var(--cyan))"></div>
       <h3 style="color:var(--blue)">&#128202; data-analyst</h3><div class="role">Primary — all data questions</div>
-      <div class="lbl">Triggers</div><ul><li>Any question about Taleemabad data</li><li>"How many teachers?", "LP rate?", "FICO scores?"</li></ul>
+      <div class="lbl">Triggers</div><ul><li>Any question about data</li><li>"How many teachers?", "LP rate?", "FICO scores?"</li></ul>
       <div class="lbl">What it does</div><ul><li>Phase 1: Reads governance rules for the right region/domain</li><li>Phase 2: Asks mandatory clarification questions</li><li>Phase 3: Generates governed SQL (never ad-hoc)</li><li>Phase 4: On error, opens ticket + dispatches query-fixer</li></ul>
       <div class="trow"><span class="tt">Read</span><span class="tt">Glob</span><span class="tt">Grep</span></div>
     </div>
@@ -486,7 +486,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     </div>
     <div class="ag"><div class="bar" style="background:linear-gradient(90deg,var(--red),#f87171)"></div>
       <h3 style="color:var(--red)">&#9889; system-doctor</h3><div class="role">Healer — fixes infrastructure</div>
-      <div class="lbl">Triggers</div><ul><li>Auto-dispatched by data-analyst on system-level errors</li><li>Auto-dispatched after 3 failed query fix attempts</li><li>Manual fallback: /taleemabad-doctor command</li></ul>
+      <div class="lbl">Triggers</div><ul><li>Auto-dispatched by data-analyst on system-level errors</li><li>Auto-dispatched after 3 failed query fix attempts</li><li>Manual fallback: /custom-data-doctor command</li></ul>
       <div class="lbl">What it does</div><ul><li>Checks MCP connectivity, env config, rules sync</li><li>Fixes: re-run hook, setx env var, delete stackdump</li><li>Verifies fixes worked, escalates if not</li><li>Files GitHub issues (rate limited, sanitized)</li></ul>
       <div class="trow"><span class="tt">Read</span><span class="tt">Bash</span><span class="tt">Write</span><span class="tt">Glob</span><span class="tt">Grep</span><span class="tt">WebFetch</span></div>
     </div>
@@ -503,8 +503,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     <thead><tr><th>Symptom</th><th>Detection</th><th>Auto-Fix</th><th>Fallback</th></tr></thead>
     <tbody>
       <tr><td><code>connection_failed</code></td><td>curl /health returns non-200</td><td class="a-g">Retry after 10s</td><td class="a-u">Tell user: check internet</td></tr>
-      <tr><td><code>user_env_missing</code></td><td>~/.claude/taleemabad-data-mcp.env missing</td><td class="a-g">Recover email from audit log</td><td class="a-u">Ask user &rarr; /taleemabad-setup</td></tr>
-      <tr><td><code>user_env_unexpanded</code></td><td>Literal ${TALEEMABAD_USER} in headers</td><td class="a-g">setx (Win) / shell rc (Linux)</td><td class="a-u">Restart terminal</td></tr>
+      <tr><td><code>user_env_missing</code></td><td>~/.claude/custom-data-mcp.env missing</td><td class="a-g">Recover email from audit log</td><td class="a-u">Ask user &rarr; /custom-data-setup</td></tr>
+      <tr><td><code>user_env_unexpanded</code></td><td>Literal ${CUSTOM_DATA_USER} in headers</td><td class="a-g">setx (Win) / shell rc (Linux)</td><td class="a-u">Restart terminal</td></tr>
       <tr><td><code>rules_path_missing</code></td><td>Path file gone or points to empty dir</td><td class="a-g">Re-run update.py hook</td><td class="a-e">Suggest reinstall after 2 fails</td></tr>
       <tr><td><code>rules_stale</code></td><td>Local version 2+ behind latest tag</td><td class="a-g">Force refresh via hook</td><td>—</td></tr>
       <tr><td><code>plugin_not_installed</code></td><td>claude plugin list missing it</td><td>—</td><td class="a-u">Print install commands</td></tr>
@@ -584,7 +584,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 </div>
 
 <div class="footer">
-  <strong>Taleemabad Data MCP</strong> v0.18.0 &middot; 4 Agents &middot; 12 Tools &middot; 5 Regions &middot; 6 Datasets<br>
+  <strong>Custom Data MCP</strong> v0.18.0 &middot; 4 Agents &middot; 12 Tools &middot; 5 Regions &middot; 6 Datasets<br>
   <a href="https://github.com/a92rehman/custom-data-mcp">GitHub</a> &middot; a92rehman
 </div>
 

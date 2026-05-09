@@ -5,8 +5,8 @@
 **ALWAYS bump the version before pushing to GitHub.** This is mandatory — no exceptions.
 
 Before running `git push`, run one of:
-- `python -m taleemabad_data_mcp bump` — patch bump (0.3.1 → 0.3.2) for fixes, docs, small changes
-- `python -m taleemabad_data_mcp bump --minor` — minor bump (0.3.2 → 0.4.0) for new features, bigger releases
+- `python -m custom_data_mcp bump` — patch bump (0.3.1 → 0.3.2) for fixes, docs, small changes
+- `python -m custom_data_mcp bump --minor` — minor bump (0.3.2 → 0.4.0) for new features, bigger releases
 
 This updates both `__init__.py` and `pyproject.toml` automatically.
 
@@ -24,7 +24,7 @@ This updates both `__init__.py` and `pyproject.toml` automatically.
 
 1. `git add -A`
 2. `git commit -m "description"`
-3. `python -m taleemabad_data_mcp bump` (or `bump --minor`)
+3. `python -m custom_data_mcp bump` (or `bump --minor`)
 4. `git add -A && git commit -m "chore: bump version to vX.Y.Z"`
 5. `git tag vX.Y.Z`
 6. `git push origin master --tags && git push origin master:main --tags`
@@ -36,10 +36,10 @@ Never push without bumping. Users check `/mcp` and `version` command to know wha
 ## How Rules Reach Users
 
 The session-start hook automatically downloads the latest rules on every session:
-1. Writes `~/.claude/taleemabad-rules-path` with the absolute path to the rules directory (so the agent can find them)
-2. Checks `git ls-remote --tags` against `~/.claude/taleemabad-rules-version`
+1. Writes `~/.claude/custom-data-rules-path` with the absolute path to the rules directory (so the agent can find them)
+2. Checks `git ls-remote --tags` against `~/.claude/custom-data-rules-version`
 3. If newer tag exists: shallow-clones tag, extracts `rules/` into plugin cache directory
-4. Updates `~/.claude/taleemabad-rules-path` again (rules may have moved to a new version directory)
+4. Updates `~/.claude/custom-data-rules-path` again (rules may have moved to a new version directory)
 5. Checks at most once every 6 hours (skips if recently checked)
 6. Fallback: uses existing plugin cache rules if network unavailable
 
@@ -47,8 +47,8 @@ Rules auto-update. No manual reinstall needed.
 
 ## What `bump` Does
 
-Running `python -m taleemabad_data_mcp bump` also:
-- Syncs rules to `src/taleemabad_data_mcp/rules/` and `rules/`
+Running `python -m custom_data_mcp bump` also:
+- Syncs rules to `src/custom_data_mcp/rules/` and `rules/`
 - Updates `.claude-plugin/plugin.json` and `marketplace.json` version fields
 - Updates `.current-version`
 

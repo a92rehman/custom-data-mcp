@@ -2,16 +2,16 @@
 
 from unittest.mock import MagicMock
 
-from taleemabad_data_mcp.engine.ticket_logger import TicketLogger
+from custom_data_mcp.engine.ticket_logger import TicketLogger
 
 
 def test_open_ticket_writes_local(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.ticket_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.ticket_logger._LOCAL_LOG_DIR", tmp_path
     )
     ticket_file = tmp_path / "tickets.jsonl"
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.ticket_logger._LOCAL_TICKET_FILE", ticket_file
+        "custom_data_mcp.engine.ticket_logger._LOCAL_TICKET_FILE", ticket_file
     )
 
     tl = TicketLogger(hostname="test-host")
@@ -31,10 +31,10 @@ def test_open_ticket_writes_local(tmp_path, monkeypatch):
 
 def test_update_ticket(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.ticket_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.ticket_logger._LOCAL_LOG_DIR", tmp_path
     )
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.ticket_logger._LOCAL_TICKET_FILE",
+        "custom_data_mcp.engine.ticket_logger._LOCAL_TICKET_FILE",
         tmp_path / "tickets.jsonl",
     )
 
@@ -55,10 +55,10 @@ def test_update_ticket(tmp_path, monkeypatch):
 
 def test_close_ticket(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.ticket_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.ticket_logger._LOCAL_LOG_DIR", tmp_path
     )
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.ticket_logger._LOCAL_TICKET_FILE",
+        "custom_data_mcp.engine.ticket_logger._LOCAL_TICKET_FILE",
         tmp_path / "tickets.jsonl",
     )
 
@@ -77,10 +77,10 @@ def test_close_ticket(tmp_path, monkeypatch):
 
 def test_update_nonexistent_ticket(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.ticket_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.ticket_logger._LOCAL_LOG_DIR", tmp_path
     )
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.ticket_logger._LOCAL_TICKET_FILE",
+        "custom_data_mcp.engine.ticket_logger._LOCAL_TICKET_FILE",
         tmp_path / "tickets.jsonl",
     )
 
@@ -91,10 +91,10 @@ def test_update_nonexistent_ticket(tmp_path, monkeypatch):
 
 def test_read_local_tickets_filtered(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.ticket_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.ticket_logger._LOCAL_LOG_DIR", tmp_path
     )
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.ticket_logger._LOCAL_TICKET_FILE",
+        "custom_data_mcp.engine.ticket_logger._LOCAL_TICKET_FILE",
         tmp_path / "tickets.jsonl",
     )
 
@@ -113,10 +113,10 @@ def test_read_local_tickets_filtered(tmp_path, monkeypatch):
 def test_bq_write_failure_does_not_raise(tmp_path, monkeypatch):
     """BigQuery write failures must not propagate."""
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.ticket_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.ticket_logger._LOCAL_LOG_DIR", tmp_path
     )
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.ticket_logger._LOCAL_TICKET_FILE",
+        "custom_data_mcp.engine.ticket_logger._LOCAL_TICKET_FILE",
         tmp_path / "tickets.jsonl",
     )
 
@@ -137,10 +137,10 @@ def test_bq_write_failure_does_not_raise(tmp_path, monkeypatch):
 
 def test_close_nonexistent_returns_none(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.ticket_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.ticket_logger._LOCAL_LOG_DIR", tmp_path
     )
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.ticket_logger._LOCAL_TICKET_FILE",
+        "custom_data_mcp.engine.ticket_logger._LOCAL_TICKET_FILE",
         tmp_path / "tickets.jsonl",
     )
 

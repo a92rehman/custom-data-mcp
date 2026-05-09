@@ -7,14 +7,14 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-from taleemabad_data_mcp.models.feedback import FeedbackEntry
+from custom_data_mcp.models.feedback import FeedbackEntry
 
 if TYPE_CHECKING:
     from google.cloud import bigquery
 
 logger = structlog.get_logger()
 
-_LOCAL_LOG_DIR = Path.home() / ".claude" / "taleemabad-logs"
+_LOCAL_LOG_DIR = Path.home() / ".claude" / "custom-data-logs"
 _LOCAL_LOG_FILE = _LOCAL_LOG_DIR / "feedback.jsonl"
 
 

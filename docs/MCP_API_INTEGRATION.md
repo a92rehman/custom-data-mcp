@@ -1,4 +1,4 @@
-# Taleemabad Data MCP — API Integration Guide
+# Custom Data MCP — API Integration Guide
 
 **Base URL:** `https://mcp-server-production-337f.up.railway.app`
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-The Taleemabad Data MCP server provides governed access to BigQuery datasets across all Taleemabad regions (ICT, Rawalpindi, Moawin/Akhuwat, MySchool). It runs on Railway and exposes tools via the MCP protocol (JSON-RPC 2.0 over HTTP).
+The Custom Data MCP server provides governed access to BigQuery datasets across all regions (ICT, Rawalpindi, Moawin/Akhuwat, MySchool). It runs on Railway and exposes tools via the MCP protocol (JSON-RPC 2.0 over HTTP).
 
 **No API keys or credentials are needed on the client side.** BigQuery authentication is handled server-side.
 
@@ -21,7 +21,7 @@ Add to `.mcp.json` in your project root:
 ```json
 {
   "mcpServers": {
-    "taleemabad-data": {
+    "custom-data": {
       "type": "url",
       "url": "https://mcp-server-production-337f.up.railway.app/mcp"
     }
@@ -34,7 +34,7 @@ Or add to user settings at `~/.claude/settings.json`:
 ```json
 {
   "mcpServers": {
-    "taleemabad-data": {
+    "custom-data": {
       "type": "url",
       "url": "https://mcp-server-production-337f.up.railway.app/mcp"
     }

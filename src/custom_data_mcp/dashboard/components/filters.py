@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from taleemabad_data_mcp.dashboard.data.queries import (
+from custom_data_mcp.dashboard.data.queries import (
     get_distinct_domains,
     get_distinct_users,
 )

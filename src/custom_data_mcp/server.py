@@ -20,18 +20,18 @@ import structlog
 from google.cloud import bigquery
 from mcp.server.fastmcp import FastMCP
 
-from taleemabad_data_mcp import __version__
-from taleemabad_data_mcp.config import ServerConfig
-from taleemabad_data_mcp.engine.audit_logger import AuditLogger
-from taleemabad_data_mcp.engine.cost_estimator import CostEstimator
-from taleemabad_data_mcp.engine.domain_classifier import classify_domain
-from taleemabad_data_mcp.engine.errors import (
+from custom_data_mcp import __version__
+from custom_data_mcp.config import ServerConfig
+from custom_data_mcp.engine.audit_logger import AuditLogger
+from custom_data_mcp.engine.cost_estimator import CostEstimator
+from custom_data_mcp.engine.domain_classifier import classify_domain
+from custom_data_mcp.engine.errors import (
     classify_bigquery_error,
     format_error_response,
     format_success_response,
 )
-from taleemabad_data_mcp.engine.feedback_logger import FeedbackLogger
-from taleemabad_data_mcp.engine.ticket_logger import TicketLogger
+from custom_data_mcp.engine.feedback_logger import FeedbackLogger
+from custom_data_mcp.engine.ticket_logger import TicketLogger
 
 logger = structlog.get_logger()
 
@@ -57,15 +57,15 @@ ALLOWED_EMAIL_DOMAINS = {"taleemabad.com", "niete.edu.pk", "niete.pk"}
 
 def _is_remote_mode() -> bool:
     """Check if running in remote mode (Railway deployment)."""
-    return os.environ.get("TALEEMABAD_REMOTE_MODE", "").lower() in ("1", "true", "yes")
+    return os.environ.get("CUSTOM_DATA_REMOTE_MODE", "").lower() in ("1", "true", "yes")
 
 
 def _read_user_from_env_file() -> str | None:
-    """Read TALEEMABAD_USER from saved env file.
+    """Read CUSTOM_DATA_USER from saved env file.
 
-    The plugin .mcp.json passes ${TALEEMABAD_USER} but Claude Code does not
+    The plugin .mcp.json passes ${CUSTOM_DATA_USER} but Claude Code does not
     expand arbitrary env vars. This function reads the value directly from
-    the env file written by /taleemabad-setup.
+    the env file written by /custom-data-setup.
     """
     if not _ENV_FILE.exists():
         return None
@@ -73,7 +73,7 @@ def _read_user_from_env_file() -> str | None:
         for line in _ENV_FILE.read_text(encoding="utf-8").strip().split("\n"):
             if "=" in line:
                 key, value = line.split("=", 1)
-                if key.strip() == "TALEEMABAD_USER" and value.strip():
+                if key.strip() == "CUSTOM_DATA_USER" and value.strip():
                     return value.strip()
     except Exception:
         pass
@@ -87,8 +87,8 @@ def _get_request_user_email() -> str | None:
     """
     try:
         from fastmcp.server.dependencies import get_http_headers
-        headers = get_http_headers(include={"x-taleemabad-user"})
-        return headers.get("x-taleemabad-user")
+        headers = get_http_headers(include={"x-custom-data-user"})
+        return headers.get("x-custom-data-user")
     except (ImportError, RuntimeError):
         return None
 
@@ -104,10 +104,10 @@ def _validate_email_domain(email: str) -> bool:
 def _validate_bearer_token() -> bool:
     """Validate the Authorization bearer token from HTTP headers.
 
-    Returns True if token matches the server's TALEEMABAD_API_TOKEN,
+    Returns True if token matches the server's CUSTOM_DATA_API_TOKEN,
     or if no token is configured (open access).
     """
-    expected_token = os.environ.get("TALEEMABAD_API_TOKEN", "")
+    expected_token = os.environ.get("CUSTOM_DATA_API_TOKEN", "")
     if not expected_token:
         return True  # No token configured = open access
 
@@ -150,7 +150,7 @@ def _require_auth(app: "AppContext") -> str | None:
         return None
 
     # Email header is optional — used for audit enrichment only
-    # Treat unexpanded env var placeholders (e.g. "${TALEEMABAD_USER}") as absent
+    # Treat unexpanded env var placeholders (e.g. "${CUSTOM_DATA_USER}") as absent
     # Treat non-email values (no @) as absent — MCP clients may send session IDs
     email = _get_request_user_email()
     if email and (email.startswith("${") or email.startswith("${")):
@@ -181,10 +181,10 @@ async def app_lifespan(server: FastMCP):
     remote_mode = _is_remote_mode()
 
     # Override user name from env file if config has unexpanded var or default
-    if not remote_mode and config.taleemabad_user in ("unknown", "", "${TALEEMABAD_USER}"):
+    if not remote_mode and config.custom_data_user in ("unknown", "", "${CUSTOM_DATA_USER}"):
         env_user = _read_user_from_env_file()
         if env_user:
-            config.taleemabad_user = env_user
+            config.custom_data_user = env_user
             logger.info("user_name_loaded", source="env_file", user=env_user)
 
     bq_client = None
@@ -207,8 +207,8 @@ async def app_lifespan(server: FastMCP):
             project=config.bigquery_project,
             audit_dataset=config.audit_dataset,
             audit_table=config.audit_table,
-            user_name=config.taleemabad_user,
-            hostname=config.taleemabad_hostname,
+            user_name=config.custom_data_user,
+            hostname=config.custom_data_hostname,
             remote_mode=remote_mode,
         )
         cost_estimator = CostEstimator(bq_client, max_bytes=config.bigquery_max_bytes)
@@ -217,14 +217,14 @@ async def app_lifespan(server: FastMCP):
             project=config.bigquery_project,
             audit_dataset=config.audit_dataset,
             feedback_table="query_feedback",
-            user_name=config.taleemabad_user,
+            user_name=config.custom_data_user,
         )
         ticket_logger = TicketLogger(
             bq_client=bq_client,
             project=config.bigquery_project,
             audit_dataset=config.audit_dataset,
-            user_email=config.taleemabad_user if config.taleemabad_user != "unknown" else None,
-            hostname=config.taleemabad_hostname,
+            user_email=config.custom_data_user if config.custom_data_user != "unknown" else None,
+            hostname=config.custom_data_hostname,
         )
 
         logger.info(
@@ -256,7 +256,7 @@ async def app_lifespan(server: FastMCP):
 
 
 mcp = FastMCP(
-    f"Taleemabad Data Navigator v{__version__}",
+    f"Custom Data Navigator v{__version__}",
     lifespan=app_lifespan,
 )
 
@@ -589,7 +589,7 @@ async def submit_feedback(
 
 @mcp.tool()
 async def get_version() -> str:
-    """Get the installed version of the Taleemabad Data MCP.
+    """Get the installed version of the Custom Data MCP.
 
     Use this when the user asks what version they are running,
     or when troubleshooting to confirm the installed version.
@@ -607,8 +607,8 @@ async def get_version() -> str:
             pass  # Fall back to configured list
 
     return (
-        f"Taleemabad Data Navigator v{__version__}\n"
-        f"User: {app.config.taleemabad_user}\n"
+        f"Custom Data Navigator v{__version__}\n"
+        f"User: {app.config.custom_data_user}\n"
         f"Project: {app.config.bigquery_project}\n"
         f"Datasets: {datasets_str}"
     )
@@ -719,7 +719,7 @@ async def save_query_results(
         return f"Invalid format '{format}'. Must be 'csv' or 'json'."
 
     user_email = _get_audit_email(app)
-    user_display = user_email or app.config.taleemabad_user
+    user_display = user_email or app.config.custom_data_user
 
     try:
         job_config = bigquery.QueryJobConfig(
@@ -782,7 +782,7 @@ async def save_query_results(
 
         # In remote mode, return content directly (can't write to server filesystem)
         if app.remote_mode:
-            filename = f"taleemabad_export_{timestamp}_{domain}.{format}"
+            filename = f"custom_data_export_{timestamp}_{domain}.{format}"
             return (
                 f"FILE_CONTENT:{filename}\n"
                 f"---\n"
@@ -795,7 +795,7 @@ async def save_query_results(
         if not out_path.is_dir():
             return f"Output directory '{output_dir}' does not exist."
 
-        filename = f"taleemabad_export_{timestamp}_{domain}.{format}"
+        filename = f"custom_data_export_{timestamp}_{domain}.{format}"
         filepath = out_path / filename
         filepath.write_text(file_content, encoding="utf-8")
         return f"Saved {len(rows)} rows to {filepath} ({format.upper()})"
@@ -931,7 +931,7 @@ async def report_ticket(
 
     tl = app.ticket_logger
     if tl is None:
-        tl = TicketLogger(hostname=app.config.taleemabad_hostname)
+        tl = TicketLogger(hostname=app.config.custom_data_hostname)
 
     ticket = tl.open_ticket(
         loop=loop,
@@ -970,7 +970,7 @@ async def update_ticket(
 
     tl = app.ticket_logger
     if tl is None:
-        tl = TicketLogger(hostname=app.config.taleemabad_hostname)
+        tl = TicketLogger(hostname=app.config.custom_data_hostname)
 
     ticket = tl.update_ticket(
         ticket_id=ticket_id,
@@ -1011,7 +1011,7 @@ async def close_ticket(
 
     tl = app.ticket_logger
     if tl is None:
-        tl = TicketLogger(hostname=app.config.taleemabad_hostname)
+        tl = TicketLogger(hostname=app.config.custom_data_hostname)
 
     ticket = tl.close_ticket(
         ticket_id=ticket_id,

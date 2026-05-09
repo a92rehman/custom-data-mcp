@@ -1,4 +1,4 @@
-# Data Governance MCP — Taleemabad
+# Data Governance MCP — Custom Data
 
 Python MCP server — thin BigQuery execution layer with governed data agents.
 See [VISION.md](docs/VISION.md) for why and what. See [README.md](README.md) for installation.
@@ -40,22 +40,22 @@ Do NOT generate SQL yourself. Do NOT call `execute_query` without the agent's go
 ## Commands
 ```bash
 uv sync                                    # Install dependencies
-uv run python -m taleemabad_data_mcp       # Run server (stdio)
+uv run python -m custom_data_mcp       # Run server (stdio)
 uv run pytest                              # Run tests
-uv run pytest --cov=src/taleemabad_data_mcp --cov-report=term-missing
+uv run pytest --cov=src/custom_data_mcp --cov-report=term-missing
 uv run ruff check src/ tests/             # Lint
 uv run ruff format src/ tests/            # Format
 ```
 
 ## CLI Commands
 ```bash
-python -m taleemabad_data_mcp setup --email <email>  # Save email
-python -m taleemabad_data_mcp version       # Show installed version
-python -m taleemabad_data_mcp serve         # Run MCP server (stdio)
-python -m taleemabad_data_mcp serve-remote  # Run MCP server (HTTP, Railway)
-python -m taleemabad_data_mcp dashboard     # Launch Streamlit dashboard
-python -m taleemabad_data_mcp uninstall     # Remove user config
-python -m taleemabad_data_mcp bump          # Patch version bump (bump --minor for minor)
+python -m custom_data_mcp setup --email <email>  # Save email
+python -m custom_data_mcp version       # Show installed version
+python -m custom_data_mcp serve         # Run MCP server (stdio)
+python -m custom_data_mcp serve-remote  # Run MCP server (HTTP, Railway)
+python -m custom_data_mcp dashboard     # Launch Streamlit dashboard
+python -m custom_data_mcp uninstall     # Remove user config
+python -m custom_data_mcp bump          # Patch version bump (bump --minor for minor)
 ```
 
 ## Project Structure
@@ -64,7 +64,7 @@ python -m taleemabad_data_mcp bump          # Patch version bump (bump --minor f
 .claude-plugin/
   plugin.json                   # Plugin manifest (agents, commands)
   marketplace.json              # Marketplace listing
-src/taleemabad_data_mcp/        # Python MCP server package
+src/custom_data_mcp/        # Python MCP server package
   __init__.py                   # Package version (__version__)
   __main__.py                   # Entry point (routes to CLI)
   cli.py                        # CLI: setup, bump, serve, serve-remote, dashboard, uninstall
@@ -106,20 +106,20 @@ docs/
 Teams install via Claude Code plugin system:
 ```bash
 claude plugin marketplace add a92rehman/custom-data-mcp
-claude plugin install taleemabad-data@a92rehman
-# Then in Claude Code: /taleemabad-setup (one time, for email)
+claude plugin install custom-data@a92rehman
+# Then in Claude Code: /custom-data-setup (one time, for email)
 ```
 The plugin bundles `.mcp.json` pointing to the remote MCP server URL. No local Python, uv, or credentials needed.
 
 ## For Developers: Editing Governance Rules
 
-Rules define what queries are valid. They live in `src/taleemabad_data_mcp/rules/`.
+Rules define what queries are valid. They live in `src/custom_data_mcp/rules/`.
 
 ### How rules propagate
 ```
-src/taleemabad_data_mcp/rules/   ← SOURCE OF TRUTH (committed)
+src/custom_data_mcp/rules/   ← SOURCE OF TRUTH (committed)
         │
-        │  `python -m taleemabad_data_mcp bump`
+        │  `python -m custom_data_mcp bump`
         └──▶ rules/                           (plugin agents read from here)
                 │
                 │  git push --tags
@@ -129,18 +129,18 @@ PLUGIN_CACHE/rules/              ← User's copy (auto-downloaded)
                 │
                 │  session-start hook writes absolute path
                 ▼
-~/.claude/taleemabad-rules-path  ← Pointer file (agent reads this to find rules)
+~/.claude/custom-data-rules-path  ← Pointer file (agent reads this to find rules)
 ```
 
 ### How the agent finds rules
 The data-analyst agent runs as a subprocess from the user's working directory — NOT the plugin directory. It cannot use relative paths to find rules in the plugin cache.
 
-The session-start hook writes `~/.claude/taleemabad-rules-path` containing the absolute path to the rules directory (e.g., `/home/user/.claude/plugins/cache/a92rehman/taleemabad-data/0.17.15/rules`). The agent reads this file first, then uses the path to read `index.md` and domain-specific rule files.
+The session-start hook writes `~/.claude/custom-data-rules-path` containing the absolute path to the rules directory (e.g., `/home/user/.claude/plugins/cache/a92rehman/custom-data/0.17.15/rules`). The agent reads this file first, then uses the path to read `index.md` and domain-specific rule files.
 
 ### Steps to add a new rule
-1. Create the `.md` file in `src/taleemabad_data_mcp/rules/<region>/<domain>/`
-2. Add an entry in `src/taleemabad_data_mcp/rules/index.md`
-3. Run `python -m taleemabad_data_mcp bump`
+1. Create the `.md` file in `src/custom_data_mcp/rules/<region>/<domain>/`
+2. Add an entry in `src/custom_data_mcp/rules/index.md`
+3. Run `python -m custom_data_mcp bump`
 4. Commit, tag, and push — users get it automatically
 
 ### Important

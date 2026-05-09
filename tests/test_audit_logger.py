@@ -1,14 +1,14 @@
 """Tests for audit logging."""
 
-from taleemabad_data_mcp.engine.audit_logger import AuditLogger
+from custom_data_mcp.engine.audit_logger import AuditLogger
 
 
 def test_log_creates_entry(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.audit_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.audit_logger._LOCAL_LOG_DIR", tmp_path
     )
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.audit_logger._LOCAL_LOG_FILE",
+        "custom_data_mcp.engine.audit_logger._LOCAL_LOG_FILE",
         tmp_path / "activity.jsonl",
     )
     logger = AuditLogger(user_name="test-user", hostname="test-host")
@@ -28,11 +28,11 @@ def test_log_creates_entry(tmp_path, monkeypatch):
 
 def test_log_writes_local_file(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.audit_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.audit_logger._LOCAL_LOG_DIR", tmp_path
     )
     log_file = tmp_path / "activity.jsonl"
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.audit_logger._LOCAL_LOG_FILE", log_file
+        "custom_data_mcp.engine.audit_logger._LOCAL_LOG_FILE", log_file
     )
     logger = AuditLogger()
     logger.log(query_text="query 1")
@@ -43,10 +43,10 @@ def test_log_writes_local_file(tmp_path, monkeypatch):
 
 def test_log_with_error(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.audit_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.audit_logger._LOCAL_LOG_DIR", tmp_path
     )
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.audit_logger._LOCAL_LOG_FILE",
+        "custom_data_mcp.engine.audit_logger._LOCAL_LOG_FILE",
         tmp_path / "activity.jsonl",
     )
     logger = AuditLogger()
@@ -60,10 +60,10 @@ def test_log_with_error(tmp_path, monkeypatch):
 
 def test_log_with_cost(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.audit_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.audit_logger._LOCAL_LOG_DIR", tmp_path
     )
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.audit_logger._LOCAL_LOG_FILE",
+        "custom_data_mcp.engine.audit_logger._LOCAL_LOG_FILE",
         tmp_path / "activity.jsonl",
     )
     logger = AuditLogger()
@@ -78,10 +78,10 @@ def test_log_with_cost(tmp_path, monkeypatch):
 
 def test_log_with_domain(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.audit_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.audit_logger._LOCAL_LOG_DIR", tmp_path
     )
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.audit_logger._LOCAL_LOG_FILE",
+        "custom_data_mcp.engine.audit_logger._LOCAL_LOG_FILE",
         tmp_path / "activity.jsonl",
     )
     logger = AuditLogger()
@@ -91,10 +91,10 @@ def test_log_with_domain(tmp_path, monkeypatch):
 
 def test_log_domain_defaults_to_other(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.audit_logger._LOCAL_LOG_DIR", tmp_path
+        "custom_data_mcp.engine.audit_logger._LOCAL_LOG_DIR", tmp_path
     )
     monkeypatch.setattr(
-        "taleemabad_data_mcp.engine.audit_logger._LOCAL_LOG_FILE",
+        "custom_data_mcp.engine.audit_logger._LOCAL_LOG_FILE",
         tmp_path / "activity.jsonl",
     )
     logger = AuditLogger()

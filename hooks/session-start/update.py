@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Taleemabad Data Plugin — cross-platform session-start hook.
+"""Custom Data Plugin — cross-platform session-start hook.
 
 Downloads latest governance rules into the plugin's rules/ directory.
 Pure stdlib — no third-party dependencies required.
 
 Flow:
-  1. Export TALEEMABAD_USER from saved env file
+  1. Export CUSTOM_DATA_USER from saved env file
   2. If rules were checked <6 hours ago: skip network call
   3. Otherwise: check latest tag, download rules/ via shallow clone
   4. Fallback: plugin ships with rules/ already — no sync needed
 
-Set TALEEMABAD_PIN_VERSION=v0.17.5 to lock to a specific version.
-Delete ~/.claude/taleemabad-rules-version to force immediate refresh.
+Set CUSTOM_DATA_PIN_VERSION=v0.17.5 to lock to a specific version.
+Delete ~/.claude/custom-data-rules-version to force immediate refresh.
 """
 
 from __future__ import annotations
@@ -29,10 +29,10 @@ CHECK_INTERVAL = 21600  # 6 hours in seconds
 # Paths
 HOME = Path.home()
 CLAUDE_DIR = HOME / ".claude"
-VERSION_FILE = CLAUDE_DIR / "taleemabad-rules-version"
+VERSION_FILE = CLAUDE_DIR / "custom-data-rules-version"
 ENV_FILE = CLAUDE_DIR / "custom-data-mcp.env"
-RULES_PATH_FILE = CLAUDE_DIR / "taleemabad-rules-path"
-HOOK_LOG = CLAUDE_DIR / "taleemabad-hook.log"
+RULES_PATH_FILE = CLAUDE_DIR / "custom-data-rules-path"
+HOOK_LOG = CLAUDE_DIR / "custom-data-hook.log"
 
 # Set up file logging (never stdout — hooks are fire-and-forget)
 logging.basicConfig(
@@ -41,19 +41,19 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-log = logging.getLogger("taleemabad-hook")
+log = logging.getLogger("custom-data-hook")
 
 
 def _export_user_env() -> None:
-    """Read TALEEMABAD_USER from env file and set in current process."""
+    """Read CUSTOM_DATA_USER from env file and set in current process."""
     if not ENV_FILE.exists():
         return
     try:
         for line in ENV_FILE.read_text(encoding="utf-8").strip().splitlines():
             if "=" in line:
                 key, _, value = line.partition("=")
-                if key.strip() == "TALEEMABAD_USER" and value.strip():
-                    os.environ["TALEEMABAD_USER"] = value.strip()
+                if key.strip() == "CUSTOM_DATA_USER" and value.strip():
+                    os.environ["CUSTOM_DATA_USER"] = value.strip()
     except Exception as e:
         log.warning("Failed to read env file: %s", e)
 
@@ -67,7 +67,7 @@ def _find_plugin_dir() -> Path | None:
             return p
 
     # Search the plugin cache
-    cache_base = CLAUDE_DIR / "plugins" / "cache" / "a92rehman" / "taleemabad-data"
+    cache_base = CLAUDE_DIR / "plugins" / "cache" / "a92rehman" / "custom-data"
     if cache_base.is_dir():
         for d in sorted(cache_base.iterdir(), reverse=True):
             if (d / ".claude-plugin").is_dir():
@@ -138,7 +138,7 @@ def _download_rules(tag: str, dest: Path) -> bool:
     import shutil
     import tempfile
 
-    tmp_dir = Path(tempfile.mkdtemp(prefix="taleemabad-"))
+    tmp_dir = Path(tempfile.mkdtemp(prefix="custom-data-"))
     plugin_dir = dest.parent  # dest is plugin_dir/rules
     try:
         repo_dir = tmp_dir / "repo"
@@ -244,7 +244,7 @@ def _write_rules_path(rules_dest: Path) -> None:
 
 def _cleanup_old_global_rules() -> None:
     """Remove old global rules that bypass agent governance."""
-    old_rules = CLAUDE_DIR / "rules" / "taleemabad"
+    old_rules = CLAUDE_DIR / "rules" / "custom-data"
     if old_rules.is_dir():
         import shutil
         try:
@@ -278,9 +278,9 @@ def _auto_heal(plugin_dir: Path, rules_dest: Path) -> None:
             try:
                 ENV_FILE.parent.mkdir(parents=True, exist_ok=True)
                 ENV_FILE.write_text(
-                    f"TALEEMABAD_USER={recovered_user}\n", encoding="utf-8"
+                    f"CUSTOM_DATA_USER={recovered_user}\n", encoding="utf-8"
                 )
-                os.environ["TALEEMABAD_USER"] = recovered_user
+                os.environ["CUSTOM_DATA_USER"] = recovered_user
                 fixed.append("user_env_missing")
                 log.info("Auto-healed: recovered user '%s' from audit log", recovered_user)
             except Exception as e:
@@ -293,15 +293,15 @@ def _auto_heal(plugin_dir: Path, rules_dest: Path) -> None:
         if "${" in content:
             # The env file itself has the placeholder — try to find real value
             # from audit log or existing env var
-            real_user = os.environ.get("TALEEMABAD_USER", "")
+            real_user = os.environ.get("CUSTOM_DATA_USER", "")
             if not real_user or real_user.startswith("${"):
                 real_user = _recover_user_from_audit_log()
             if real_user and not real_user.startswith("${"):
                 try:
                     ENV_FILE.write_text(
-                        f"TALEEMABAD_USER={real_user}\n", encoding="utf-8"
+                        f"CUSTOM_DATA_USER={real_user}\n", encoding="utf-8"
                     )
-                    os.environ["TALEEMABAD_USER"] = real_user
+                    os.environ["CUSTOM_DATA_USER"] = real_user
                     fixed.append("user_env_unexpanded")
                     log.info("Auto-healed: fixed unexpanded env var")
                 except Exception:
@@ -365,7 +365,7 @@ def _recover_user_from_audit_log() -> str | None:
     Checks user_email first (prefer email), then falls back to user_name.
     Accepts any non-empty, non-placeholder value — not just emails.
     """
-    audit_file = CLAUDE_DIR / "taleemabad-logs" / "activity.jsonl"
+    audit_file = CLAUDE_DIR / "custom-data-logs" / "activity.jsonl"
     if not audit_file.exists():
         return None
     try:
@@ -410,7 +410,7 @@ def main() -> None:
         _cleanup_old_global_rules()
 
         # Respect version pin — skip network update but still auto-heal
-        if os.environ.get("TALEEMABAD_PIN_VERSION"):
+        if os.environ.get("CUSTOM_DATA_PIN_VERSION"):
             log.info("Version pinned, skipping update")
             _auto_heal(plugin_dir, rules_dest)
             return
@@ -427,7 +427,7 @@ def main() -> None:
         if latest and latest != current:
             if _download_rules(latest, rules_dest):
                 log.info("Rules updated to %s", latest)
-                print(f"[Taleemabad Data] Updated to {latest}")
+                print(f"[Custom Data] Updated to {latest}")
             else:
                 _touch_version()
         elif latest:

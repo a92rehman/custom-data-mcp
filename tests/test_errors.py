@@ -1,6 +1,6 @@
 """Tests for BigQuery error classification and structured responses."""
 
-from taleemabad_data_mcp.engine.errors import (
+from custom_data_mcp.engine.errors import (
     BIGQUERY_UNAVAILABLE,
     COST_EXCEEDED,
     MISSING_PARTITION,

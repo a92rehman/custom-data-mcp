@@ -1,20 +1,20 @@
 {
   "name": "a92rehman",
   "owner": {
-    "name": "Orenda Project",
+    "name": "a92rehman",
     "email": "tech@orenda.pk"
   },
   "metadata": {
-    "description": "Taleemabad Data MCP \u2014 governed BigQuery analytics for Taleemabad education platform"
+    "description": "Custom Data MCP — governed BigQuery analytics with self-healing agents"
   },
   "plugins": [
     {
-      "name": "taleemabad-data",
+      "name": "custom-data",
       "source": "./",
-      "description": "Governed semantic layer for Taleemabad BigQuery data. Four agents (data-analyst, data-admin, query-fixer, system-doctor) with self-healing query loop, ticket-tracked infrastructure recovery, auto-updating governance rules, and full audit trail.",
+      "description": "Governed semantic layer for BigQuery data. Four agents (data-analyst, data-admin, query-fixer, system-doctor) with self-healing query loop, ticket-tracked infrastructure recovery, auto-updating governance rules, and full audit trail.",
       "version": "0.18.4",
       "author": {
-        "name": "Orenda Project",
+        "name": "a92rehman",
         "email": "tech@orenda.pk"
       },
       "homepage": "https://github.com/a92rehman/custom-data-mcp",
@@ -25,7 +25,7 @@
         "analytics",
         "data-governance",
         "education",
-        "taleemabad"
+        "custom-data"
       ],
       "category": "data",
       "tags": [
@@ -33,7 +33,7 @@
         "analytics",
         "data-governance",
         "education",
-        "taleemabad"
+        "custom-data"
       ]
     }
   ]

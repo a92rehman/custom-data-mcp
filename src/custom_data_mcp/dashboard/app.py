@@ -1,4 +1,4 @@
-"""Taleemabad Data MCP — Observatory Dashboard.
+"""Custom Data MCP — Observatory Dashboard.
 
 Uses st.navigation API for full control over sidebar page labels.
 """
@@ -9,7 +9,7 @@ from pathlib import Path
 import streamlit as st
 
 st.set_page_config(
-    page_title="Taleemabad MCP Observatory",
+    page_title="Custom Data MCP Observatory",
     page_icon="T",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -26,7 +26,7 @@ def check_password() -> bool:
         st.session_state.authenticated = False
     if st.session_state.authenticated:
         return True
-    st.title("Taleemabad MCP Observatory")
+    st.title("Custom Data MCP Observatory")
     entered = st.text_input("Password", type="password")
     if st.button("Login"):
         if entered == password:

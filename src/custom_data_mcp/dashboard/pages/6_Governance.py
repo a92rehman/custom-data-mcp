@@ -9,13 +9,13 @@ if _src not in _sys.path:
 import pandas as pd
 import streamlit as st
 
-from taleemabad_data_mcp.dashboard.data.projects import (
+from custom_data_mcp.dashboard.data.projects import (
     get_all_tables,
     get_governance_coverage,
     load_projects,
     format_rows,
 )
-from taleemabad_data_mcp.dashboard.components.styles import (
+from custom_data_mcp.dashboard.components.styles import (
     COLORS, inject_page_css, page_header, section_header,
 )
 

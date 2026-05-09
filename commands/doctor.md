@@ -1,6 +1,6 @@
-# /taleemabad-doctor
+# /custom-data-doctor
 
-Run system health checks and auto-fix common Taleemabad Data MCP issues.
+Run system health checks and auto-fix common Custom Data MCP issues.
 
 ## What it does
 
@@ -30,7 +30,7 @@ Show the user the system-doctor's health report summary:
 ### Step 3: Recommendations
 
 If any issues remain unresolved, provide clear next steps:
-- For `user_env_missing`: "Run `/taleemabad-setup` to configure your email"
-- For `plugin_not_installed`: "Run `claude plugin install taleemabad-data@a92rehman`"
-- For `plugin_outdated`: "Run `claude plugin update taleemabad-data@a92rehman`"
+- For `user_env_missing`: "Run `/custom-data-setup` to configure your email"
+- For `plugin_not_installed`: "Run `claude plugin install custom-data@a92rehman`"
+- For `plugin_outdated`: "Run `claude plugin update custom-data@a92rehman`"
 - For escalated issues: "A GitHub issue has been filed at <URL>. The data team will investigate."

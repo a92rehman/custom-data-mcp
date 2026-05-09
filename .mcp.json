@@ -1,10 +1,10 @@
 {
   "mcpServers": {
-    "taleemabad-data": {
+    "custom-data": {
       "type": "http",
       "url": "https://mcp-server-production-337f.up.railway.app/mcp",
       "headers": {
-        "X-Taleemabad-User": "${TALEEMABAD_USER}"
+        "X-Custom-Data-User": "${CUSTOM_DATA_USER}"
       }
     }
   }

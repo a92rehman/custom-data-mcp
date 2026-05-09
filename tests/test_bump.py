@@ -9,7 +9,7 @@ import pytest
 @pytest.fixture
 def fake_repo(tmp_path):
     """Create a minimal fake repo structure for testing bump_version."""
-    src = tmp_path / "src" / "taleemabad_data_mcp"
+    src = tmp_path / "src" / "custom_data_mcp"
     src.mkdir(parents=True)
     (src / "__init__.py").write_text('__version__ = "0.4.8"\n')
 
@@ -32,7 +32,7 @@ def fake_repo(tmp_path):
     manifest_dir = tmp_path / ".claude-plugin"
     manifest_dir.mkdir()
     (manifest_dir / "plugin.json").write_text(
-        json.dumps({"name": "taleemabad-data", "version": "0.4.8"}) + "\n"
+        json.dumps({"name": "custom-data", "version": "0.4.8"}) + "\n"
     )
 
     # Existing rules/ with stale content (should be replaced by bump)
@@ -45,22 +45,22 @@ def fake_repo(tmp_path):
 
 def _call_bump(fake_repo, minor=False):
     """Call bump_version with fake_repo as the project root."""
-    from taleemabad_data_mcp.cli import bump_version
-    # Patch Path(__file__).parent inside bump_version to point at fake_repo/src/taleemabad_data_mcp
-    fake_cli_file = fake_repo / "src" / "taleemabad_data_mcp" / "cli.py"
-    with patch("taleemabad_data_mcp.cli.__file__", str(fake_cli_file)):
+    from custom_data_mcp.cli import bump_version
+    # Patch Path(__file__).parent inside bump_version to point at fake_repo/src/custom_data_mcp
+    fake_cli_file = fake_repo / "src" / "custom_data_mcp" / "cli.py"
+    with patch("custom_data_mcp.cli.__file__", str(fake_cli_file)):
         bump_version(minor=minor)
 
 
 def test_patch_bump_updates_init(fake_repo):
     _call_bump(fake_repo, minor=False)
-    text = (fake_repo / "src" / "taleemabad_data_mcp" / "__init__.py").read_text()
+    text = (fake_repo / "src" / "custom_data_mcp" / "__init__.py").read_text()
     assert '__version__ = "0.4.9"' in text
 
 
 def test_minor_bump_updates_init(fake_repo):
     _call_bump(fake_repo, minor=True)
-    text = (fake_repo / "src" / "taleemabad_data_mcp" / "__init__.py").read_text()
+    text = (fake_repo / "src" / "custom_data_mcp" / "__init__.py").read_text()
     assert '__version__ = "0.5.0"' in text
 
 

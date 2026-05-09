@@ -8,8 +8,8 @@ set -e
 # Make the package importable by adding a .pth file to the venv site-packages
 SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])" 2>/dev/null)
 if [ -n "$SITE_PACKAGES" ]; then
-    echo "/app/src" > "${SITE_PACKAGES}/taleemabad_src.pth"
-    echo "Added /app/src to ${SITE_PACKAGES}/taleemabad_src.pth"
+    echo "/app/src" > "${SITE_PACKAGES}/custom_data_src.pth"
+    echo "Added /app/src to ${SITE_PACKAGES}/custom_data_src.pth"
 fi
 export PYTHONPATH="${PYTHONPATH}:/app/src"
 
@@ -24,4 +24,4 @@ else
 fi
 
 echo "Starting MCP server on port ${PORT:-8000}..."
-python -m taleemabad_data_mcp serve-remote
+python -m custom_data_mcp serve-remote

@@ -18,7 +18,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 # Import only styles (no filters — those pull in BQ client)
-from taleemabad_data_mcp.dashboard.components.styles import (
+from custom_data_mcp.dashboard.components.styles import (
     CHART_H,
     CHART_H_SM,
     COLORS,
@@ -39,7 +39,7 @@ def _load_tickets_from_jsonl(days: int = 30) -> pd.DataFrame:
         "loop", "category", "symptom", "severity", "status",
         "diagnosis", "resolution_notes", "escalated_to", "related_event_id",
     ]
-    local_file = _Path.home() / ".claude" / "taleemabad-logs" / "tickets.jsonl"
+    local_file = _Path.home() / ".claude" / "custom-data-logs" / "tickets.jsonl"
     if not local_file.exists():
         return pd.DataFrame(columns=cols)
 

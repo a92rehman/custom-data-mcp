@@ -10,13 +10,13 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from taleemabad_data_mcp.dashboard.components.auto_refresh import (
+from custom_data_mcp.dashboard.components.auto_refresh import (
     clear_cache_if_needed,
     inject_auto_refresh,
 )
-from taleemabad_data_mcp.dashboard.components.charts import DOMAIN_COLORS
-from taleemabad_data_mcp.dashboard.components.filters import get_refresh_seconds, render_filters
-from taleemabad_data_mcp.dashboard.components.styles import (
+from custom_data_mcp.dashboard.components.charts import DOMAIN_COLORS
+from custom_data_mcp.dashboard.components.filters import get_refresh_seconds, render_filters
+from custom_data_mcp.dashboard.components.styles import (
     CHART_H,
     CHART_H_SM,
     COLORS,
@@ -24,7 +24,7 @@ from taleemabad_data_mcp.dashboard.components.styles import (
     page_header,
     section_header,
 )
-from taleemabad_data_mcp.dashboard.data.queries import get_activity_log
+from custom_data_mcp.dashboard.data.queries import get_activity_log
 
 inject_page_css()
 

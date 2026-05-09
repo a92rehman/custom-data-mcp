@@ -80,7 +80,7 @@ Open your terminal and run:
 
 ```bash
 claude plugin marketplace add a92rehman/custom-data-mcp
-claude plugin install taleemabad-data@a92rehman
+claude plugin install custom-data@a92rehman
 ```
 
 The first command registers the a92rehman repository as a plugin source.
@@ -93,7 +93,7 @@ The second installs the plugin (agents, slash commands, governance rules, and MC
 Open Claude Code in any project directory and type:
 
 ```
-/taleemabad-setup
+/custom-data-setup
 ```
 
 The setup will ask for your **work email** (for audit logs). Governance rules are managed automatically by the plugin.
@@ -107,7 +107,7 @@ Close and reopen Claude Code, or press `Ctrl+R` to reload.
 Type `/mcp` in Claude Code. You should see:
 
 ```
-taleemabad-data · connected
+custom-data · connected
 ```
 
 Then try: *"How many active PRIMARY teachers are in ICT/Islamabad?"*
@@ -138,7 +138,7 @@ The data-analyst agent reads governance rules, asks mandatory clarification ques
 
 | Command | What It Does |
 |---------|-------------|
-| `/taleemabad-setup` | Save your email for audit logging (one-time) |
+| `/custom-data-setup` | Save your email for audit logging (one-time) |
 | `/mcp` | Check MCP connection status |
 
 ---
@@ -157,7 +157,7 @@ Update manually when:
 - You're experiencing issues that might be fixed in a newer version
 
 ```bash
-claude plugin update taleemabad-data@a92rehman
+claude plugin update custom-data@a92rehman
 ```
 
 ### How to Check Your Version
@@ -174,7 +174,7 @@ If the update command doesn't work (e.g., locked directory on Windows):
 2. Open a fresh terminal (not Claude Code) and run:
 
 ```bash
-claude plugin uninstall taleemabad-data@a92rehman
+claude plugin uninstall custom-data@a92rehman
 claude plugin marketplace remove a92rehman
 ```
 
@@ -182,17 +182,17 @@ claude plugin marketplace remove a92rehman
 
 ```bash
 claude plugin marketplace add a92rehman/custom-data-mcp
-claude plugin install taleemabad-data@a92rehman
+claude plugin install custom-data@a92rehman
 ```
 
-4. Run `/taleemabad-setup` again in Claude Code.
+4. Run `/custom-data-setup` again in Claude Code.
 
 ---
 
 ## Uninstall
 
 ```bash
-claude plugin uninstall taleemabad-data@a92rehman
+claude plugin uninstall custom-data@a92rehman
 claude plugin marketplace remove a92rehman
 ```
 
@@ -264,7 +264,7 @@ User's Machine                              Railway (Cloud)
 |  |   +- hooks/           |                        v
 |  |   +- .mcp.json (URL)  |              Google BigQuery
 |  +- ~/.claude/            |              (niete-bq-prod)
-|  |   +- taleemabad-       |
+|  |   +- custom-data-       |
 |  |   |  rules-path (ptr)  |
 |  |   +- email config      |
 |  |   +- tickets.jsonl     |
@@ -272,7 +272,7 @@ User's Machine                              Railway (Cloud)
 ```
 
 - **Plugin** runs locally: agents read governance rules from the plugin cache and generate correct SQL
-- **Session-start hook** (Python-first) writes `~/.claude/taleemabad-rules-path` so agents can locate rules regardless of working directory; silently auto-heals common issues (missing env, broken paths, stale plugin.json)
+- **Session-start hook** (Python-first) writes `~/.claude/custom-data-rules-path` so agents can locate rules regardless of working directory; silently auto-heals common issues (missing env, broken paths, stale plugin.json)
 - **MCP server** runs on Railway: executes queries, enforces cost guardrails, logs audits, manages tickets
 - **Self-healing loops**: query-fixer auto-retries failed SQL (max 3 attempts); system-doctor fixes infrastructure issues with ticket tracking
 - **No local dependencies** needed — no Python, no credentials file, no BigQuery access
@@ -299,14 +299,14 @@ All recovery actions are tracked as tickets (viewable in the dashboard's Tickets
 Make sure you ran both commands:
 ```bash
 claude plugin marketplace add a92rehman/custom-data-mcp
-claude plugin install taleemabad-data@a92rehman
+claude plugin install custom-data@a92rehman
 ```
 
-### /taleemabad-setup not recognized
+### /custom-data-setup not recognized
 Restart Claude Code after installing the plugin. The slash command is provided by the plugin.
 
 ### MCP shows "Setup required"
-Run `/taleemabad-setup` and enter your work email.
+Run `/custom-data-setup` and enter your work email.
 
 ### MCP shows "Unauthorized domain"
 You must use a work email ending with `@taleemabad.com`, `@niete.edu.pk`, or `@niete.pk`.
@@ -321,7 +321,7 @@ You must use a work email ending with `@taleemabad.com`, `@niete.edu.pk`, or `@n
 The repository is private. Ask IT to add your GitHub account to the [a92rehman](https://github.com/a92rehman) organization.
 
 ### Agent not reading rules / generating ad-hoc SQL
-The data-analyst agent needs `~/.claude/taleemabad-rules-path` to find governance rules. This file is created and repaired automatically by the session-start hook. If it's missing:
+The data-analyst agent needs `~/.claude/custom-data-rules-path` to find governance rules. This file is created and repaired automatically by the session-start hook. If it's missing:
 1. Close and reopen Claude Code (triggers the hook which auto-fixes this)
 2. If still missing, check that the plugin is installed: `claude plugin list`
 3. Reinstall if needed (see "Reinstall" section below)
@@ -333,7 +333,7 @@ Close all Claude Code windows and terminals, then retry. The plugin directory ge
 Previous versions required a credentials file and local Python. These are no longer needed:
 - Delete `niete-bq-prod-48ae5260d1ea.json` from your project directories
 - Delete any old `.mcp.json` files from project directories
-- Run `/taleemabad-setup` again to enter your email
+- Run `/custom-data-setup` again to enter your email
 
 ---
 

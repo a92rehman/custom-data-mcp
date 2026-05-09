@@ -137,7 +137,7 @@ def _rules_dir() -> Path:
     """
     try:
         # Python 3.9+ path: importlib.resources.files
-        pkg_path = importlib.resources.files("taleemabad_data_mcp") / "rules"
+        pkg_path = importlib.resources.files("custom_data_mcp") / "rules"
         # Resolve to a real filesystem path
         return Path(str(pkg_path))
     except Exception:

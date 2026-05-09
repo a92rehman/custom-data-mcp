@@ -2,7 +2,7 @@
 
 import pytest
 
-from taleemabad_data_mcp.config import ServerConfig
+from custom_data_mcp.config import ServerConfig
 
 
 def test_config_loads_from_env(monkeypatch):

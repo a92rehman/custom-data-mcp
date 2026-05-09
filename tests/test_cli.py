@@ -3,17 +3,17 @@
 
 from click.testing import CliRunner
 
-from taleemabad_data_mcp.cli import _bundled_rules_dir, main
+from custom_data_mcp.cli import _bundled_rules_dir, main
 
 
 def _mock_patches(monkeypatch, claude_dir):
     """Apply common monkeypatches for CLI tests."""
-    monkeypatch.setattr("taleemabad_data_mcp.cli._claude_dir", lambda: claude_dir)
+    monkeypatch.setattr("custom_data_mcp.cli._claude_dir", lambda: claude_dir)
     monkeypatch.setattr(
-        "taleemabad_data_mcp.cli._rules_dest", lambda: claude_dir / "rules" / "taleemabad"
+        "custom_data_mcp.cli._rules_dest", lambda: claude_dir / "rules" / "custom-data"
     )
     monkeypatch.setattr(
-        "taleemabad_data_mcp.cli._env_path", lambda: claude_dir / "custom-data-mcp.env"
+        "custom_data_mcp.cli._env_path", lambda: claude_dir / "custom-data-mcp.env"
     )
     claude_dir.mkdir(parents=True, exist_ok=True)
 
@@ -28,12 +28,12 @@ def test_setup_saves_email_and_cleans_old_rules(tmp_path, monkeypatch):
     assert result.exit_code == 0, result.output
 
     # Old global rules should NOT exist (setup removes them, doesn't create them)
-    rules_dir = claude_dir / "rules" / "taleemabad"
+    rules_dir = claude_dir / "rules" / "custom-data"
     assert not rules_dir.exists()
 
     # Env file was created with email
     env_content = (claude_dir / "custom-data-mcp.env").read_text()
-    assert "TALEEMABAD_USER=test@taleemabad.com" in env_content
+    assert "CUSTOM_DATA_USER=test@taleemabad.com" in env_content
 
     # Setup message mentions rules are managed by plugin
     assert "managed by the plugin" in result.output
@@ -46,12 +46,12 @@ def test_uninstall_removes_rules_and_env(tmp_path, monkeypatch):
     _mock_patches(monkeypatch, claude_dir)
 
     # Create the things that setup would have created
-    rules_dir = claude_dir / "rules" / "taleemabad"
+    rules_dir = claude_dir / "rules" / "custom-data"
     rules_dir.mkdir(parents=True)
     (rules_dir / "index.md").write_text("test")
 
     env_path = claude_dir / "custom-data-mcp.env"
-    env_path.write_text("TALEEMABAD_USER=test")
+    env_path.write_text("CUSTOM_DATA_USER=test")
 
     runner = CliRunner()
     result = runner.invoke(main, ["uninstall"])
@@ -76,12 +76,12 @@ def test_setup_warns_about_old_artifacts(tmp_path, monkeypatch):
     _mock_patches(monkeypatch, claude_dir)
 
     # Create old artifacts
-    old_venv = claude_dir / "taleemabad-venv"
+    old_venv = claude_dir / "custom-data-venv"
     old_venv.mkdir(parents=True)
 
     monkeypatch.chdir(tmp_path)
     old_mcp = tmp_path / ".mcp.json"
-    old_mcp.write_text('{"mcpServers": {"taleemabad-data": {}}}')
+    old_mcp.write_text('{"mcpServers": {"custom-data": {}}}')
 
     runner = CliRunner()
     result = runner.invoke(main, ["setup", "--email", "ali@taleemabad.com"])

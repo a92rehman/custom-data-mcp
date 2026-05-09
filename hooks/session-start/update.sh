@@ -1,31 +1,31 @@
 #!/usr/bin/env bash
-# Taleemabad Data Plugin — session-start hook
+# Custom Data Plugin — session-start hook
 # Downloads latest governance rules into the plugin's rules/ directory.
 # Rules are NOT placed in ~/.claude/rules/ — that would inject them into the
 # parent session's context, causing it to bypass the agent's Read→Clarify→Execute flow.
 #
 # Flow:
-#   1. Export TALEEMABAD_USER from saved env file
+#   1. Export CUSTOM_DATA_USER from saved env file
 #   2. If rules were checked <6 hours ago: skip network call
 #   3. Otherwise: check latest tag, download rules/ via shallow clone
 #   4. Fallback: plugin ships with rules/ already — no sync needed
 #
-# Set TALEEMABAD_PIN_VERSION=v0.17.5 to lock to a specific version.
-# Delete ~/.claude/taleemabad-rules-version to force immediate refresh.
+# Set CUSTOM_DATA_PIN_VERSION=v0.17.5 to lock to a specific version.
+# Delete ~/.claude/custom-data-rules-version to force immediate refresh.
 
 REPO_URL="https://github.com/a92rehman/custom-data-mcp.git"
-VERSION_FILE="${HOME}/.claude/taleemabad-rules-version"
+VERSION_FILE="${HOME}/.claude/custom-data-rules-version"
 ENV_FILE="${HOME}/.claude/custom-data-mcp.env"
 CHECK_INTERVAL=21600  # 6 hours in seconds
 
 # Never prompt for credentials — fail fast if not available
 export GIT_TERMINAL_PROMPT=0
 
-# --- Export TALEEMABAD_USER from saved env file ---
+# --- Export CUSTOM_DATA_USER from saved env file ---
 if [ -f "$ENV_FILE" ]; then
   while IFS='=' read -r key value; do
-    if [ "$key" = "TALEEMABAD_USER" ] && [ -n "$value" ]; then
-      export TALEEMABAD_USER="$value"
+    if [ "$key" = "CUSTOM_DATA_USER" ] && [ -n "$value" ]; then
+      export CUSTOM_DATA_USER="$value"
     fi
   done < "$ENV_FILE"
 fi
@@ -33,7 +33,7 @@ fi
 # --- Locate plugin directory ---
 PLUGIN_DIR="${CLAUDE_PLUGIN_ROOT:-}"
 if [ -z "$PLUGIN_DIR" ]; then
-  for d in "${HOME}/.claude/plugins/cache/a92rehman/taleemabad-data"/*; do
+  for d in "${HOME}/.claude/plugins/cache/a92rehman/custom-data"/*; do
     if [ -d "$d/.claude-plugin" ]; then
       PLUGIN_DIR="$d"
       break
@@ -47,7 +47,7 @@ if [ -z "$PLUGIN_DIR" ] || [ ! -d "$PLUGIN_DIR" ]; then
 fi
 
 RULES_DEST="${PLUGIN_DIR}/rules"
-RULES_PATH_FILE="${HOME}/.claude/taleemabad-rules-path"
+RULES_PATH_FILE="${HOME}/.claude/custom-data-rules-path"
 
 # --- Write rules path immediately (before network update) ---
 # The data-analyst agent needs this to find rules on user machines.
@@ -59,7 +59,7 @@ fi
 
 # --- Clean up old global rules (from previous versions) ---
 # These were injected into parent session context, causing governance bypass.
-OLD_GLOBAL_RULES="${HOME}/.claude/rules/taleemabad"
+OLD_GLOBAL_RULES="${HOME}/.claude/rules/custom-data"
 if [ -d "$OLD_GLOBAL_RULES" ]; then
   rm -rf "$OLD_GLOBAL_RULES"
 fi
@@ -122,7 +122,7 @@ get_latest_tag() {
 download_rules() {
   local tag="$1"
   local tmp_dir
-  tmp_dir=$(mktemp -d 2>/dev/null || mktemp -d -t 'taleemabad')
+  tmp_dir=$(mktemp -d 2>/dev/null || mktemp -d -t 'custom-data')
 
   if ! timeout 20 git clone --depth 1 --branch "$tag" --no-checkout --quiet \
        "$REPO_URL" "${tmp_dir}/repo" 2>/dev/null; then
@@ -182,7 +182,7 @@ touch_version() {
 # --- Main logic ---
 
 # Respect version pin
-if [ -n "$TALEEMABAD_PIN_VERSION" ]; then
+if [ -n "$CUSTOM_DATA_PIN_VERSION" ]; then
   exit 0
 fi
 
@@ -204,7 +204,7 @@ LATEST=$(get_latest_tag)
 
 if [ -n "$LATEST" ] && [ "$LATEST" != "$CURRENT" ]; then
   if download_rules "$LATEST"; then
-    echo "[Taleemabad Data] Rules updated to ${LATEST}"
+    echo "[Custom Data] Rules updated to ${LATEST}"
   else
     touch_version
   fi
@@ -215,7 +215,7 @@ else
 fi
 
 if [ ! -f "$RULES_DEST/index.md" ]; then
-  echo "[Taleemabad Data] WARNING: Governance rules not available in ${RULES_DEST}"
+  echo "[Custom Data] WARNING: Governance rules not available in ${RULES_DEST}"
 else
   # Update path file again — rules may have been downloaded to a new location
   echo "$RULES_DEST" > "$RULES_PATH_FILE"
