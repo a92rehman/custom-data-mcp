@@ -1,4 +1,4 @@
-# Taleemabad Data Governance MCP
+# Data Governance MCP
 
 A governed semantic layer between business teams and BigQuery. Ask a question in natural language, get the right number — every time, with full audit trail.
 
