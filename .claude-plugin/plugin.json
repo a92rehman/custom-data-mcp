@@ -4,10 +4,10 @@
   "description": "Governed BigQuery analytics for Taleemabad \u2014 four agents (data-analyst, data-admin, query-fixer, system-doctor) with self-healing query loop, auto-updating governance rules, ticket-tracked infrastructure recovery, and full audit trail",
   "author": {
     "name": "Orenda Project",
-    "url": "https://github.com/Orenda-Project"
+    "url": "https://github.com/a92rehman"
   },
-  "homepage": "https://github.com/Orenda-Project/taleemabad-data-mcp",
-  "repository": "https://github.com/Orenda-Project/taleemabad-data-mcp",
+  "homepage": "https://github.com/a92rehman/custom-data-mcp",
+  "repository": "https://github.com/a92rehman/custom-data-mcp",
   "license": "MIT",
   "keywords": [
     "bigquery",

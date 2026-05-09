@@ -40,7 +40,7 @@ def get_bq_client() -> bigquery.Client:
     if creds_path:
         return bigquery.Client.from_service_account_json(creds_path, project=project)
 
-    env_file = os.path.expanduser("~/.claude/taleemabad-data-mcp.env")
+    env_file = os.path.expanduser("~/.claude/custom-data-mcp.env")
     if os.path.exists(env_file):
         env_vars = {}
         with open(env_file) as f:

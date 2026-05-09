@@ -179,7 +179,7 @@ class TestMcpHandshakeFailSymptom:
         tl.update_ticket(ticket.ticket_id,
                          action={"action": "retry", "result": "still_failing"})
         closed = tl.close_ticket(ticket.ticket_id, status="escalated",
-                                  escalated_to="https://github.com/Orenda-Project/taleemabad-data-mcp/issues/99")
+                                  escalated_to="https://github.com/a92rehman/custom-data-mcp/issues/99")
         assert closed.escalated_to is not None
 
 

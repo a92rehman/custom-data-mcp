@@ -36,7 +36,7 @@ If only the relative path works, use `rules/` as your `RULES_BASE`.
 
 **Step 3: Read domain-specific rules.** Use `RULES_BASE` as the prefix for ALL subsequent rule file reads.
 
-For example, if the path file contains `/home/user/.claude/plugins/cache/Orenda-Project/taleemabad-data/0.17.14/rules`, then read `/home/user/.claude/plugins/cache/Orenda-Project/taleemabad-data/0.17.14/rules/ict-islamabad/dimensions/teachers/teacher-query-rules.md`.
+For example, if the path file contains `/home/user/.claude/plugins/cache/a92rehman/taleemabad-data/0.17.14/rules`, then read `/home/user/.claude/plugins/cache/a92rehman/taleemabad-data/0.17.14/rules/ict-islamabad/dimensions/teachers/teacher-query-rules.md`.
 
 | Region | Subdirectory |
 |--------|-------------|

@@ -31,6 +31,6 @@ Show the user the system-doctor's health report summary:
 
 If any issues remain unresolved, provide clear next steps:
 - For `user_env_missing`: "Run `/taleemabad-setup` to configure your email"
-- For `plugin_not_installed`: "Run `claude plugin install taleemabad-data@Orenda-Project`"
-- For `plugin_outdated`: "Run `claude plugin update taleemabad-data@Orenda-Project`"
+- For `plugin_not_installed`: "Run `claude plugin install taleemabad-data@a92rehman`"
+- For `plugin_outdated`: "Run `claude plugin update taleemabad-data@a92rehman`"
 - For escalated issues: "A GitHub issue has been filed at <URL>. The data team will investigate."

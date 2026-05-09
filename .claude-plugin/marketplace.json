@@ -1,5 +1,5 @@
 {
-  "name": "Orenda-Project",
+  "name": "a92rehman",
   "owner": {
     "name": "Orenda Project",
     "email": "tech@orenda.pk"
@@ -17,8 +17,8 @@
         "name": "Orenda Project",
         "email": "tech@orenda.pk"
       },
-      "homepage": "https://github.com/Orenda-Project/taleemabad-data-mcp",
-      "repository": "https://github.com/Orenda-Project/taleemabad-data-mcp",
+      "homepage": "https://github.com/a92rehman/custom-data-mcp",
+      "repository": "https://github.com/a92rehman/custom-data-mcp",
       "license": "MIT",
       "keywords": [
         "bigquery",

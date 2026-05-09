@@ -50,7 +50,7 @@ _SAFE_FILTER_RE = _re.compile(
 )
 _SAFE_IDENTIFIER_RE = _re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
-_ENV_FILE = Path.home() / ".claude" / "taleemabad-data-mcp.env"
+_ENV_FILE = Path.home() / ".claude" / "custom-data-mcp.env"
 
 ALLOWED_EMAIL_DOMAINS = {"taleemabad.com", "niete.edu.pk", "niete.pk"}
 

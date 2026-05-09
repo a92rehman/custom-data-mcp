@@ -23,14 +23,14 @@ import sys
 import time
 from pathlib import Path
 
-REPO_URL = "https://github.com/Orenda-Project/taleemabad-data-mcp.git"
+REPO_URL = "https://github.com/a92rehman/custom-data-mcp.git"
 CHECK_INTERVAL = 21600  # 6 hours in seconds
 
 # Paths
 HOME = Path.home()
 CLAUDE_DIR = HOME / ".claude"
 VERSION_FILE = CLAUDE_DIR / "taleemabad-rules-version"
-ENV_FILE = CLAUDE_DIR / "taleemabad-data-mcp.env"
+ENV_FILE = CLAUDE_DIR / "custom-data-mcp.env"
 RULES_PATH_FILE = CLAUDE_DIR / "taleemabad-rules-path"
 HOOK_LOG = CLAUDE_DIR / "taleemabad-hook.log"
 
@@ -67,7 +67,7 @@ def _find_plugin_dir() -> Path | None:
             return p
 
     # Search the plugin cache
-    cache_base = CLAUDE_DIR / "plugins" / "cache" / "Orenda-Project" / "taleemabad-data"
+    cache_base = CLAUDE_DIR / "plugins" / "cache" / "a92rehman" / "taleemabad-data"
     if cache_base.is_dir():
         for d in sorted(cache_base.iterdir(), reverse=True):
             if (d / ".claude-plugin").is_dir():

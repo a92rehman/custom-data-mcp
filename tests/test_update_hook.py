@@ -26,7 +26,7 @@ def test_hook_imports():
 def test_export_user_env(tmp_path, monkeypatch):
     """Should read TALEEMABAD_USER from env file."""
     mod = _import_hook()
-    env_file = tmp_path / "taleemabad-data-mcp.env"
+    env_file = tmp_path / "custom-data-mcp.env"
     env_file.write_text("TALEEMABAD_USER=test@taleemabad.com\n")
     monkeypatch.setattr(mod, "ENV_FILE", env_file)
     monkeypatch.delenv("TALEEMABAD_USER", raising=False)

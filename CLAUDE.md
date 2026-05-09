@@ -105,8 +105,8 @@ docs/
 ## Distribution
 Teams install via Claude Code plugin system:
 ```bash
-claude plugin marketplace add Orenda-Project/taleemabad-data-mcp
-claude plugin install taleemabad-data@Orenda-Project
+claude plugin marketplace add a92rehman/custom-data-mcp
+claude plugin install taleemabad-data@a92rehman
 # Then in Claude Code: /taleemabad-setup (one time, for email)
 ```
 The plugin bundles `.mcp.json` pointing to the remote MCP server URL. No local Python, uv, or credentials needed.
@@ -135,7 +135,7 @@ PLUGIN_CACHE/rules/              ← User's copy (auto-downloaded)
 ### How the agent finds rules
 The data-analyst agent runs as a subprocess from the user's working directory — NOT the plugin directory. It cannot use relative paths to find rules in the plugin cache.
 
-The session-start hook writes `~/.claude/taleemabad-rules-path` containing the absolute path to the rules directory (e.g., `/home/user/.claude/plugins/cache/Orenda-Project/taleemabad-data/0.17.15/rules`). The agent reads this file first, then uses the path to read `index.md` and domain-specific rule files.
+The session-start hook writes `~/.claude/taleemabad-rules-path` containing the absolute path to the rules directory (e.g., `/home/user/.claude/plugins/cache/a92rehman/taleemabad-data/0.17.15/rules`). The agent reads this file first, then uses the path to read `index.md` and domain-specific rule files.
 
 ### Steps to add a new rule
 1. Create the `.md` file in `src/taleemabad_data_mcp/rules/<region>/<domain>/`

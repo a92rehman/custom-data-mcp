@@ -79,14 +79,14 @@ Works on **Windows**, **macOS**, **Linux**, and **iOS** (via Claude Code termina
 Open your terminal and run:
 
 ```bash
-claude plugin marketplace add Orenda-Project/taleemabad-data-mcp
-claude plugin install taleemabad-data@Orenda-Project
+claude plugin marketplace add a92rehman/custom-data-mcp
+claude plugin install taleemabad-data@a92rehman
 ```
 
-The first command registers the Orenda-Project repository as a plugin source.
+The first command registers the a92rehman repository as a plugin source.
 The second installs the plugin (agents, slash commands, governance rules, and MCP server connection).
 
-**Private repository?** You need GitHub access to the [Orenda-Project](https://github.com/Orenda-Project) organization. Ask IT if the install fails with a git error.
+**Private repository?** You need GitHub access to the [a92rehman](https://github.com/a92rehman) organization. Ask IT if the install fails with a git error.
 
 ### Step 2: Run Setup (One Time)
 
@@ -157,7 +157,7 @@ Update manually when:
 - You're experiencing issues that might be fixed in a newer version
 
 ```bash
-claude plugin update taleemabad-data@Orenda-Project
+claude plugin update taleemabad-data@a92rehman
 ```
 
 ### How to Check Your Version
@@ -174,15 +174,15 @@ If the update command doesn't work (e.g., locked directory on Windows):
 2. Open a fresh terminal (not Claude Code) and run:
 
 ```bash
-claude plugin uninstall taleemabad-data@Orenda-Project
-claude plugin marketplace remove Orenda-Project
+claude plugin uninstall taleemabad-data@a92rehman
+claude plugin marketplace remove a92rehman
 ```
 
 3. Then reinstall:
 
 ```bash
-claude plugin marketplace add Orenda-Project/taleemabad-data-mcp
-claude plugin install taleemabad-data@Orenda-Project
+claude plugin marketplace add a92rehman/custom-data-mcp
+claude plugin install taleemabad-data@a92rehman
 ```
 
 4. Run `/taleemabad-setup` again in Claude Code.
@@ -192,8 +192,8 @@ claude plugin install taleemabad-data@Orenda-Project
 ## Uninstall
 
 ```bash
-claude plugin uninstall taleemabad-data@Orenda-Project
-claude plugin marketplace remove Orenda-Project
+claude plugin uninstall taleemabad-data@a92rehman
+claude plugin marketplace remove a92rehman
 ```
 
 This removes the plugin, agents, rules, and MCP connection. Your email config at `~/.claude/` is not removed.
@@ -298,8 +298,8 @@ All recovery actions are tracked as tickets (viewable in the dashboard's Tickets
 ### Plugin not found after install
 Make sure you ran both commands:
 ```bash
-claude plugin marketplace add Orenda-Project/taleemabad-data-mcp
-claude plugin install taleemabad-data@Orenda-Project
+claude plugin marketplace add a92rehman/custom-data-mcp
+claude plugin install taleemabad-data@a92rehman
 ```
 
 ### /taleemabad-setup not recognized
@@ -318,7 +318,7 @@ You must use a work email ending with `@taleemabad.com`, `@niete.edu.pk`, or `@n
 - Run `/mcp` to see the connection status
 
 ### "Git access required" error during install
-The repository is private. Ask IT to add your GitHub account to the [Orenda-Project](https://github.com/Orenda-Project) organization.
+The repository is private. Ask IT to add your GitHub account to the [a92rehman](https://github.com/a92rehman) organization.
 
 ### Agent not reading rules / generating ad-hoc SQL
 The data-analyst agent needs `~/.claude/taleemabad-rules-path` to find governance rules. This file is created and repaired automatically by the session-start hook. If it's missing:
@@ -352,8 +352,8 @@ The **Tickets** page shows self-healing activity: open/auto-fixed/escalated tick
 For contributing to this project (not needed for regular users):
 
 ```bash
-git clone https://github.com/Orenda-Project/taleemabad-data-mcp.git
-cd taleemabad-data-mcp
+git clone https://github.com/a92rehman/custom-data-mcp.git
+cd custom-data-mcp
 uv sync --extra dev
 cp .env.example .env
 # Edit .env — see CLAUDE.md for all environment variables

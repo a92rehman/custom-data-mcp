@@ -13,7 +13,7 @@ def _mock_patches(monkeypatch, claude_dir):
         "taleemabad_data_mcp.cli._rules_dest", lambda: claude_dir / "rules" / "taleemabad"
     )
     monkeypatch.setattr(
-        "taleemabad_data_mcp.cli._env_path", lambda: claude_dir / "taleemabad-data-mcp.env"
+        "taleemabad_data_mcp.cli._env_path", lambda: claude_dir / "custom-data-mcp.env"
     )
     claude_dir.mkdir(parents=True, exist_ok=True)
 
@@ -32,7 +32,7 @@ def test_setup_saves_email_and_cleans_old_rules(tmp_path, monkeypatch):
     assert not rules_dir.exists()
 
     # Env file was created with email
-    env_content = (claude_dir / "taleemabad-data-mcp.env").read_text()
+    env_content = (claude_dir / "custom-data-mcp.env").read_text()
     assert "TALEEMABAD_USER=test@taleemabad.com" in env_content
 
     # Setup message mentions rules are managed by plugin
@@ -50,7 +50,7 @@ def test_uninstall_removes_rules_and_env(tmp_path, monkeypatch):
     rules_dir.mkdir(parents=True)
     (rules_dir / "index.md").write_text("test")
 
-    env_path = claude_dir / "taleemabad-data-mcp.env"
+    env_path = claude_dir / "custom-data-mcp.env"
     env_path.write_text("TALEEMABAD_USER=test")
 
     runner = CliRunner()

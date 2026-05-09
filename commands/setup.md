@@ -3,7 +3,7 @@
 Set up your work email for the Taleemabad Data MCP. The MCP server runs remotely.
 
 ## Prerequisites
-- Plugin must be installed: `claude plugin install taleemabad-data@Orenda-Project`
+- Plugin must be installed: `claude plugin install taleemabad-data@a92rehman`
 - You need your **work email** (must be @taleemabad.com, @niete.edu.pk, or @niete.pk)
 
 ## Steps
@@ -22,12 +22,12 @@ Save email to the env file (used by local stdio server):
 
 On Windows:
 ```
-python -c "from pathlib import Path; p = Path.home() / '.claude' / 'taleemabad-data-mcp.env'; p.parent.mkdir(parents=True, exist_ok=True); p.write_text('TALEEMABAD_USER=<user_email>\n')"
+python -c "from pathlib import Path; p = Path.home() / '.claude' / 'custom-data-mcp.env'; p.parent.mkdir(parents=True, exist_ok=True); p.write_text('TALEEMABAD_USER=<user_email>\n')"
 ```
 
 On macOS/Linux:
 ```
-mkdir -p ~/.claude && echo "TALEEMABAD_USER=<user_email>" > ~/.claude/taleemabad-data-mcp.env
+mkdir -p ~/.claude && echo "TALEEMABAD_USER=<user_email>" > ~/.claude/custom-data-mcp.env
 ```
 
 ### Step 3: Set system environment variable

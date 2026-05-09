@@ -24,8 +24,8 @@ def _rules_dest() -> Path:
 
 
 def _env_path() -> Path:
-    """Return ~/.claude/taleemabad-data-mcp.env path."""
-    return _claude_dir() / "taleemabad-data-mcp.env"
+    """Return ~/.claude/custom-data-mcp.env path."""
+    return _claude_dir() / "custom-data-mcp.env"
 
 
 def _bundled_rules_dir() -> Path:
@@ -43,7 +43,7 @@ def show_version() -> None:
     """Show the installed version."""
     from taleemabad_data_mcp import __version__
 
-    click.echo(f"taleemabad-data-mcp v{__version__}")
+    click.echo(f"custom-data-mcp v{__version__}")
 
 
 def bump_version(minor: bool = False) -> None:
@@ -340,7 +340,7 @@ def dashboard() -> None:
     except ImportError:
         click.echo(
             "Streamlit is not installed. Install dashboard dependencies:\n"
-            '  pip install "taleemabad-data-mcp[dashboard]"',
+            '  pip install "custom-data-mcp[dashboard]"',
             err=True,
         )
         sys.exit(1)

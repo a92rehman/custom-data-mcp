@@ -50,12 +50,12 @@ DETECT → OPEN TICKET → DIAGNOSE → HEAL → VERIFY → CLOSE/ESCALATE
 - **If still down:** Open ticket, tell user to check internet connection and try again later.
 
 ### user_env_missing
-- **Detection:** Check if `~/.claude/taleemabad-data-mcp.env` exists. Check if `TALEEMABAD_USER` env var is set.
+- **Detection:** Check if `~/.claude/custom-data-mcp.env` exists. Check if `TALEEMABAD_USER` env var is set.
 - **Auto-fix:** If previous audit log entries exist in `~/.claude/taleemabad-logs/activity.jsonl`, extract the `user_name` from the most recent entry and write the env file.
 - **Confirm-then-fix:** If no audit history, ask the user for their work email and run the setup flow (`/taleemabad-setup` steps).
 
 ### user_env_unexpanded
-- **Detection:** Read `~/.claude/taleemabad-data-mcp.env` — if it contains `${TALEEMABAD_USER}` literally, OR check MCP connection headers for the literal string.
+- **Detection:** Read `~/.claude/custom-data-mcp.env` — if it contains `${TALEEMABAD_USER}` literally, OR check MCP connection headers for the literal string.
 - **Auto-fix (Windows):** Run `setx TALEEMABAD_USER "<email>"` using the email from the env file (the value after the `=`).
 - **Auto-fix (macOS/Linux):** Append `export TALEEMABAD_USER="<email>"` to `~/.bashrc` and `~/.zshrc`.
 - **Post-fix note:** Tell user: "Please restart your terminal — `setx` only affects new processes."
@@ -63,10 +63,10 @@ DETECT → OPEN TICKET → DIAGNOSE → HEAL → VERIFY → CLOSE/ESCALATE
 ### rules_path_missing
 - **Detection:** Check `~/.claude/taleemabad-rules-path` exists AND the path it points to is a real directory containing `index.md`.
 - **Auto-fix:** Run the Python session-start hook: `python <plugin_dir>/hooks/session-start/update.py`
-- **If still missing after 2 attempts:** Suggest full reinstall: `claude plugin update taleemabad-data@Orenda-Project`
+- **If still missing after 2 attempts:** Suggest full reinstall: `claude plugin update taleemabad-data@a92rehman`
 
 ### rules_stale
-- **Detection:** Compare latest tag via `git ls-remote --tags https://github.com/Orenda-Project/taleemabad-data-mcp.git v*` with `~/.claude/taleemabad-rules-version`.
+- **Detection:** Compare latest tag via `git ls-remote --tags https://github.com/a92rehman/custom-data-mcp.git v*` with `~/.claude/taleemabad-rules-version`.
 - **Auto-fix:** Delete `~/.claude/taleemabad-rules-version` (forces refresh) then run the session-start hook.
 - **Verify:** Re-read version file, confirm it matches latest tag.
 
@@ -75,14 +75,14 @@ DETECT → OPEN TICKET → DIAGNOSE → HEAL → VERIFY → CLOSE/ESCALATE
 - **Cannot auto-fix** — requires user action.
 - **Offer:** Print the install commands:
   ```
-  claude plugin marketplace add Orenda-Project/taleemabad-data-mcp
-  claude plugin install taleemabad-data@Orenda-Project
+  claude plugin marketplace add a92rehman/custom-data-mcp
+  claude plugin install taleemabad-data@a92rehman
   ```
 
 ### plugin_outdated
 - **Detection:** Compare local plugin version (from `~/.claude/taleemabad-rules-version` or plugin.json) with latest tag. Alert if 2+ minor versions behind.
 - **Cannot auto-fix** — requires user action.
-- **Offer:** `claude plugin update taleemabad-data@Orenda-Project`
+- **Offer:** `claude plugin update taleemabad-data@a92rehman`
 
 ### mcp_handshake_fail
 - **Detection:** After connection_failed check passes (server is up), check if `/mcp` endpoint responds. Or check Claude Code MCP status.
@@ -101,7 +101,7 @@ When a symptom cannot be auto-fixed after 2 attempts:
 1. **Preferred:** If `gh` CLI is available and authenticated, file an issue:
    ```
    gh issue create \
-     --repo Orenda-Project/taleemabad-data-mcp \
+     --repo a92rehman/custom-data-mcp \
      --title "[auto] <symptom_id>: <one-line diagnosis> (TKT-...)" \
      --body "<sanitized ticket body>"
    ```
@@ -111,7 +111,7 @@ When a symptom cannot be auto-fixed after 2 attempts:
 3. **Last resort:** Write the issue body to `~/.claude/taleemabad-tickets-pending-github.jsonl` and tell the user:
    ```
    Could not file GitHub issue automatically.
-   Please create an issue at: https://github.com/Orenda-Project/taleemabad-data-mcp/issues/new
+   Please create an issue at: https://github.com/a92rehman/custom-data-mcp/issues/new
    Title: [auto] <symptom_id>: <diagnosis> (TKT-...)
    The issue body has been saved to ~/.claude/taleemabad-tickets-pending-github.jsonl
    ```

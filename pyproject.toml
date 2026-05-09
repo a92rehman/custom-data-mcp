@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "taleemabad-data-mcp"
+name = "custom-data-mcp"
 version = "0.18.4"
 description = "Taleemabad's Data Navigator — governed semantic layer for BigQuery"
 requires-python = ">=3.11"
@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-taleemabad-data-mcp = "taleemabad_data_mcp.cli:main"
+custom-data-mcp = "taleemabad_data_mcp.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/taleemabad_data_mcp"]

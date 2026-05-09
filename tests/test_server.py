@@ -101,7 +101,7 @@ def test_describe_data_median_odd():
 
 def test_read_user_from_env_file(tmp_path, monkeypatch):
     """Should read TALEEMABAD_USER from env file."""
-    env_file = tmp_path / "taleemabad-data-mcp.env"
+    env_file = tmp_path / "custom-data-mcp.env"
     env_file.write_text("TALEEMABAD_USER=Mariam\nGOOGLE_APPLICATION_CREDENTIALS=creds.json\n")
     monkeypatch.setattr("taleemabad_data_mcp.server._ENV_FILE", env_file)
 
@@ -120,7 +120,7 @@ def test_read_user_from_env_file_missing(tmp_path, monkeypatch):
 
 def test_read_user_from_env_file_empty_value(tmp_path, monkeypatch):
     """Should return None when TALEEMABAD_USER is empty."""
-    env_file = tmp_path / "taleemabad-data-mcp.env"
+    env_file = tmp_path / "custom-data-mcp.env"
     env_file.write_text("TALEEMABAD_USER=\n")
     monkeypatch.setattr("taleemabad_data_mcp.server._ENV_FILE", env_file)
 

@@ -13,9 +13,9 @@
 # Set TALEEMABAD_PIN_VERSION=v0.17.5 to lock to a specific version.
 # Delete ~/.claude/taleemabad-rules-version to force immediate refresh.
 
-REPO_URL="https://github.com/Orenda-Project/taleemabad-data-mcp.git"
+REPO_URL="https://github.com/a92rehman/custom-data-mcp.git"
 VERSION_FILE="${HOME}/.claude/taleemabad-rules-version"
-ENV_FILE="${HOME}/.claude/taleemabad-data-mcp.env"
+ENV_FILE="${HOME}/.claude/custom-data-mcp.env"
 CHECK_INTERVAL=21600  # 6 hours in seconds
 
 # Never prompt for credentials — fail fast if not available
@@ -33,7 +33,7 @@ fi
 # --- Locate plugin directory ---
 PLUGIN_DIR="${CLAUDE_PLUGIN_ROOT:-}"
 if [ -z "$PLUGIN_DIR" ]; then
-  for d in "${HOME}/.claude/plugins/cache/Orenda-Project/taleemabad-data"/*; do
+  for d in "${HOME}/.claude/plugins/cache/a92rehman/taleemabad-data"/*; do
     if [ -d "$d/.claude-plugin" ]; then
       PLUGIN_DIR="$d"
       break

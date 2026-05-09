@@ -16,7 +16,7 @@ def fake_repo(tmp_path):
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(textwrap.dedent("""\
         [project]
-        name = "taleemabad-data-mcp"
+        name = "custom-data-mcp"
         version = "0.4.8"
     """))
 
